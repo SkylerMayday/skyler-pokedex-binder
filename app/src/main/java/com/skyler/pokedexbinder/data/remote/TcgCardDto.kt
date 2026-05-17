@@ -1,0 +1,28 @@
+package com.skyler.pokedexbinder.data.remote
+
+import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
+
+@JsonClass(generateAdapter = true)
+data class TcgCardDto(
+    val id: String,
+    val name: String,
+    val number: String,
+    val set: TcgSetDto,
+    val images: TcgImagesDto
+)
+
+@JsonClass(generateAdapter = true)
+data class TcgSetDto(val name: String)
+
+@JsonClass(generateAdapter = true)
+data class TcgImagesDto(
+    val small: String,
+    val large: String
+)
+
+@JsonClass(generateAdapter = true)
+data class TcgCardsResponse(
+    val data: List<TcgCardDto>,
+    val totalCount: Int
+)
