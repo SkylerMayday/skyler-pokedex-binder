@@ -1,11 +1,13 @@
 package com.skyler.pokedexbinder.repository
 
+import android.util.Log
 import com.skyler.pokedexbinder.data.local.MainBinderDao
 import com.skyler.pokedexbinder.data.local.MainBinderEntry
 import com.skyler.pokedexbinder.data.model.PokemonSlot
 import com.skyler.pokedexbinder.data.model.SlotType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import org.json.JSONArray
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -33,6 +35,26 @@ class BinderRepository @Inject constructor(
 
     suspend fun seedFromJson(slots: List<MainBinderEntry>) {
         mainBinderDao.insertAll(slots)
+    }
+
+    suspend fun seedIfEmpty(context: android.content.Context) {
+        if (mainBinderDao.count() > 0) return
+        runCatching {
+            val json = context.resources.openRawResource(com.skyler.pokedexbinder.R.raw.pokemon_slots)
+                .bufferedReader().readText()
+            val arr = JSONArray(json)
+            val entries = (0 until arr.length()).map { i ->
+                val obj = arr.getJSONObject(i)
+                MainBinderEntry(
+                    pokemonId = obj.getString("id"),
+                    pokemonName = obj.getString("name"),
+                    dexOrder = obj.getInt("dex_order")
+                )
+            }
+            mainBinderDao.insertAll(entries)
+        }.onFailure { e ->
+            Log.e("BinderRepository", "Failed to seed pokemon slots", e)
+        }
     }
 
     private fun MainBinderEntry.toDomain() = PokemonSlot(

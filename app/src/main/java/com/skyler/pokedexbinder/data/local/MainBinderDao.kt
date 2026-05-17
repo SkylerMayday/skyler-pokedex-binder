@@ -16,4 +16,7 @@ interface MainBinderDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(entries: List<MainBinderEntry>)
+
+    @Query("SELECT COUNT(*) FROM main_binder")
+    suspend fun count(): Int
 }
