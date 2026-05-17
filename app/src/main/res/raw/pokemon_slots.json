@@ -1,0 +1,7702 @@
+[
+  {
+    "id": "bulbasaur",
+    "name": "Bulbasaur",
+    "dex_number": 1,
+    "dex_order": 1,
+    "slot_type": "base"
+  },
+  {
+    "id": "ivysaur",
+    "name": "Ivysaur",
+    "dex_number": 2,
+    "dex_order": 2,
+    "slot_type": "base"
+  },
+  {
+    "id": "venusaur",
+    "name": "Venusaur",
+    "dex_number": 3,
+    "dex_order": 3,
+    "slot_type": "base"
+  },
+  {
+    "id": "charmander",
+    "name": "Charmander",
+    "dex_number": 4,
+    "dex_order": 4,
+    "slot_type": "base"
+  },
+  {
+    "id": "charmeleon",
+    "name": "Charmeleon",
+    "dex_number": 5,
+    "dex_order": 5,
+    "slot_type": "base"
+  },
+  {
+    "id": "charizard",
+    "name": "Charizard",
+    "dex_number": 6,
+    "dex_order": 6,
+    "slot_type": "base"
+  },
+  {
+    "id": "squirtle",
+    "name": "Squirtle",
+    "dex_number": 7,
+    "dex_order": 7,
+    "slot_type": "base"
+  },
+  {
+    "id": "wartortle",
+    "name": "Wartortle",
+    "dex_number": 8,
+    "dex_order": 8,
+    "slot_type": "base"
+  },
+  {
+    "id": "blastoise",
+    "name": "Blastoise",
+    "dex_number": 9,
+    "dex_order": 9,
+    "slot_type": "base"
+  },
+  {
+    "id": "caterpie",
+    "name": "Caterpie",
+    "dex_number": 10,
+    "dex_order": 10,
+    "slot_type": "base"
+  },
+  {
+    "id": "metapod",
+    "name": "Metapod",
+    "dex_number": 11,
+    "dex_order": 11,
+    "slot_type": "base"
+  },
+  {
+    "id": "butterfree",
+    "name": "Butterfree",
+    "dex_number": 12,
+    "dex_order": 12,
+    "slot_type": "base"
+  },
+  {
+    "id": "weedle",
+    "name": "Weedle",
+    "dex_number": 13,
+    "dex_order": 13,
+    "slot_type": "base"
+  },
+  {
+    "id": "kakuna",
+    "name": "Kakuna",
+    "dex_number": 14,
+    "dex_order": 14,
+    "slot_type": "base"
+  },
+  {
+    "id": "beedrill",
+    "name": "Beedrill",
+    "dex_number": 15,
+    "dex_order": 15,
+    "slot_type": "base"
+  },
+  {
+    "id": "pidgey",
+    "name": "Pidgey",
+    "dex_number": 16,
+    "dex_order": 16,
+    "slot_type": "base"
+  },
+  {
+    "id": "pidgeotto",
+    "name": "Pidgeotto",
+    "dex_number": 17,
+    "dex_order": 17,
+    "slot_type": "base"
+  },
+  {
+    "id": "pidgeot",
+    "name": "Pidgeot",
+    "dex_number": 18,
+    "dex_order": 18,
+    "slot_type": "base"
+  },
+  {
+    "id": "rattata",
+    "name": "Rattata",
+    "dex_number": 19,
+    "dex_order": 19,
+    "slot_type": "base"
+  },
+  {
+    "id": "raticate",
+    "name": "Raticate",
+    "dex_number": 20,
+    "dex_order": 20,
+    "slot_type": "base"
+  },
+  {
+    "id": "spearow",
+    "name": "Spearow",
+    "dex_number": 21,
+    "dex_order": 21,
+    "slot_type": "base"
+  },
+  {
+    "id": "fearow",
+    "name": "Fearow",
+    "dex_number": 22,
+    "dex_order": 22,
+    "slot_type": "base"
+  },
+  {
+    "id": "ekans",
+    "name": "Ekans",
+    "dex_number": 23,
+    "dex_order": 23,
+    "slot_type": "base"
+  },
+  {
+    "id": "arbok",
+    "name": "Arbok",
+    "dex_number": 24,
+    "dex_order": 24,
+    "slot_type": "base"
+  },
+  {
+    "id": "pikachu",
+    "name": "Pikachu",
+    "dex_number": 25,
+    "dex_order": 25,
+    "slot_type": "base"
+  },
+  {
+    "id": "raichu",
+    "name": "Raichu",
+    "dex_number": 26,
+    "dex_order": 26,
+    "slot_type": "base"
+  },
+  {
+    "id": "sandshrew",
+    "name": "Sandshrew",
+    "dex_number": 27,
+    "dex_order": 27,
+    "slot_type": "base"
+  },
+  {
+    "id": "sandslash",
+    "name": "Sandslash",
+    "dex_number": 28,
+    "dex_order": 28,
+    "slot_type": "base"
+  },
+  {
+    "id": "nidoran-f",
+    "name": "Nidoran F",
+    "dex_number": 29,
+    "dex_order": 29,
+    "slot_type": "base"
+  },
+  {
+    "id": "nidorina",
+    "name": "Nidorina",
+    "dex_number": 30,
+    "dex_order": 30,
+    "slot_type": "base"
+  },
+  {
+    "id": "nidoqueen",
+    "name": "Nidoqueen",
+    "dex_number": 31,
+    "dex_order": 31,
+    "slot_type": "base"
+  },
+  {
+    "id": "nidoran-m",
+    "name": "Nidoran M",
+    "dex_number": 32,
+    "dex_order": 32,
+    "slot_type": "base"
+  },
+  {
+    "id": "nidorino",
+    "name": "Nidorino",
+    "dex_number": 33,
+    "dex_order": 33,
+    "slot_type": "base"
+  },
+  {
+    "id": "nidoking",
+    "name": "Nidoking",
+    "dex_number": 34,
+    "dex_order": 34,
+    "slot_type": "base"
+  },
+  {
+    "id": "clefairy",
+    "name": "Clefairy",
+    "dex_number": 35,
+    "dex_order": 35,
+    "slot_type": "base"
+  },
+  {
+    "id": "clefable",
+    "name": "Clefable",
+    "dex_number": 36,
+    "dex_order": 36,
+    "slot_type": "base"
+  },
+  {
+    "id": "vulpix",
+    "name": "Vulpix",
+    "dex_number": 37,
+    "dex_order": 37,
+    "slot_type": "base"
+  },
+  {
+    "id": "ninetales",
+    "name": "Ninetales",
+    "dex_number": 38,
+    "dex_order": 38,
+    "slot_type": "base"
+  },
+  {
+    "id": "jigglypuff",
+    "name": "Jigglypuff",
+    "dex_number": 39,
+    "dex_order": 39,
+    "slot_type": "base"
+  },
+  {
+    "id": "wigglytuff",
+    "name": "Wigglytuff",
+    "dex_number": 40,
+    "dex_order": 40,
+    "slot_type": "base"
+  },
+  {
+    "id": "zubat",
+    "name": "Zubat",
+    "dex_number": 41,
+    "dex_order": 41,
+    "slot_type": "base"
+  },
+  {
+    "id": "golbat",
+    "name": "Golbat",
+    "dex_number": 42,
+    "dex_order": 42,
+    "slot_type": "base"
+  },
+  {
+    "id": "oddish",
+    "name": "Oddish",
+    "dex_number": 43,
+    "dex_order": 43,
+    "slot_type": "base"
+  },
+  {
+    "id": "gloom",
+    "name": "Gloom",
+    "dex_number": 44,
+    "dex_order": 44,
+    "slot_type": "base"
+  },
+  {
+    "id": "vileplume",
+    "name": "Vileplume",
+    "dex_number": 45,
+    "dex_order": 45,
+    "slot_type": "base"
+  },
+  {
+    "id": "paras",
+    "name": "Paras",
+    "dex_number": 46,
+    "dex_order": 46,
+    "slot_type": "base"
+  },
+  {
+    "id": "parasect",
+    "name": "Parasect",
+    "dex_number": 47,
+    "dex_order": 47,
+    "slot_type": "base"
+  },
+  {
+    "id": "venonat",
+    "name": "Venonat",
+    "dex_number": 48,
+    "dex_order": 48,
+    "slot_type": "base"
+  },
+  {
+    "id": "venomoth",
+    "name": "Venomoth",
+    "dex_number": 49,
+    "dex_order": 49,
+    "slot_type": "base"
+  },
+  {
+    "id": "diglett",
+    "name": "Diglett",
+    "dex_number": 50,
+    "dex_order": 50,
+    "slot_type": "base"
+  },
+  {
+    "id": "dugtrio",
+    "name": "Dugtrio",
+    "dex_number": 51,
+    "dex_order": 51,
+    "slot_type": "base"
+  },
+  {
+    "id": "meowth",
+    "name": "Meowth",
+    "dex_number": 52,
+    "dex_order": 52,
+    "slot_type": "base"
+  },
+  {
+    "id": "persian",
+    "name": "Persian",
+    "dex_number": 53,
+    "dex_order": 53,
+    "slot_type": "base"
+  },
+  {
+    "id": "psyduck",
+    "name": "Psyduck",
+    "dex_number": 54,
+    "dex_order": 54,
+    "slot_type": "base"
+  },
+  {
+    "id": "golduck",
+    "name": "Golduck",
+    "dex_number": 55,
+    "dex_order": 55,
+    "slot_type": "base"
+  },
+  {
+    "id": "mankey",
+    "name": "Mankey",
+    "dex_number": 56,
+    "dex_order": 56,
+    "slot_type": "base"
+  },
+  {
+    "id": "primeape",
+    "name": "Primeape",
+    "dex_number": 57,
+    "dex_order": 57,
+    "slot_type": "base"
+  },
+  {
+    "id": "growlithe",
+    "name": "Growlithe",
+    "dex_number": 58,
+    "dex_order": 58,
+    "slot_type": "base"
+  },
+  {
+    "id": "arcanine",
+    "name": "Arcanine",
+    "dex_number": 59,
+    "dex_order": 59,
+    "slot_type": "base"
+  },
+  {
+    "id": "poliwag",
+    "name": "Poliwag",
+    "dex_number": 60,
+    "dex_order": 60,
+    "slot_type": "base"
+  },
+  {
+    "id": "poliwhirl",
+    "name": "Poliwhirl",
+    "dex_number": 61,
+    "dex_order": 61,
+    "slot_type": "base"
+  },
+  {
+    "id": "poliwrath",
+    "name": "Poliwrath",
+    "dex_number": 62,
+    "dex_order": 62,
+    "slot_type": "base"
+  },
+  {
+    "id": "abra",
+    "name": "Abra",
+    "dex_number": 63,
+    "dex_order": 63,
+    "slot_type": "base"
+  },
+  {
+    "id": "kadabra",
+    "name": "Kadabra",
+    "dex_number": 64,
+    "dex_order": 64,
+    "slot_type": "base"
+  },
+  {
+    "id": "alakazam",
+    "name": "Alakazam",
+    "dex_number": 65,
+    "dex_order": 65,
+    "slot_type": "base"
+  },
+  {
+    "id": "machop",
+    "name": "Machop",
+    "dex_number": 66,
+    "dex_order": 66,
+    "slot_type": "base"
+  },
+  {
+    "id": "machoke",
+    "name": "Machoke",
+    "dex_number": 67,
+    "dex_order": 67,
+    "slot_type": "base"
+  },
+  {
+    "id": "machamp",
+    "name": "Machamp",
+    "dex_number": 68,
+    "dex_order": 68,
+    "slot_type": "base"
+  },
+  {
+    "id": "bellsprout",
+    "name": "Bellsprout",
+    "dex_number": 69,
+    "dex_order": 69,
+    "slot_type": "base"
+  },
+  {
+    "id": "weepinbell",
+    "name": "Weepinbell",
+    "dex_number": 70,
+    "dex_order": 70,
+    "slot_type": "base"
+  },
+  {
+    "id": "victreebel",
+    "name": "Victreebel",
+    "dex_number": 71,
+    "dex_order": 71,
+    "slot_type": "base"
+  },
+  {
+    "id": "tentacool",
+    "name": "Tentacool",
+    "dex_number": 72,
+    "dex_order": 72,
+    "slot_type": "base"
+  },
+  {
+    "id": "tentacruel",
+    "name": "Tentacruel",
+    "dex_number": 73,
+    "dex_order": 73,
+    "slot_type": "base"
+  },
+  {
+    "id": "geodude",
+    "name": "Geodude",
+    "dex_number": 74,
+    "dex_order": 74,
+    "slot_type": "base"
+  },
+  {
+    "id": "graveler",
+    "name": "Graveler",
+    "dex_number": 75,
+    "dex_order": 75,
+    "slot_type": "base"
+  },
+  {
+    "id": "golem",
+    "name": "Golem",
+    "dex_number": 76,
+    "dex_order": 76,
+    "slot_type": "base"
+  },
+  {
+    "id": "ponyta",
+    "name": "Ponyta",
+    "dex_number": 77,
+    "dex_order": 77,
+    "slot_type": "base"
+  },
+  {
+    "id": "rapidash",
+    "name": "Rapidash",
+    "dex_number": 78,
+    "dex_order": 78,
+    "slot_type": "base"
+  },
+  {
+    "id": "slowpoke",
+    "name": "Slowpoke",
+    "dex_number": 79,
+    "dex_order": 79,
+    "slot_type": "base"
+  },
+  {
+    "id": "slowbro",
+    "name": "Slowbro",
+    "dex_number": 80,
+    "dex_order": 80,
+    "slot_type": "base"
+  },
+  {
+    "id": "magnemite",
+    "name": "Magnemite",
+    "dex_number": 81,
+    "dex_order": 81,
+    "slot_type": "base"
+  },
+  {
+    "id": "magneton",
+    "name": "Magneton",
+    "dex_number": 82,
+    "dex_order": 82,
+    "slot_type": "base"
+  },
+  {
+    "id": "farfetchd",
+    "name": "Farfetchd",
+    "dex_number": 83,
+    "dex_order": 83,
+    "slot_type": "base"
+  },
+  {
+    "id": "doduo",
+    "name": "Doduo",
+    "dex_number": 84,
+    "dex_order": 84,
+    "slot_type": "base"
+  },
+  {
+    "id": "dodrio",
+    "name": "Dodrio",
+    "dex_number": 85,
+    "dex_order": 85,
+    "slot_type": "base"
+  },
+  {
+    "id": "seel",
+    "name": "Seel",
+    "dex_number": 86,
+    "dex_order": 86,
+    "slot_type": "base"
+  },
+  {
+    "id": "dewgong",
+    "name": "Dewgong",
+    "dex_number": 87,
+    "dex_order": 87,
+    "slot_type": "base"
+  },
+  {
+    "id": "grimer",
+    "name": "Grimer",
+    "dex_number": 88,
+    "dex_order": 88,
+    "slot_type": "base"
+  },
+  {
+    "id": "muk",
+    "name": "Muk",
+    "dex_number": 89,
+    "dex_order": 89,
+    "slot_type": "base"
+  },
+  {
+    "id": "shellder",
+    "name": "Shellder",
+    "dex_number": 90,
+    "dex_order": 90,
+    "slot_type": "base"
+  },
+  {
+    "id": "cloyster",
+    "name": "Cloyster",
+    "dex_number": 91,
+    "dex_order": 91,
+    "slot_type": "base"
+  },
+  {
+    "id": "gastly",
+    "name": "Gastly",
+    "dex_number": 92,
+    "dex_order": 92,
+    "slot_type": "base"
+  },
+  {
+    "id": "haunter",
+    "name": "Haunter",
+    "dex_number": 93,
+    "dex_order": 93,
+    "slot_type": "base"
+  },
+  {
+    "id": "gengar",
+    "name": "Gengar",
+    "dex_number": 94,
+    "dex_order": 94,
+    "slot_type": "base"
+  },
+  {
+    "id": "onix",
+    "name": "Onix",
+    "dex_number": 95,
+    "dex_order": 95,
+    "slot_type": "base"
+  },
+  {
+    "id": "drowzee",
+    "name": "Drowzee",
+    "dex_number": 96,
+    "dex_order": 96,
+    "slot_type": "base"
+  },
+  {
+    "id": "hypno",
+    "name": "Hypno",
+    "dex_number": 97,
+    "dex_order": 97,
+    "slot_type": "base"
+  },
+  {
+    "id": "krabby",
+    "name": "Krabby",
+    "dex_number": 98,
+    "dex_order": 98,
+    "slot_type": "base"
+  },
+  {
+    "id": "kingler",
+    "name": "Kingler",
+    "dex_number": 99,
+    "dex_order": 99,
+    "slot_type": "base"
+  },
+  {
+    "id": "voltorb",
+    "name": "Voltorb",
+    "dex_number": 100,
+    "dex_order": 100,
+    "slot_type": "base"
+  },
+  {
+    "id": "electrode",
+    "name": "Electrode",
+    "dex_number": 101,
+    "dex_order": 101,
+    "slot_type": "base"
+  },
+  {
+    "id": "exeggcute",
+    "name": "Exeggcute",
+    "dex_number": 102,
+    "dex_order": 102,
+    "slot_type": "base"
+  },
+  {
+    "id": "exeggutor",
+    "name": "Exeggutor",
+    "dex_number": 103,
+    "dex_order": 103,
+    "slot_type": "base"
+  },
+  {
+    "id": "cubone",
+    "name": "Cubone",
+    "dex_number": 104,
+    "dex_order": 104,
+    "slot_type": "base"
+  },
+  {
+    "id": "marowak",
+    "name": "Marowak",
+    "dex_number": 105,
+    "dex_order": 105,
+    "slot_type": "base"
+  },
+  {
+    "id": "hitmonlee",
+    "name": "Hitmonlee",
+    "dex_number": 106,
+    "dex_order": 106,
+    "slot_type": "base"
+  },
+  {
+    "id": "hitmonchan",
+    "name": "Hitmonchan",
+    "dex_number": 107,
+    "dex_order": 107,
+    "slot_type": "base"
+  },
+  {
+    "id": "lickitung",
+    "name": "Lickitung",
+    "dex_number": 108,
+    "dex_order": 108,
+    "slot_type": "base"
+  },
+  {
+    "id": "koffing",
+    "name": "Koffing",
+    "dex_number": 109,
+    "dex_order": 109,
+    "slot_type": "base"
+  },
+  {
+    "id": "weezing",
+    "name": "Weezing",
+    "dex_number": 110,
+    "dex_order": 110,
+    "slot_type": "base"
+  },
+  {
+    "id": "rhyhorn",
+    "name": "Rhyhorn",
+    "dex_number": 111,
+    "dex_order": 111,
+    "slot_type": "base"
+  },
+  {
+    "id": "rhydon",
+    "name": "Rhydon",
+    "dex_number": 112,
+    "dex_order": 112,
+    "slot_type": "base"
+  },
+  {
+    "id": "chansey",
+    "name": "Chansey",
+    "dex_number": 113,
+    "dex_order": 113,
+    "slot_type": "base"
+  },
+  {
+    "id": "tangela",
+    "name": "Tangela",
+    "dex_number": 114,
+    "dex_order": 114,
+    "slot_type": "base"
+  },
+  {
+    "id": "kangaskhan",
+    "name": "Kangaskhan",
+    "dex_number": 115,
+    "dex_order": 115,
+    "slot_type": "base"
+  },
+  {
+    "id": "horsea",
+    "name": "Horsea",
+    "dex_number": 116,
+    "dex_order": 116,
+    "slot_type": "base"
+  },
+  {
+    "id": "seadra",
+    "name": "Seadra",
+    "dex_number": 117,
+    "dex_order": 117,
+    "slot_type": "base"
+  },
+  {
+    "id": "goldeen",
+    "name": "Goldeen",
+    "dex_number": 118,
+    "dex_order": 118,
+    "slot_type": "base"
+  },
+  {
+    "id": "seaking",
+    "name": "Seaking",
+    "dex_number": 119,
+    "dex_order": 119,
+    "slot_type": "base"
+  },
+  {
+    "id": "staryu",
+    "name": "Staryu",
+    "dex_number": 120,
+    "dex_order": 120,
+    "slot_type": "base"
+  },
+  {
+    "id": "starmie",
+    "name": "Starmie",
+    "dex_number": 121,
+    "dex_order": 121,
+    "slot_type": "base"
+  },
+  {
+    "id": "mr-mime",
+    "name": "Mr Mime",
+    "dex_number": 122,
+    "dex_order": 122,
+    "slot_type": "base"
+  },
+  {
+    "id": "scyther",
+    "name": "Scyther",
+    "dex_number": 123,
+    "dex_order": 123,
+    "slot_type": "base"
+  },
+  {
+    "id": "jynx",
+    "name": "Jynx",
+    "dex_number": 124,
+    "dex_order": 124,
+    "slot_type": "base"
+  },
+  {
+    "id": "electabuzz",
+    "name": "Electabuzz",
+    "dex_number": 125,
+    "dex_order": 125,
+    "slot_type": "base"
+  },
+  {
+    "id": "magmar",
+    "name": "Magmar",
+    "dex_number": 126,
+    "dex_order": 126,
+    "slot_type": "base"
+  },
+  {
+    "id": "pinsir",
+    "name": "Pinsir",
+    "dex_number": 127,
+    "dex_order": 127,
+    "slot_type": "base"
+  },
+  {
+    "id": "tauros",
+    "name": "Tauros",
+    "dex_number": 128,
+    "dex_order": 128,
+    "slot_type": "base"
+  },
+  {
+    "id": "magikarp",
+    "name": "Magikarp",
+    "dex_number": 129,
+    "dex_order": 129,
+    "slot_type": "base"
+  },
+  {
+    "id": "gyarados",
+    "name": "Gyarados",
+    "dex_number": 130,
+    "dex_order": 130,
+    "slot_type": "base"
+  },
+  {
+    "id": "lapras",
+    "name": "Lapras",
+    "dex_number": 131,
+    "dex_order": 131,
+    "slot_type": "base"
+  },
+  {
+    "id": "ditto",
+    "name": "Ditto",
+    "dex_number": 132,
+    "dex_order": 132,
+    "slot_type": "base"
+  },
+  {
+    "id": "eevee",
+    "name": "Eevee",
+    "dex_number": 133,
+    "dex_order": 133,
+    "slot_type": "base"
+  },
+  {
+    "id": "vaporeon",
+    "name": "Vaporeon",
+    "dex_number": 134,
+    "dex_order": 134,
+    "slot_type": "base"
+  },
+  {
+    "id": "jolteon",
+    "name": "Jolteon",
+    "dex_number": 135,
+    "dex_order": 135,
+    "slot_type": "base"
+  },
+  {
+    "id": "flareon",
+    "name": "Flareon",
+    "dex_number": 136,
+    "dex_order": 136,
+    "slot_type": "base"
+  },
+  {
+    "id": "porygon",
+    "name": "Porygon",
+    "dex_number": 137,
+    "dex_order": 137,
+    "slot_type": "base"
+  },
+  {
+    "id": "omanyte",
+    "name": "Omanyte",
+    "dex_number": 138,
+    "dex_order": 138,
+    "slot_type": "base"
+  },
+  {
+    "id": "omastar",
+    "name": "Omastar",
+    "dex_number": 139,
+    "dex_order": 139,
+    "slot_type": "base"
+  },
+  {
+    "id": "kabuto",
+    "name": "Kabuto",
+    "dex_number": 140,
+    "dex_order": 140,
+    "slot_type": "base"
+  },
+  {
+    "id": "kabutops",
+    "name": "Kabutops",
+    "dex_number": 141,
+    "dex_order": 141,
+    "slot_type": "base"
+  },
+  {
+    "id": "aerodactyl",
+    "name": "Aerodactyl",
+    "dex_number": 142,
+    "dex_order": 142,
+    "slot_type": "base"
+  },
+  {
+    "id": "snorlax",
+    "name": "Snorlax",
+    "dex_number": 143,
+    "dex_order": 143,
+    "slot_type": "base"
+  },
+  {
+    "id": "articuno",
+    "name": "Articuno",
+    "dex_number": 144,
+    "dex_order": 144,
+    "slot_type": "base"
+  },
+  {
+    "id": "zapdos",
+    "name": "Zapdos",
+    "dex_number": 145,
+    "dex_order": 145,
+    "slot_type": "base"
+  },
+  {
+    "id": "moltres",
+    "name": "Moltres",
+    "dex_number": 146,
+    "dex_order": 146,
+    "slot_type": "base"
+  },
+  {
+    "id": "dratini",
+    "name": "Dratini",
+    "dex_number": 147,
+    "dex_order": 147,
+    "slot_type": "base"
+  },
+  {
+    "id": "dragonair",
+    "name": "Dragonair",
+    "dex_number": 148,
+    "dex_order": 148,
+    "slot_type": "base"
+  },
+  {
+    "id": "dragonite",
+    "name": "Dragonite",
+    "dex_number": 149,
+    "dex_order": 149,
+    "slot_type": "base"
+  },
+  {
+    "id": "mewtwo",
+    "name": "Mewtwo",
+    "dex_number": 150,
+    "dex_order": 150,
+    "slot_type": "base"
+  },
+  {
+    "id": "mew",
+    "name": "Mew",
+    "dex_number": 151,
+    "dex_order": 151,
+    "slot_type": "base"
+  },
+  {
+    "id": "chikorita",
+    "name": "Chikorita",
+    "dex_number": 152,
+    "dex_order": 152,
+    "slot_type": "base"
+  },
+  {
+    "id": "bayleef",
+    "name": "Bayleef",
+    "dex_number": 153,
+    "dex_order": 153,
+    "slot_type": "base"
+  },
+  {
+    "id": "meganium",
+    "name": "Meganium",
+    "dex_number": 154,
+    "dex_order": 154,
+    "slot_type": "base"
+  },
+  {
+    "id": "cyndaquil",
+    "name": "Cyndaquil",
+    "dex_number": 155,
+    "dex_order": 155,
+    "slot_type": "base"
+  },
+  {
+    "id": "quilava",
+    "name": "Quilava",
+    "dex_number": 156,
+    "dex_order": 156,
+    "slot_type": "base"
+  },
+  {
+    "id": "typhlosion",
+    "name": "Typhlosion",
+    "dex_number": 157,
+    "dex_order": 157,
+    "slot_type": "base"
+  },
+  {
+    "id": "totodile",
+    "name": "Totodile",
+    "dex_number": 158,
+    "dex_order": 158,
+    "slot_type": "base"
+  },
+  {
+    "id": "croconaw",
+    "name": "Croconaw",
+    "dex_number": 159,
+    "dex_order": 159,
+    "slot_type": "base"
+  },
+  {
+    "id": "feraligatr",
+    "name": "Feraligatr",
+    "dex_number": 160,
+    "dex_order": 160,
+    "slot_type": "base"
+  },
+  {
+    "id": "sentret",
+    "name": "Sentret",
+    "dex_number": 161,
+    "dex_order": 161,
+    "slot_type": "base"
+  },
+  {
+    "id": "furret",
+    "name": "Furret",
+    "dex_number": 162,
+    "dex_order": 162,
+    "slot_type": "base"
+  },
+  {
+    "id": "hoothoot",
+    "name": "Hoothoot",
+    "dex_number": 163,
+    "dex_order": 163,
+    "slot_type": "base"
+  },
+  {
+    "id": "noctowl",
+    "name": "Noctowl",
+    "dex_number": 164,
+    "dex_order": 164,
+    "slot_type": "base"
+  },
+  {
+    "id": "ledyba",
+    "name": "Ledyba",
+    "dex_number": 165,
+    "dex_order": 165,
+    "slot_type": "base"
+  },
+  {
+    "id": "ledian",
+    "name": "Ledian",
+    "dex_number": 166,
+    "dex_order": 166,
+    "slot_type": "base"
+  },
+  {
+    "id": "spinarak",
+    "name": "Spinarak",
+    "dex_number": 167,
+    "dex_order": 167,
+    "slot_type": "base"
+  },
+  {
+    "id": "ariados",
+    "name": "Ariados",
+    "dex_number": 168,
+    "dex_order": 168,
+    "slot_type": "base"
+  },
+  {
+    "id": "crobat",
+    "name": "Crobat",
+    "dex_number": 169,
+    "dex_order": 169,
+    "slot_type": "base"
+  },
+  {
+    "id": "chinchou",
+    "name": "Chinchou",
+    "dex_number": 170,
+    "dex_order": 170,
+    "slot_type": "base"
+  },
+  {
+    "id": "lanturn",
+    "name": "Lanturn",
+    "dex_number": 171,
+    "dex_order": 171,
+    "slot_type": "base"
+  },
+  {
+    "id": "pichu",
+    "name": "Pichu",
+    "dex_number": 172,
+    "dex_order": 172,
+    "slot_type": "base"
+  },
+  {
+    "id": "cleffa",
+    "name": "Cleffa",
+    "dex_number": 173,
+    "dex_order": 173,
+    "slot_type": "base"
+  },
+  {
+    "id": "igglybuff",
+    "name": "Igglybuff",
+    "dex_number": 174,
+    "dex_order": 174,
+    "slot_type": "base"
+  },
+  {
+    "id": "togepi",
+    "name": "Togepi",
+    "dex_number": 175,
+    "dex_order": 175,
+    "slot_type": "base"
+  },
+  {
+    "id": "togetic",
+    "name": "Togetic",
+    "dex_number": 176,
+    "dex_order": 176,
+    "slot_type": "base"
+  },
+  {
+    "id": "natu",
+    "name": "Natu",
+    "dex_number": 177,
+    "dex_order": 177,
+    "slot_type": "base"
+  },
+  {
+    "id": "xatu",
+    "name": "Xatu",
+    "dex_number": 178,
+    "dex_order": 178,
+    "slot_type": "base"
+  },
+  {
+    "id": "mareep",
+    "name": "Mareep",
+    "dex_number": 179,
+    "dex_order": 179,
+    "slot_type": "base"
+  },
+  {
+    "id": "flaaffy",
+    "name": "Flaaffy",
+    "dex_number": 180,
+    "dex_order": 180,
+    "slot_type": "base"
+  },
+  {
+    "id": "ampharos",
+    "name": "Ampharos",
+    "dex_number": 181,
+    "dex_order": 181,
+    "slot_type": "base"
+  },
+  {
+    "id": "bellossom",
+    "name": "Bellossom",
+    "dex_number": 182,
+    "dex_order": 182,
+    "slot_type": "base"
+  },
+  {
+    "id": "marill",
+    "name": "Marill",
+    "dex_number": 183,
+    "dex_order": 183,
+    "slot_type": "base"
+  },
+  {
+    "id": "azumarill",
+    "name": "Azumarill",
+    "dex_number": 184,
+    "dex_order": 184,
+    "slot_type": "base"
+  },
+  {
+    "id": "sudowoodo",
+    "name": "Sudowoodo",
+    "dex_number": 185,
+    "dex_order": 185,
+    "slot_type": "base"
+  },
+  {
+    "id": "politoed",
+    "name": "Politoed",
+    "dex_number": 186,
+    "dex_order": 186,
+    "slot_type": "base"
+  },
+  {
+    "id": "hoppip",
+    "name": "Hoppip",
+    "dex_number": 187,
+    "dex_order": 187,
+    "slot_type": "base"
+  },
+  {
+    "id": "skiploom",
+    "name": "Skiploom",
+    "dex_number": 188,
+    "dex_order": 188,
+    "slot_type": "base"
+  },
+  {
+    "id": "jumpluff",
+    "name": "Jumpluff",
+    "dex_number": 189,
+    "dex_order": 189,
+    "slot_type": "base"
+  },
+  {
+    "id": "aipom",
+    "name": "Aipom",
+    "dex_number": 190,
+    "dex_order": 190,
+    "slot_type": "base"
+  },
+  {
+    "id": "sunkern",
+    "name": "Sunkern",
+    "dex_number": 191,
+    "dex_order": 191,
+    "slot_type": "base"
+  },
+  {
+    "id": "sunflora",
+    "name": "Sunflora",
+    "dex_number": 192,
+    "dex_order": 192,
+    "slot_type": "base"
+  },
+  {
+    "id": "yanma",
+    "name": "Yanma",
+    "dex_number": 193,
+    "dex_order": 193,
+    "slot_type": "base"
+  },
+  {
+    "id": "wooper",
+    "name": "Wooper",
+    "dex_number": 194,
+    "dex_order": 194,
+    "slot_type": "base"
+  },
+  {
+    "id": "quagsire",
+    "name": "Quagsire",
+    "dex_number": 195,
+    "dex_order": 195,
+    "slot_type": "base"
+  },
+  {
+    "id": "espeon",
+    "name": "Espeon",
+    "dex_number": 196,
+    "dex_order": 196,
+    "slot_type": "base"
+  },
+  {
+    "id": "umbreon",
+    "name": "Umbreon",
+    "dex_number": 197,
+    "dex_order": 197,
+    "slot_type": "base"
+  },
+  {
+    "id": "murkrow",
+    "name": "Murkrow",
+    "dex_number": 198,
+    "dex_order": 198,
+    "slot_type": "base"
+  },
+  {
+    "id": "slowking",
+    "name": "Slowking",
+    "dex_number": 199,
+    "dex_order": 199,
+    "slot_type": "base"
+  },
+  {
+    "id": "misdreavus",
+    "name": "Misdreavus",
+    "dex_number": 200,
+    "dex_order": 200,
+    "slot_type": "base"
+  },
+  {
+    "id": "unown",
+    "name": "Unown",
+    "dex_number": 201,
+    "dex_order": 201,
+    "slot_type": "base"
+  },
+  {
+    "id": "wobbuffet",
+    "name": "Wobbuffet",
+    "dex_number": 202,
+    "dex_order": 202,
+    "slot_type": "base"
+  },
+  {
+    "id": "girafarig",
+    "name": "Girafarig",
+    "dex_number": 203,
+    "dex_order": 203,
+    "slot_type": "base"
+  },
+  {
+    "id": "pineco",
+    "name": "Pineco",
+    "dex_number": 204,
+    "dex_order": 204,
+    "slot_type": "base"
+  },
+  {
+    "id": "forretress",
+    "name": "Forretress",
+    "dex_number": 205,
+    "dex_order": 205,
+    "slot_type": "base"
+  },
+  {
+    "id": "dunsparce",
+    "name": "Dunsparce",
+    "dex_number": 206,
+    "dex_order": 206,
+    "slot_type": "base"
+  },
+  {
+    "id": "gligar",
+    "name": "Gligar",
+    "dex_number": 207,
+    "dex_order": 207,
+    "slot_type": "base"
+  },
+  {
+    "id": "steelix",
+    "name": "Steelix",
+    "dex_number": 208,
+    "dex_order": 208,
+    "slot_type": "base"
+  },
+  {
+    "id": "snubbull",
+    "name": "Snubbull",
+    "dex_number": 209,
+    "dex_order": 209,
+    "slot_type": "base"
+  },
+  {
+    "id": "granbull",
+    "name": "Granbull",
+    "dex_number": 210,
+    "dex_order": 210,
+    "slot_type": "base"
+  },
+  {
+    "id": "qwilfish",
+    "name": "Qwilfish",
+    "dex_number": 211,
+    "dex_order": 211,
+    "slot_type": "base"
+  },
+  {
+    "id": "scizor",
+    "name": "Scizor",
+    "dex_number": 212,
+    "dex_order": 212,
+    "slot_type": "base"
+  },
+  {
+    "id": "shuckle",
+    "name": "Shuckle",
+    "dex_number": 213,
+    "dex_order": 213,
+    "slot_type": "base"
+  },
+  {
+    "id": "heracross",
+    "name": "Heracross",
+    "dex_number": 214,
+    "dex_order": 214,
+    "slot_type": "base"
+  },
+  {
+    "id": "sneasel",
+    "name": "Sneasel",
+    "dex_number": 215,
+    "dex_order": 215,
+    "slot_type": "base"
+  },
+  {
+    "id": "teddiursa",
+    "name": "Teddiursa",
+    "dex_number": 216,
+    "dex_order": 216,
+    "slot_type": "base"
+  },
+  {
+    "id": "ursaring",
+    "name": "Ursaring",
+    "dex_number": 217,
+    "dex_order": 217,
+    "slot_type": "base"
+  },
+  {
+    "id": "slugma",
+    "name": "Slugma",
+    "dex_number": 218,
+    "dex_order": 218,
+    "slot_type": "base"
+  },
+  {
+    "id": "magcargo",
+    "name": "Magcargo",
+    "dex_number": 219,
+    "dex_order": 219,
+    "slot_type": "base"
+  },
+  {
+    "id": "swinub",
+    "name": "Swinub",
+    "dex_number": 220,
+    "dex_order": 220,
+    "slot_type": "base"
+  },
+  {
+    "id": "piloswine",
+    "name": "Piloswine",
+    "dex_number": 221,
+    "dex_order": 221,
+    "slot_type": "base"
+  },
+  {
+    "id": "corsola",
+    "name": "Corsola",
+    "dex_number": 222,
+    "dex_order": 222,
+    "slot_type": "base"
+  },
+  {
+    "id": "remoraid",
+    "name": "Remoraid",
+    "dex_number": 223,
+    "dex_order": 223,
+    "slot_type": "base"
+  },
+  {
+    "id": "octillery",
+    "name": "Octillery",
+    "dex_number": 224,
+    "dex_order": 224,
+    "slot_type": "base"
+  },
+  {
+    "id": "delibird",
+    "name": "Delibird",
+    "dex_number": 225,
+    "dex_order": 225,
+    "slot_type": "base"
+  },
+  {
+    "id": "mantine",
+    "name": "Mantine",
+    "dex_number": 226,
+    "dex_order": 226,
+    "slot_type": "base"
+  },
+  {
+    "id": "skarmory",
+    "name": "Skarmory",
+    "dex_number": 227,
+    "dex_order": 227,
+    "slot_type": "base"
+  },
+  {
+    "id": "houndour",
+    "name": "Houndour",
+    "dex_number": 228,
+    "dex_order": 228,
+    "slot_type": "base"
+  },
+  {
+    "id": "houndoom",
+    "name": "Houndoom",
+    "dex_number": 229,
+    "dex_order": 229,
+    "slot_type": "base"
+  },
+  {
+    "id": "kingdra",
+    "name": "Kingdra",
+    "dex_number": 230,
+    "dex_order": 230,
+    "slot_type": "base"
+  },
+  {
+    "id": "phanpy",
+    "name": "Phanpy",
+    "dex_number": 231,
+    "dex_order": 231,
+    "slot_type": "base"
+  },
+  {
+    "id": "donphan",
+    "name": "Donphan",
+    "dex_number": 232,
+    "dex_order": 232,
+    "slot_type": "base"
+  },
+  {
+    "id": "porygon2",
+    "name": "Porygon2",
+    "dex_number": 233,
+    "dex_order": 233,
+    "slot_type": "base"
+  },
+  {
+    "id": "stantler",
+    "name": "Stantler",
+    "dex_number": 234,
+    "dex_order": 234,
+    "slot_type": "base"
+  },
+  {
+    "id": "smeargle",
+    "name": "Smeargle",
+    "dex_number": 235,
+    "dex_order": 235,
+    "slot_type": "base"
+  },
+  {
+    "id": "tyrogue",
+    "name": "Tyrogue",
+    "dex_number": 236,
+    "dex_order": 236,
+    "slot_type": "base"
+  },
+  {
+    "id": "hitmontop",
+    "name": "Hitmontop",
+    "dex_number": 237,
+    "dex_order": 237,
+    "slot_type": "base"
+  },
+  {
+    "id": "smoochum",
+    "name": "Smoochum",
+    "dex_number": 238,
+    "dex_order": 238,
+    "slot_type": "base"
+  },
+  {
+    "id": "elekid",
+    "name": "Elekid",
+    "dex_number": 239,
+    "dex_order": 239,
+    "slot_type": "base"
+  },
+  {
+    "id": "magby",
+    "name": "Magby",
+    "dex_number": 240,
+    "dex_order": 240,
+    "slot_type": "base"
+  },
+  {
+    "id": "miltank",
+    "name": "Miltank",
+    "dex_number": 241,
+    "dex_order": 241,
+    "slot_type": "base"
+  },
+  {
+    "id": "blissey",
+    "name": "Blissey",
+    "dex_number": 242,
+    "dex_order": 242,
+    "slot_type": "base"
+  },
+  {
+    "id": "raikou",
+    "name": "Raikou",
+    "dex_number": 243,
+    "dex_order": 243,
+    "slot_type": "base"
+  },
+  {
+    "id": "entei",
+    "name": "Entei",
+    "dex_number": 244,
+    "dex_order": 244,
+    "slot_type": "base"
+  },
+  {
+    "id": "suicune",
+    "name": "Suicune",
+    "dex_number": 245,
+    "dex_order": 245,
+    "slot_type": "base"
+  },
+  {
+    "id": "larvitar",
+    "name": "Larvitar",
+    "dex_number": 246,
+    "dex_order": 246,
+    "slot_type": "base"
+  },
+  {
+    "id": "pupitar",
+    "name": "Pupitar",
+    "dex_number": 247,
+    "dex_order": 247,
+    "slot_type": "base"
+  },
+  {
+    "id": "tyranitar",
+    "name": "Tyranitar",
+    "dex_number": 248,
+    "dex_order": 248,
+    "slot_type": "base"
+  },
+  {
+    "id": "lugia",
+    "name": "Lugia",
+    "dex_number": 249,
+    "dex_order": 249,
+    "slot_type": "base"
+  },
+  {
+    "id": "ho-oh",
+    "name": "Ho Oh",
+    "dex_number": 250,
+    "dex_order": 250,
+    "slot_type": "base"
+  },
+  {
+    "id": "celebi",
+    "name": "Celebi",
+    "dex_number": 251,
+    "dex_order": 251,
+    "slot_type": "base"
+  },
+  {
+    "id": "treecko",
+    "name": "Treecko",
+    "dex_number": 252,
+    "dex_order": 252,
+    "slot_type": "base"
+  },
+  {
+    "id": "grovyle",
+    "name": "Grovyle",
+    "dex_number": 253,
+    "dex_order": 253,
+    "slot_type": "base"
+  },
+  {
+    "id": "sceptile",
+    "name": "Sceptile",
+    "dex_number": 254,
+    "dex_order": 254,
+    "slot_type": "base"
+  },
+  {
+    "id": "torchic",
+    "name": "Torchic",
+    "dex_number": 255,
+    "dex_order": 255,
+    "slot_type": "base"
+  },
+  {
+    "id": "combusken",
+    "name": "Combusken",
+    "dex_number": 256,
+    "dex_order": 256,
+    "slot_type": "base"
+  },
+  {
+    "id": "blaziken",
+    "name": "Blaziken",
+    "dex_number": 257,
+    "dex_order": 257,
+    "slot_type": "base"
+  },
+  {
+    "id": "mudkip",
+    "name": "Mudkip",
+    "dex_number": 258,
+    "dex_order": 258,
+    "slot_type": "base"
+  },
+  {
+    "id": "marshtomp",
+    "name": "Marshtomp",
+    "dex_number": 259,
+    "dex_order": 259,
+    "slot_type": "base"
+  },
+  {
+    "id": "swampert",
+    "name": "Swampert",
+    "dex_number": 260,
+    "dex_order": 260,
+    "slot_type": "base"
+  },
+  {
+    "id": "poochyena",
+    "name": "Poochyena",
+    "dex_number": 261,
+    "dex_order": 261,
+    "slot_type": "base"
+  },
+  {
+    "id": "mightyena",
+    "name": "Mightyena",
+    "dex_number": 262,
+    "dex_order": 262,
+    "slot_type": "base"
+  },
+  {
+    "id": "zigzagoon",
+    "name": "Zigzagoon",
+    "dex_number": 263,
+    "dex_order": 263,
+    "slot_type": "base"
+  },
+  {
+    "id": "linoone",
+    "name": "Linoone",
+    "dex_number": 264,
+    "dex_order": 264,
+    "slot_type": "base"
+  },
+  {
+    "id": "wurmple",
+    "name": "Wurmple",
+    "dex_number": 265,
+    "dex_order": 265,
+    "slot_type": "base"
+  },
+  {
+    "id": "silcoon",
+    "name": "Silcoon",
+    "dex_number": 266,
+    "dex_order": 266,
+    "slot_type": "base"
+  },
+  {
+    "id": "beautifly",
+    "name": "Beautifly",
+    "dex_number": 267,
+    "dex_order": 267,
+    "slot_type": "base"
+  },
+  {
+    "id": "cascoon",
+    "name": "Cascoon",
+    "dex_number": 268,
+    "dex_order": 268,
+    "slot_type": "base"
+  },
+  {
+    "id": "dustox",
+    "name": "Dustox",
+    "dex_number": 269,
+    "dex_order": 269,
+    "slot_type": "base"
+  },
+  {
+    "id": "lotad",
+    "name": "Lotad",
+    "dex_number": 270,
+    "dex_order": 270,
+    "slot_type": "base"
+  },
+  {
+    "id": "lombre",
+    "name": "Lombre",
+    "dex_number": 271,
+    "dex_order": 271,
+    "slot_type": "base"
+  },
+  {
+    "id": "ludicolo",
+    "name": "Ludicolo",
+    "dex_number": 272,
+    "dex_order": 272,
+    "slot_type": "base"
+  },
+  {
+    "id": "seedot",
+    "name": "Seedot",
+    "dex_number": 273,
+    "dex_order": 273,
+    "slot_type": "base"
+  },
+  {
+    "id": "nuzleaf",
+    "name": "Nuzleaf",
+    "dex_number": 274,
+    "dex_order": 274,
+    "slot_type": "base"
+  },
+  {
+    "id": "shiftry",
+    "name": "Shiftry",
+    "dex_number": 275,
+    "dex_order": 275,
+    "slot_type": "base"
+  },
+  {
+    "id": "taillow",
+    "name": "Taillow",
+    "dex_number": 276,
+    "dex_order": 276,
+    "slot_type": "base"
+  },
+  {
+    "id": "swellow",
+    "name": "Swellow",
+    "dex_number": 277,
+    "dex_order": 277,
+    "slot_type": "base"
+  },
+  {
+    "id": "wingull",
+    "name": "Wingull",
+    "dex_number": 278,
+    "dex_order": 278,
+    "slot_type": "base"
+  },
+  {
+    "id": "pelipper",
+    "name": "Pelipper",
+    "dex_number": 279,
+    "dex_order": 279,
+    "slot_type": "base"
+  },
+  {
+    "id": "ralts",
+    "name": "Ralts",
+    "dex_number": 280,
+    "dex_order": 280,
+    "slot_type": "base"
+  },
+  {
+    "id": "kirlia",
+    "name": "Kirlia",
+    "dex_number": 281,
+    "dex_order": 281,
+    "slot_type": "base"
+  },
+  {
+    "id": "gardevoir",
+    "name": "Gardevoir",
+    "dex_number": 282,
+    "dex_order": 282,
+    "slot_type": "base"
+  },
+  {
+    "id": "surskit",
+    "name": "Surskit",
+    "dex_number": 283,
+    "dex_order": 283,
+    "slot_type": "base"
+  },
+  {
+    "id": "masquerain",
+    "name": "Masquerain",
+    "dex_number": 284,
+    "dex_order": 284,
+    "slot_type": "base"
+  },
+  {
+    "id": "shroomish",
+    "name": "Shroomish",
+    "dex_number": 285,
+    "dex_order": 285,
+    "slot_type": "base"
+  },
+  {
+    "id": "breloom",
+    "name": "Breloom",
+    "dex_number": 286,
+    "dex_order": 286,
+    "slot_type": "base"
+  },
+  {
+    "id": "slakoth",
+    "name": "Slakoth",
+    "dex_number": 287,
+    "dex_order": 287,
+    "slot_type": "base"
+  },
+  {
+    "id": "vigoroth",
+    "name": "Vigoroth",
+    "dex_number": 288,
+    "dex_order": 288,
+    "slot_type": "base"
+  },
+  {
+    "id": "slaking",
+    "name": "Slaking",
+    "dex_number": 289,
+    "dex_order": 289,
+    "slot_type": "base"
+  },
+  {
+    "id": "nincada",
+    "name": "Nincada",
+    "dex_number": 290,
+    "dex_order": 290,
+    "slot_type": "base"
+  },
+  {
+    "id": "ninjask",
+    "name": "Ninjask",
+    "dex_number": 291,
+    "dex_order": 291,
+    "slot_type": "base"
+  },
+  {
+    "id": "shedinja",
+    "name": "Shedinja",
+    "dex_number": 292,
+    "dex_order": 292,
+    "slot_type": "base"
+  },
+  {
+    "id": "whismur",
+    "name": "Whismur",
+    "dex_number": 293,
+    "dex_order": 293,
+    "slot_type": "base"
+  },
+  {
+    "id": "loudred",
+    "name": "Loudred",
+    "dex_number": 294,
+    "dex_order": 294,
+    "slot_type": "base"
+  },
+  {
+    "id": "exploud",
+    "name": "Exploud",
+    "dex_number": 295,
+    "dex_order": 295,
+    "slot_type": "base"
+  },
+  {
+    "id": "makuhita",
+    "name": "Makuhita",
+    "dex_number": 296,
+    "dex_order": 296,
+    "slot_type": "base"
+  },
+  {
+    "id": "hariyama",
+    "name": "Hariyama",
+    "dex_number": 297,
+    "dex_order": 297,
+    "slot_type": "base"
+  },
+  {
+    "id": "azurill",
+    "name": "Azurill",
+    "dex_number": 298,
+    "dex_order": 298,
+    "slot_type": "base"
+  },
+  {
+    "id": "nosepass",
+    "name": "Nosepass",
+    "dex_number": 299,
+    "dex_order": 299,
+    "slot_type": "base"
+  },
+  {
+    "id": "skitty",
+    "name": "Skitty",
+    "dex_number": 300,
+    "dex_order": 300,
+    "slot_type": "base"
+  },
+  {
+    "id": "delcatty",
+    "name": "Delcatty",
+    "dex_number": 301,
+    "dex_order": 301,
+    "slot_type": "base"
+  },
+  {
+    "id": "sableye",
+    "name": "Sableye",
+    "dex_number": 302,
+    "dex_order": 302,
+    "slot_type": "base"
+  },
+  {
+    "id": "mawile",
+    "name": "Mawile",
+    "dex_number": 303,
+    "dex_order": 303,
+    "slot_type": "base"
+  },
+  {
+    "id": "aron",
+    "name": "Aron",
+    "dex_number": 304,
+    "dex_order": 304,
+    "slot_type": "base"
+  },
+  {
+    "id": "lairon",
+    "name": "Lairon",
+    "dex_number": 305,
+    "dex_order": 305,
+    "slot_type": "base"
+  },
+  {
+    "id": "aggron",
+    "name": "Aggron",
+    "dex_number": 306,
+    "dex_order": 306,
+    "slot_type": "base"
+  },
+  {
+    "id": "meditite",
+    "name": "Meditite",
+    "dex_number": 307,
+    "dex_order": 307,
+    "slot_type": "base"
+  },
+  {
+    "id": "medicham",
+    "name": "Medicham",
+    "dex_number": 308,
+    "dex_order": 308,
+    "slot_type": "base"
+  },
+  {
+    "id": "electrike",
+    "name": "Electrike",
+    "dex_number": 309,
+    "dex_order": 309,
+    "slot_type": "base"
+  },
+  {
+    "id": "manectric",
+    "name": "Manectric",
+    "dex_number": 310,
+    "dex_order": 310,
+    "slot_type": "base"
+  },
+  {
+    "id": "plusle",
+    "name": "Plusle",
+    "dex_number": 311,
+    "dex_order": 311,
+    "slot_type": "base"
+  },
+  {
+    "id": "minun",
+    "name": "Minun",
+    "dex_number": 312,
+    "dex_order": 312,
+    "slot_type": "base"
+  },
+  {
+    "id": "volbeat",
+    "name": "Volbeat",
+    "dex_number": 313,
+    "dex_order": 313,
+    "slot_type": "base"
+  },
+  {
+    "id": "illumise",
+    "name": "Illumise",
+    "dex_number": 314,
+    "dex_order": 314,
+    "slot_type": "base"
+  },
+  {
+    "id": "roselia",
+    "name": "Roselia",
+    "dex_number": 315,
+    "dex_order": 315,
+    "slot_type": "base"
+  },
+  {
+    "id": "gulpin",
+    "name": "Gulpin",
+    "dex_number": 316,
+    "dex_order": 316,
+    "slot_type": "base"
+  },
+  {
+    "id": "swalot",
+    "name": "Swalot",
+    "dex_number": 317,
+    "dex_order": 317,
+    "slot_type": "base"
+  },
+  {
+    "id": "carvanha",
+    "name": "Carvanha",
+    "dex_number": 318,
+    "dex_order": 318,
+    "slot_type": "base"
+  },
+  {
+    "id": "sharpedo",
+    "name": "Sharpedo",
+    "dex_number": 319,
+    "dex_order": 319,
+    "slot_type": "base"
+  },
+  {
+    "id": "wailmer",
+    "name": "Wailmer",
+    "dex_number": 320,
+    "dex_order": 320,
+    "slot_type": "base"
+  },
+  {
+    "id": "wailord",
+    "name": "Wailord",
+    "dex_number": 321,
+    "dex_order": 321,
+    "slot_type": "base"
+  },
+  {
+    "id": "numel",
+    "name": "Numel",
+    "dex_number": 322,
+    "dex_order": 322,
+    "slot_type": "base"
+  },
+  {
+    "id": "camerupt",
+    "name": "Camerupt",
+    "dex_number": 323,
+    "dex_order": 323,
+    "slot_type": "base"
+  },
+  {
+    "id": "torkoal",
+    "name": "Torkoal",
+    "dex_number": 324,
+    "dex_order": 324,
+    "slot_type": "base"
+  },
+  {
+    "id": "spoink",
+    "name": "Spoink",
+    "dex_number": 325,
+    "dex_order": 325,
+    "slot_type": "base"
+  },
+  {
+    "id": "grumpig",
+    "name": "Grumpig",
+    "dex_number": 326,
+    "dex_order": 326,
+    "slot_type": "base"
+  },
+  {
+    "id": "spinda",
+    "name": "Spinda",
+    "dex_number": 327,
+    "dex_order": 327,
+    "slot_type": "base"
+  },
+  {
+    "id": "trapinch",
+    "name": "Trapinch",
+    "dex_number": 328,
+    "dex_order": 328,
+    "slot_type": "base"
+  },
+  {
+    "id": "vibrava",
+    "name": "Vibrava",
+    "dex_number": 329,
+    "dex_order": 329,
+    "slot_type": "base"
+  },
+  {
+    "id": "flygon",
+    "name": "Flygon",
+    "dex_number": 330,
+    "dex_order": 330,
+    "slot_type": "base"
+  },
+  {
+    "id": "cacnea",
+    "name": "Cacnea",
+    "dex_number": 331,
+    "dex_order": 331,
+    "slot_type": "base"
+  },
+  {
+    "id": "cacturne",
+    "name": "Cacturne",
+    "dex_number": 332,
+    "dex_order": 332,
+    "slot_type": "base"
+  },
+  {
+    "id": "swablu",
+    "name": "Swablu",
+    "dex_number": 333,
+    "dex_order": 333,
+    "slot_type": "base"
+  },
+  {
+    "id": "altaria",
+    "name": "Altaria",
+    "dex_number": 334,
+    "dex_order": 334,
+    "slot_type": "base"
+  },
+  {
+    "id": "zangoose",
+    "name": "Zangoose",
+    "dex_number": 335,
+    "dex_order": 335,
+    "slot_type": "base"
+  },
+  {
+    "id": "seviper",
+    "name": "Seviper",
+    "dex_number": 336,
+    "dex_order": 336,
+    "slot_type": "base"
+  },
+  {
+    "id": "lunatone",
+    "name": "Lunatone",
+    "dex_number": 337,
+    "dex_order": 337,
+    "slot_type": "base"
+  },
+  {
+    "id": "solrock",
+    "name": "Solrock",
+    "dex_number": 338,
+    "dex_order": 338,
+    "slot_type": "base"
+  },
+  {
+    "id": "barboach",
+    "name": "Barboach",
+    "dex_number": 339,
+    "dex_order": 339,
+    "slot_type": "base"
+  },
+  {
+    "id": "whiscash",
+    "name": "Whiscash",
+    "dex_number": 340,
+    "dex_order": 340,
+    "slot_type": "base"
+  },
+  {
+    "id": "corphish",
+    "name": "Corphish",
+    "dex_number": 341,
+    "dex_order": 341,
+    "slot_type": "base"
+  },
+  {
+    "id": "crawdaunt",
+    "name": "Crawdaunt",
+    "dex_number": 342,
+    "dex_order": 342,
+    "slot_type": "base"
+  },
+  {
+    "id": "baltoy",
+    "name": "Baltoy",
+    "dex_number": 343,
+    "dex_order": 343,
+    "slot_type": "base"
+  },
+  {
+    "id": "claydol",
+    "name": "Claydol",
+    "dex_number": 344,
+    "dex_order": 344,
+    "slot_type": "base"
+  },
+  {
+    "id": "lileep",
+    "name": "Lileep",
+    "dex_number": 345,
+    "dex_order": 345,
+    "slot_type": "base"
+  },
+  {
+    "id": "cradily",
+    "name": "Cradily",
+    "dex_number": 346,
+    "dex_order": 346,
+    "slot_type": "base"
+  },
+  {
+    "id": "anorith",
+    "name": "Anorith",
+    "dex_number": 347,
+    "dex_order": 347,
+    "slot_type": "base"
+  },
+  {
+    "id": "armaldo",
+    "name": "Armaldo",
+    "dex_number": 348,
+    "dex_order": 348,
+    "slot_type": "base"
+  },
+  {
+    "id": "feebas",
+    "name": "Feebas",
+    "dex_number": 349,
+    "dex_order": 349,
+    "slot_type": "base"
+  },
+  {
+    "id": "milotic",
+    "name": "Milotic",
+    "dex_number": 350,
+    "dex_order": 350,
+    "slot_type": "base"
+  },
+  {
+    "id": "castform",
+    "name": "Castform",
+    "dex_number": 351,
+    "dex_order": 351,
+    "slot_type": "base"
+  },
+  {
+    "id": "kecleon",
+    "name": "Kecleon",
+    "dex_number": 352,
+    "dex_order": 352,
+    "slot_type": "base"
+  },
+  {
+    "id": "shuppet",
+    "name": "Shuppet",
+    "dex_number": 353,
+    "dex_order": 353,
+    "slot_type": "base"
+  },
+  {
+    "id": "banette",
+    "name": "Banette",
+    "dex_number": 354,
+    "dex_order": 354,
+    "slot_type": "base"
+  },
+  {
+    "id": "duskull",
+    "name": "Duskull",
+    "dex_number": 355,
+    "dex_order": 355,
+    "slot_type": "base"
+  },
+  {
+    "id": "dusclops",
+    "name": "Dusclops",
+    "dex_number": 356,
+    "dex_order": 356,
+    "slot_type": "base"
+  },
+  {
+    "id": "tropius",
+    "name": "Tropius",
+    "dex_number": 357,
+    "dex_order": 357,
+    "slot_type": "base"
+  },
+  {
+    "id": "chimecho",
+    "name": "Chimecho",
+    "dex_number": 358,
+    "dex_order": 358,
+    "slot_type": "base"
+  },
+  {
+    "id": "absol",
+    "name": "Absol",
+    "dex_number": 359,
+    "dex_order": 359,
+    "slot_type": "base"
+  },
+  {
+    "id": "wynaut",
+    "name": "Wynaut",
+    "dex_number": 360,
+    "dex_order": 360,
+    "slot_type": "base"
+  },
+  {
+    "id": "snorunt",
+    "name": "Snorunt",
+    "dex_number": 361,
+    "dex_order": 361,
+    "slot_type": "base"
+  },
+  {
+    "id": "glalie",
+    "name": "Glalie",
+    "dex_number": 362,
+    "dex_order": 362,
+    "slot_type": "base"
+  },
+  {
+    "id": "spheal",
+    "name": "Spheal",
+    "dex_number": 363,
+    "dex_order": 363,
+    "slot_type": "base"
+  },
+  {
+    "id": "sealeo",
+    "name": "Sealeo",
+    "dex_number": 364,
+    "dex_order": 364,
+    "slot_type": "base"
+  },
+  {
+    "id": "walrein",
+    "name": "Walrein",
+    "dex_number": 365,
+    "dex_order": 365,
+    "slot_type": "base"
+  },
+  {
+    "id": "clamperl",
+    "name": "Clamperl",
+    "dex_number": 366,
+    "dex_order": 366,
+    "slot_type": "base"
+  },
+  {
+    "id": "huntail",
+    "name": "Huntail",
+    "dex_number": 367,
+    "dex_order": 367,
+    "slot_type": "base"
+  },
+  {
+    "id": "gorebyss",
+    "name": "Gorebyss",
+    "dex_number": 368,
+    "dex_order": 368,
+    "slot_type": "base"
+  },
+  {
+    "id": "relicanth",
+    "name": "Relicanth",
+    "dex_number": 369,
+    "dex_order": 369,
+    "slot_type": "base"
+  },
+  {
+    "id": "luvdisc",
+    "name": "Luvdisc",
+    "dex_number": 370,
+    "dex_order": 370,
+    "slot_type": "base"
+  },
+  {
+    "id": "bagon",
+    "name": "Bagon",
+    "dex_number": 371,
+    "dex_order": 371,
+    "slot_type": "base"
+  },
+  {
+    "id": "shelgon",
+    "name": "Shelgon",
+    "dex_number": 372,
+    "dex_order": 372,
+    "slot_type": "base"
+  },
+  {
+    "id": "salamence",
+    "name": "Salamence",
+    "dex_number": 373,
+    "dex_order": 373,
+    "slot_type": "base"
+  },
+  {
+    "id": "beldum",
+    "name": "Beldum",
+    "dex_number": 374,
+    "dex_order": 374,
+    "slot_type": "base"
+  },
+  {
+    "id": "metang",
+    "name": "Metang",
+    "dex_number": 375,
+    "dex_order": 375,
+    "slot_type": "base"
+  },
+  {
+    "id": "metagross",
+    "name": "Metagross",
+    "dex_number": 376,
+    "dex_order": 376,
+    "slot_type": "base"
+  },
+  {
+    "id": "regirock",
+    "name": "Regirock",
+    "dex_number": 377,
+    "dex_order": 377,
+    "slot_type": "base"
+  },
+  {
+    "id": "regice",
+    "name": "Regice",
+    "dex_number": 378,
+    "dex_order": 378,
+    "slot_type": "base"
+  },
+  {
+    "id": "registeel",
+    "name": "Registeel",
+    "dex_number": 379,
+    "dex_order": 379,
+    "slot_type": "base"
+  },
+  {
+    "id": "latias",
+    "name": "Latias",
+    "dex_number": 380,
+    "dex_order": 380,
+    "slot_type": "base"
+  },
+  {
+    "id": "latios",
+    "name": "Latios",
+    "dex_number": 381,
+    "dex_order": 381,
+    "slot_type": "base"
+  },
+  {
+    "id": "kyogre",
+    "name": "Kyogre",
+    "dex_number": 382,
+    "dex_order": 382,
+    "slot_type": "base"
+  },
+  {
+    "id": "groudon",
+    "name": "Groudon",
+    "dex_number": 383,
+    "dex_order": 383,
+    "slot_type": "base"
+  },
+  {
+    "id": "rayquaza",
+    "name": "Rayquaza",
+    "dex_number": 384,
+    "dex_order": 384,
+    "slot_type": "base"
+  },
+  {
+    "id": "jirachi",
+    "name": "Jirachi",
+    "dex_number": 385,
+    "dex_order": 385,
+    "slot_type": "base"
+  },
+  {
+    "id": "deoxys-normal",
+    "name": "Deoxys Normal",
+    "dex_number": 386,
+    "dex_order": 386,
+    "slot_type": "base"
+  },
+  {
+    "id": "turtwig",
+    "name": "Turtwig",
+    "dex_number": 387,
+    "dex_order": 387,
+    "slot_type": "base"
+  },
+  {
+    "id": "grotle",
+    "name": "Grotle",
+    "dex_number": 388,
+    "dex_order": 388,
+    "slot_type": "base"
+  },
+  {
+    "id": "torterra",
+    "name": "Torterra",
+    "dex_number": 389,
+    "dex_order": 389,
+    "slot_type": "base"
+  },
+  {
+    "id": "chimchar",
+    "name": "Chimchar",
+    "dex_number": 390,
+    "dex_order": 390,
+    "slot_type": "base"
+  },
+  {
+    "id": "monferno",
+    "name": "Monferno",
+    "dex_number": 391,
+    "dex_order": 391,
+    "slot_type": "base"
+  },
+  {
+    "id": "infernape",
+    "name": "Infernape",
+    "dex_number": 392,
+    "dex_order": 392,
+    "slot_type": "base"
+  },
+  {
+    "id": "piplup",
+    "name": "Piplup",
+    "dex_number": 393,
+    "dex_order": 393,
+    "slot_type": "base"
+  },
+  {
+    "id": "prinplup",
+    "name": "Prinplup",
+    "dex_number": 394,
+    "dex_order": 394,
+    "slot_type": "base"
+  },
+  {
+    "id": "empoleon",
+    "name": "Empoleon",
+    "dex_number": 395,
+    "dex_order": 395,
+    "slot_type": "base"
+  },
+  {
+    "id": "starly",
+    "name": "Starly",
+    "dex_number": 396,
+    "dex_order": 396,
+    "slot_type": "base"
+  },
+  {
+    "id": "staravia",
+    "name": "Staravia",
+    "dex_number": 397,
+    "dex_order": 397,
+    "slot_type": "base"
+  },
+  {
+    "id": "staraptor",
+    "name": "Staraptor",
+    "dex_number": 398,
+    "dex_order": 398,
+    "slot_type": "base"
+  },
+  {
+    "id": "bidoof",
+    "name": "Bidoof",
+    "dex_number": 399,
+    "dex_order": 399,
+    "slot_type": "base"
+  },
+  {
+    "id": "bibarel",
+    "name": "Bibarel",
+    "dex_number": 400,
+    "dex_order": 400,
+    "slot_type": "base"
+  },
+  {
+    "id": "kricketot",
+    "name": "Kricketot",
+    "dex_number": 401,
+    "dex_order": 401,
+    "slot_type": "base"
+  },
+  {
+    "id": "kricketune",
+    "name": "Kricketune",
+    "dex_number": 402,
+    "dex_order": 402,
+    "slot_type": "base"
+  },
+  {
+    "id": "shinx",
+    "name": "Shinx",
+    "dex_number": 403,
+    "dex_order": 403,
+    "slot_type": "base"
+  },
+  {
+    "id": "luxio",
+    "name": "Luxio",
+    "dex_number": 404,
+    "dex_order": 404,
+    "slot_type": "base"
+  },
+  {
+    "id": "luxray",
+    "name": "Luxray",
+    "dex_number": 405,
+    "dex_order": 405,
+    "slot_type": "base"
+  },
+  {
+    "id": "budew",
+    "name": "Budew",
+    "dex_number": 406,
+    "dex_order": 406,
+    "slot_type": "base"
+  },
+  {
+    "id": "roserade",
+    "name": "Roserade",
+    "dex_number": 407,
+    "dex_order": 407,
+    "slot_type": "base"
+  },
+  {
+    "id": "cranidos",
+    "name": "Cranidos",
+    "dex_number": 408,
+    "dex_order": 408,
+    "slot_type": "base"
+  },
+  {
+    "id": "rampardos",
+    "name": "Rampardos",
+    "dex_number": 409,
+    "dex_order": 409,
+    "slot_type": "base"
+  },
+  {
+    "id": "shieldon",
+    "name": "Shieldon",
+    "dex_number": 410,
+    "dex_order": 410,
+    "slot_type": "base"
+  },
+  {
+    "id": "bastiodon",
+    "name": "Bastiodon",
+    "dex_number": 411,
+    "dex_order": 411,
+    "slot_type": "base"
+  },
+  {
+    "id": "burmy",
+    "name": "Burmy",
+    "dex_number": 412,
+    "dex_order": 412,
+    "slot_type": "base"
+  },
+  {
+    "id": "wormadam-plant",
+    "name": "Wormadam Plant",
+    "dex_number": 413,
+    "dex_order": 413,
+    "slot_type": "base"
+  },
+  {
+    "id": "mothim",
+    "name": "Mothim",
+    "dex_number": 414,
+    "dex_order": 414,
+    "slot_type": "base"
+  },
+  {
+    "id": "combee",
+    "name": "Combee",
+    "dex_number": 415,
+    "dex_order": 415,
+    "slot_type": "base"
+  },
+  {
+    "id": "vespiquen",
+    "name": "Vespiquen",
+    "dex_number": 416,
+    "dex_order": 416,
+    "slot_type": "base"
+  },
+  {
+    "id": "pachirisu",
+    "name": "Pachirisu",
+    "dex_number": 417,
+    "dex_order": 417,
+    "slot_type": "base"
+  },
+  {
+    "id": "buizel",
+    "name": "Buizel",
+    "dex_number": 418,
+    "dex_order": 418,
+    "slot_type": "base"
+  },
+  {
+    "id": "floatzel",
+    "name": "Floatzel",
+    "dex_number": 419,
+    "dex_order": 419,
+    "slot_type": "base"
+  },
+  {
+    "id": "cherubi",
+    "name": "Cherubi",
+    "dex_number": 420,
+    "dex_order": 420,
+    "slot_type": "base"
+  },
+  {
+    "id": "cherrim",
+    "name": "Cherrim",
+    "dex_number": 421,
+    "dex_order": 421,
+    "slot_type": "base"
+  },
+  {
+    "id": "shellos",
+    "name": "Shellos",
+    "dex_number": 422,
+    "dex_order": 422,
+    "slot_type": "base"
+  },
+  {
+    "id": "gastrodon",
+    "name": "Gastrodon",
+    "dex_number": 423,
+    "dex_order": 423,
+    "slot_type": "base"
+  },
+  {
+    "id": "ambipom",
+    "name": "Ambipom",
+    "dex_number": 424,
+    "dex_order": 424,
+    "slot_type": "base"
+  },
+  {
+    "id": "drifloon",
+    "name": "Drifloon",
+    "dex_number": 425,
+    "dex_order": 425,
+    "slot_type": "base"
+  },
+  {
+    "id": "drifblim",
+    "name": "Drifblim",
+    "dex_number": 426,
+    "dex_order": 426,
+    "slot_type": "base"
+  },
+  {
+    "id": "buneary",
+    "name": "Buneary",
+    "dex_number": 427,
+    "dex_order": 427,
+    "slot_type": "base"
+  },
+  {
+    "id": "lopunny",
+    "name": "Lopunny",
+    "dex_number": 428,
+    "dex_order": 428,
+    "slot_type": "base"
+  },
+  {
+    "id": "mismagius",
+    "name": "Mismagius",
+    "dex_number": 429,
+    "dex_order": 429,
+    "slot_type": "base"
+  },
+  {
+    "id": "honchkrow",
+    "name": "Honchkrow",
+    "dex_number": 430,
+    "dex_order": 430,
+    "slot_type": "base"
+  },
+  {
+    "id": "glameow",
+    "name": "Glameow",
+    "dex_number": 431,
+    "dex_order": 431,
+    "slot_type": "base"
+  },
+  {
+    "id": "purugly",
+    "name": "Purugly",
+    "dex_number": 432,
+    "dex_order": 432,
+    "slot_type": "base"
+  },
+  {
+    "id": "chingling",
+    "name": "Chingling",
+    "dex_number": 433,
+    "dex_order": 433,
+    "slot_type": "base"
+  },
+  {
+    "id": "stunky",
+    "name": "Stunky",
+    "dex_number": 434,
+    "dex_order": 434,
+    "slot_type": "base"
+  },
+  {
+    "id": "skuntank",
+    "name": "Skuntank",
+    "dex_number": 435,
+    "dex_order": 435,
+    "slot_type": "base"
+  },
+  {
+    "id": "bronzor",
+    "name": "Bronzor",
+    "dex_number": 436,
+    "dex_order": 436,
+    "slot_type": "base"
+  },
+  {
+    "id": "bronzong",
+    "name": "Bronzong",
+    "dex_number": 437,
+    "dex_order": 437,
+    "slot_type": "base"
+  },
+  {
+    "id": "bonsly",
+    "name": "Bonsly",
+    "dex_number": 438,
+    "dex_order": 438,
+    "slot_type": "base"
+  },
+  {
+    "id": "mime-jr",
+    "name": "Mime Jr",
+    "dex_number": 439,
+    "dex_order": 439,
+    "slot_type": "base"
+  },
+  {
+    "id": "happiny",
+    "name": "Happiny",
+    "dex_number": 440,
+    "dex_order": 440,
+    "slot_type": "base"
+  },
+  {
+    "id": "chatot",
+    "name": "Chatot",
+    "dex_number": 441,
+    "dex_order": 441,
+    "slot_type": "base"
+  },
+  {
+    "id": "spiritomb",
+    "name": "Spiritomb",
+    "dex_number": 442,
+    "dex_order": 442,
+    "slot_type": "base"
+  },
+  {
+    "id": "gible",
+    "name": "Gible",
+    "dex_number": 443,
+    "dex_order": 443,
+    "slot_type": "base"
+  },
+  {
+    "id": "gabite",
+    "name": "Gabite",
+    "dex_number": 444,
+    "dex_order": 444,
+    "slot_type": "base"
+  },
+  {
+    "id": "garchomp",
+    "name": "Garchomp",
+    "dex_number": 445,
+    "dex_order": 445,
+    "slot_type": "base"
+  },
+  {
+    "id": "munchlax",
+    "name": "Munchlax",
+    "dex_number": 446,
+    "dex_order": 446,
+    "slot_type": "base"
+  },
+  {
+    "id": "riolu",
+    "name": "Riolu",
+    "dex_number": 447,
+    "dex_order": 447,
+    "slot_type": "base"
+  },
+  {
+    "id": "lucario",
+    "name": "Lucario",
+    "dex_number": 448,
+    "dex_order": 448,
+    "slot_type": "base"
+  },
+  {
+    "id": "hippopotas",
+    "name": "Hippopotas",
+    "dex_number": 449,
+    "dex_order": 449,
+    "slot_type": "base"
+  },
+  {
+    "id": "hippowdon",
+    "name": "Hippowdon",
+    "dex_number": 450,
+    "dex_order": 450,
+    "slot_type": "base"
+  },
+  {
+    "id": "skorupi",
+    "name": "Skorupi",
+    "dex_number": 451,
+    "dex_order": 451,
+    "slot_type": "base"
+  },
+  {
+    "id": "drapion",
+    "name": "Drapion",
+    "dex_number": 452,
+    "dex_order": 452,
+    "slot_type": "base"
+  },
+  {
+    "id": "croagunk",
+    "name": "Croagunk",
+    "dex_number": 453,
+    "dex_order": 453,
+    "slot_type": "base"
+  },
+  {
+    "id": "toxicroak",
+    "name": "Toxicroak",
+    "dex_number": 454,
+    "dex_order": 454,
+    "slot_type": "base"
+  },
+  {
+    "id": "carnivine",
+    "name": "Carnivine",
+    "dex_number": 455,
+    "dex_order": 455,
+    "slot_type": "base"
+  },
+  {
+    "id": "finneon",
+    "name": "Finneon",
+    "dex_number": 456,
+    "dex_order": 456,
+    "slot_type": "base"
+  },
+  {
+    "id": "lumineon",
+    "name": "Lumineon",
+    "dex_number": 457,
+    "dex_order": 457,
+    "slot_type": "base"
+  },
+  {
+    "id": "mantyke",
+    "name": "Mantyke",
+    "dex_number": 458,
+    "dex_order": 458,
+    "slot_type": "base"
+  },
+  {
+    "id": "snover",
+    "name": "Snover",
+    "dex_number": 459,
+    "dex_order": 459,
+    "slot_type": "base"
+  },
+  {
+    "id": "abomasnow",
+    "name": "Abomasnow",
+    "dex_number": 460,
+    "dex_order": 460,
+    "slot_type": "base"
+  },
+  {
+    "id": "weavile",
+    "name": "Weavile",
+    "dex_number": 461,
+    "dex_order": 461,
+    "slot_type": "base"
+  },
+  {
+    "id": "magnezone",
+    "name": "Magnezone",
+    "dex_number": 462,
+    "dex_order": 462,
+    "slot_type": "base"
+  },
+  {
+    "id": "lickilicky",
+    "name": "Lickilicky",
+    "dex_number": 463,
+    "dex_order": 463,
+    "slot_type": "base"
+  },
+  {
+    "id": "rhyperior",
+    "name": "Rhyperior",
+    "dex_number": 464,
+    "dex_order": 464,
+    "slot_type": "base"
+  },
+  {
+    "id": "tangrowth",
+    "name": "Tangrowth",
+    "dex_number": 465,
+    "dex_order": 465,
+    "slot_type": "base"
+  },
+  {
+    "id": "electivire",
+    "name": "Electivire",
+    "dex_number": 466,
+    "dex_order": 466,
+    "slot_type": "base"
+  },
+  {
+    "id": "magmortar",
+    "name": "Magmortar",
+    "dex_number": 467,
+    "dex_order": 467,
+    "slot_type": "base"
+  },
+  {
+    "id": "togekiss",
+    "name": "Togekiss",
+    "dex_number": 468,
+    "dex_order": 468,
+    "slot_type": "base"
+  },
+  {
+    "id": "yanmega",
+    "name": "Yanmega",
+    "dex_number": 469,
+    "dex_order": 469,
+    "slot_type": "base"
+  },
+  {
+    "id": "leafeon",
+    "name": "Leafeon",
+    "dex_number": 470,
+    "dex_order": 470,
+    "slot_type": "base"
+  },
+  {
+    "id": "glaceon",
+    "name": "Glaceon",
+    "dex_number": 471,
+    "dex_order": 471,
+    "slot_type": "base"
+  },
+  {
+    "id": "gliscor",
+    "name": "Gliscor",
+    "dex_number": 472,
+    "dex_order": 472,
+    "slot_type": "base"
+  },
+  {
+    "id": "mamoswine",
+    "name": "Mamoswine",
+    "dex_number": 473,
+    "dex_order": 473,
+    "slot_type": "base"
+  },
+  {
+    "id": "porygon-z",
+    "name": "Porygon Z",
+    "dex_number": 474,
+    "dex_order": 474,
+    "slot_type": "base"
+  },
+  {
+    "id": "gallade",
+    "name": "Gallade",
+    "dex_number": 475,
+    "dex_order": 475,
+    "slot_type": "base"
+  },
+  {
+    "id": "probopass",
+    "name": "Probopass",
+    "dex_number": 476,
+    "dex_order": 476,
+    "slot_type": "base"
+  },
+  {
+    "id": "dusknoir",
+    "name": "Dusknoir",
+    "dex_number": 477,
+    "dex_order": 477,
+    "slot_type": "base"
+  },
+  {
+    "id": "froslass",
+    "name": "Froslass",
+    "dex_number": 478,
+    "dex_order": 478,
+    "slot_type": "base"
+  },
+  {
+    "id": "rotom",
+    "name": "Rotom",
+    "dex_number": 479,
+    "dex_order": 479,
+    "slot_type": "base"
+  },
+  {
+    "id": "uxie",
+    "name": "Uxie",
+    "dex_number": 480,
+    "dex_order": 480,
+    "slot_type": "base"
+  },
+  {
+    "id": "mesprit",
+    "name": "Mesprit",
+    "dex_number": 481,
+    "dex_order": 481,
+    "slot_type": "base"
+  },
+  {
+    "id": "azelf",
+    "name": "Azelf",
+    "dex_number": 482,
+    "dex_order": 482,
+    "slot_type": "base"
+  },
+  {
+    "id": "dialga",
+    "name": "Dialga",
+    "dex_number": 483,
+    "dex_order": 483,
+    "slot_type": "base"
+  },
+  {
+    "id": "palkia",
+    "name": "Palkia",
+    "dex_number": 484,
+    "dex_order": 484,
+    "slot_type": "base"
+  },
+  {
+    "id": "heatran",
+    "name": "Heatran",
+    "dex_number": 485,
+    "dex_order": 485,
+    "slot_type": "base"
+  },
+  {
+    "id": "regigigas",
+    "name": "Regigigas",
+    "dex_number": 486,
+    "dex_order": 486,
+    "slot_type": "base"
+  },
+  {
+    "id": "giratina-altered",
+    "name": "Giratina Altered",
+    "dex_number": 487,
+    "dex_order": 487,
+    "slot_type": "base"
+  },
+  {
+    "id": "cresselia",
+    "name": "Cresselia",
+    "dex_number": 488,
+    "dex_order": 488,
+    "slot_type": "base"
+  },
+  {
+    "id": "phione",
+    "name": "Phione",
+    "dex_number": 489,
+    "dex_order": 489,
+    "slot_type": "base"
+  },
+  {
+    "id": "manaphy",
+    "name": "Manaphy",
+    "dex_number": 490,
+    "dex_order": 490,
+    "slot_type": "base"
+  },
+  {
+    "id": "darkrai",
+    "name": "Darkrai",
+    "dex_number": 491,
+    "dex_order": 491,
+    "slot_type": "base"
+  },
+  {
+    "id": "shaymin-land",
+    "name": "Shaymin Land",
+    "dex_number": 492,
+    "dex_order": 492,
+    "slot_type": "base"
+  },
+  {
+    "id": "arceus",
+    "name": "Arceus",
+    "dex_number": 493,
+    "dex_order": 493,
+    "slot_type": "base"
+  },
+  {
+    "id": "victini",
+    "name": "Victini",
+    "dex_number": 494,
+    "dex_order": 494,
+    "slot_type": "base"
+  },
+  {
+    "id": "snivy",
+    "name": "Snivy",
+    "dex_number": 495,
+    "dex_order": 495,
+    "slot_type": "base"
+  },
+  {
+    "id": "servine",
+    "name": "Servine",
+    "dex_number": 496,
+    "dex_order": 496,
+    "slot_type": "base"
+  },
+  {
+    "id": "serperior",
+    "name": "Serperior",
+    "dex_number": 497,
+    "dex_order": 497,
+    "slot_type": "base"
+  },
+  {
+    "id": "tepig",
+    "name": "Tepig",
+    "dex_number": 498,
+    "dex_order": 498,
+    "slot_type": "base"
+  },
+  {
+    "id": "pignite",
+    "name": "Pignite",
+    "dex_number": 499,
+    "dex_order": 499,
+    "slot_type": "base"
+  },
+  {
+    "id": "emboar",
+    "name": "Emboar",
+    "dex_number": 500,
+    "dex_order": 500,
+    "slot_type": "base"
+  },
+  {
+    "id": "oshawott",
+    "name": "Oshawott",
+    "dex_number": 501,
+    "dex_order": 501,
+    "slot_type": "base"
+  },
+  {
+    "id": "dewott",
+    "name": "Dewott",
+    "dex_number": 502,
+    "dex_order": 502,
+    "slot_type": "base"
+  },
+  {
+    "id": "samurott",
+    "name": "Samurott",
+    "dex_number": 503,
+    "dex_order": 503,
+    "slot_type": "base"
+  },
+  {
+    "id": "patrat",
+    "name": "Patrat",
+    "dex_number": 504,
+    "dex_order": 504,
+    "slot_type": "base"
+  },
+  {
+    "id": "watchog",
+    "name": "Watchog",
+    "dex_number": 505,
+    "dex_order": 505,
+    "slot_type": "base"
+  },
+  {
+    "id": "lillipup",
+    "name": "Lillipup",
+    "dex_number": 506,
+    "dex_order": 506,
+    "slot_type": "base"
+  },
+  {
+    "id": "herdier",
+    "name": "Herdier",
+    "dex_number": 507,
+    "dex_order": 507,
+    "slot_type": "base"
+  },
+  {
+    "id": "stoutland",
+    "name": "Stoutland",
+    "dex_number": 508,
+    "dex_order": 508,
+    "slot_type": "base"
+  },
+  {
+    "id": "purrloin",
+    "name": "Purrloin",
+    "dex_number": 509,
+    "dex_order": 509,
+    "slot_type": "base"
+  },
+  {
+    "id": "liepard",
+    "name": "Liepard",
+    "dex_number": 510,
+    "dex_order": 510,
+    "slot_type": "base"
+  },
+  {
+    "id": "pansage",
+    "name": "Pansage",
+    "dex_number": 511,
+    "dex_order": 511,
+    "slot_type": "base"
+  },
+  {
+    "id": "simisage",
+    "name": "Simisage",
+    "dex_number": 512,
+    "dex_order": 512,
+    "slot_type": "base"
+  },
+  {
+    "id": "pansear",
+    "name": "Pansear",
+    "dex_number": 513,
+    "dex_order": 513,
+    "slot_type": "base"
+  },
+  {
+    "id": "simisear",
+    "name": "Simisear",
+    "dex_number": 514,
+    "dex_order": 514,
+    "slot_type": "base"
+  },
+  {
+    "id": "panpour",
+    "name": "Panpour",
+    "dex_number": 515,
+    "dex_order": 515,
+    "slot_type": "base"
+  },
+  {
+    "id": "simipour",
+    "name": "Simipour",
+    "dex_number": 516,
+    "dex_order": 516,
+    "slot_type": "base"
+  },
+  {
+    "id": "munna",
+    "name": "Munna",
+    "dex_number": 517,
+    "dex_order": 517,
+    "slot_type": "base"
+  },
+  {
+    "id": "musharna",
+    "name": "Musharna",
+    "dex_number": 518,
+    "dex_order": 518,
+    "slot_type": "base"
+  },
+  {
+    "id": "pidove",
+    "name": "Pidove",
+    "dex_number": 519,
+    "dex_order": 519,
+    "slot_type": "base"
+  },
+  {
+    "id": "tranquill",
+    "name": "Tranquill",
+    "dex_number": 520,
+    "dex_order": 520,
+    "slot_type": "base"
+  },
+  {
+    "id": "unfezant",
+    "name": "Unfezant",
+    "dex_number": 521,
+    "dex_order": 521,
+    "slot_type": "base"
+  },
+  {
+    "id": "blitzle",
+    "name": "Blitzle",
+    "dex_number": 522,
+    "dex_order": 522,
+    "slot_type": "base"
+  },
+  {
+    "id": "zebstrika",
+    "name": "Zebstrika",
+    "dex_number": 523,
+    "dex_order": 523,
+    "slot_type": "base"
+  },
+  {
+    "id": "roggenrola",
+    "name": "Roggenrola",
+    "dex_number": 524,
+    "dex_order": 524,
+    "slot_type": "base"
+  },
+  {
+    "id": "boldore",
+    "name": "Boldore",
+    "dex_number": 525,
+    "dex_order": 525,
+    "slot_type": "base"
+  },
+  {
+    "id": "gigalith",
+    "name": "Gigalith",
+    "dex_number": 526,
+    "dex_order": 526,
+    "slot_type": "base"
+  },
+  {
+    "id": "woobat",
+    "name": "Woobat",
+    "dex_number": 527,
+    "dex_order": 527,
+    "slot_type": "base"
+  },
+  {
+    "id": "swoobat",
+    "name": "Swoobat",
+    "dex_number": 528,
+    "dex_order": 528,
+    "slot_type": "base"
+  },
+  {
+    "id": "drilbur",
+    "name": "Drilbur",
+    "dex_number": 529,
+    "dex_order": 529,
+    "slot_type": "base"
+  },
+  {
+    "id": "excadrill",
+    "name": "Excadrill",
+    "dex_number": 530,
+    "dex_order": 530,
+    "slot_type": "base"
+  },
+  {
+    "id": "audino",
+    "name": "Audino",
+    "dex_number": 531,
+    "dex_order": 531,
+    "slot_type": "base"
+  },
+  {
+    "id": "timburr",
+    "name": "Timburr",
+    "dex_number": 532,
+    "dex_order": 532,
+    "slot_type": "base"
+  },
+  {
+    "id": "gurdurr",
+    "name": "Gurdurr",
+    "dex_number": 533,
+    "dex_order": 533,
+    "slot_type": "base"
+  },
+  {
+    "id": "conkeldurr",
+    "name": "Conkeldurr",
+    "dex_number": 534,
+    "dex_order": 534,
+    "slot_type": "base"
+  },
+  {
+    "id": "tympole",
+    "name": "Tympole",
+    "dex_number": 535,
+    "dex_order": 535,
+    "slot_type": "base"
+  },
+  {
+    "id": "palpitoad",
+    "name": "Palpitoad",
+    "dex_number": 536,
+    "dex_order": 536,
+    "slot_type": "base"
+  },
+  {
+    "id": "seismitoad",
+    "name": "Seismitoad",
+    "dex_number": 537,
+    "dex_order": 537,
+    "slot_type": "base"
+  },
+  {
+    "id": "throh",
+    "name": "Throh",
+    "dex_number": 538,
+    "dex_order": 538,
+    "slot_type": "base"
+  },
+  {
+    "id": "sawk",
+    "name": "Sawk",
+    "dex_number": 539,
+    "dex_order": 539,
+    "slot_type": "base"
+  },
+  {
+    "id": "sewaddle",
+    "name": "Sewaddle",
+    "dex_number": 540,
+    "dex_order": 540,
+    "slot_type": "base"
+  },
+  {
+    "id": "swadloon",
+    "name": "Swadloon",
+    "dex_number": 541,
+    "dex_order": 541,
+    "slot_type": "base"
+  },
+  {
+    "id": "leavanny",
+    "name": "Leavanny",
+    "dex_number": 542,
+    "dex_order": 542,
+    "slot_type": "base"
+  },
+  {
+    "id": "venipede",
+    "name": "Venipede",
+    "dex_number": 543,
+    "dex_order": 543,
+    "slot_type": "base"
+  },
+  {
+    "id": "whirlipede",
+    "name": "Whirlipede",
+    "dex_number": 544,
+    "dex_order": 544,
+    "slot_type": "base"
+  },
+  {
+    "id": "scolipede",
+    "name": "Scolipede",
+    "dex_number": 545,
+    "dex_order": 545,
+    "slot_type": "base"
+  },
+  {
+    "id": "cottonee",
+    "name": "Cottonee",
+    "dex_number": 546,
+    "dex_order": 546,
+    "slot_type": "base"
+  },
+  {
+    "id": "whimsicott",
+    "name": "Whimsicott",
+    "dex_number": 547,
+    "dex_order": 547,
+    "slot_type": "base"
+  },
+  {
+    "id": "petilil",
+    "name": "Petilil",
+    "dex_number": 548,
+    "dex_order": 548,
+    "slot_type": "base"
+  },
+  {
+    "id": "lilligant",
+    "name": "Lilligant",
+    "dex_number": 549,
+    "dex_order": 549,
+    "slot_type": "base"
+  },
+  {
+    "id": "basculin-red-striped",
+    "name": "Basculin Red Striped",
+    "dex_number": 550,
+    "dex_order": 550,
+    "slot_type": "base"
+  },
+  {
+    "id": "sandile",
+    "name": "Sandile",
+    "dex_number": 551,
+    "dex_order": 551,
+    "slot_type": "base"
+  },
+  {
+    "id": "krokorok",
+    "name": "Krokorok",
+    "dex_number": 552,
+    "dex_order": 552,
+    "slot_type": "base"
+  },
+  {
+    "id": "krookodile",
+    "name": "Krookodile",
+    "dex_number": 553,
+    "dex_order": 553,
+    "slot_type": "base"
+  },
+  {
+    "id": "darumaka",
+    "name": "Darumaka",
+    "dex_number": 554,
+    "dex_order": 554,
+    "slot_type": "base"
+  },
+  {
+    "id": "darmanitan-standard",
+    "name": "Darmanitan Standard",
+    "dex_number": 555,
+    "dex_order": 555,
+    "slot_type": "base"
+  },
+  {
+    "id": "maractus",
+    "name": "Maractus",
+    "dex_number": 556,
+    "dex_order": 556,
+    "slot_type": "base"
+  },
+  {
+    "id": "dwebble",
+    "name": "Dwebble",
+    "dex_number": 557,
+    "dex_order": 557,
+    "slot_type": "base"
+  },
+  {
+    "id": "crustle",
+    "name": "Crustle",
+    "dex_number": 558,
+    "dex_order": 558,
+    "slot_type": "base"
+  },
+  {
+    "id": "scraggy",
+    "name": "Scraggy",
+    "dex_number": 559,
+    "dex_order": 559,
+    "slot_type": "base"
+  },
+  {
+    "id": "scrafty",
+    "name": "Scrafty",
+    "dex_number": 560,
+    "dex_order": 560,
+    "slot_type": "base"
+  },
+  {
+    "id": "sigilyph",
+    "name": "Sigilyph",
+    "dex_number": 561,
+    "dex_order": 561,
+    "slot_type": "base"
+  },
+  {
+    "id": "yamask",
+    "name": "Yamask",
+    "dex_number": 562,
+    "dex_order": 562,
+    "slot_type": "base"
+  },
+  {
+    "id": "cofagrigus",
+    "name": "Cofagrigus",
+    "dex_number": 563,
+    "dex_order": 563,
+    "slot_type": "base"
+  },
+  {
+    "id": "tirtouga",
+    "name": "Tirtouga",
+    "dex_number": 564,
+    "dex_order": 564,
+    "slot_type": "base"
+  },
+  {
+    "id": "carracosta",
+    "name": "Carracosta",
+    "dex_number": 565,
+    "dex_order": 565,
+    "slot_type": "base"
+  },
+  {
+    "id": "archen",
+    "name": "Archen",
+    "dex_number": 566,
+    "dex_order": 566,
+    "slot_type": "base"
+  },
+  {
+    "id": "archeops",
+    "name": "Archeops",
+    "dex_number": 567,
+    "dex_order": 567,
+    "slot_type": "base"
+  },
+  {
+    "id": "trubbish",
+    "name": "Trubbish",
+    "dex_number": 568,
+    "dex_order": 568,
+    "slot_type": "base"
+  },
+  {
+    "id": "garbodor",
+    "name": "Garbodor",
+    "dex_number": 569,
+    "dex_order": 569,
+    "slot_type": "base"
+  },
+  {
+    "id": "zorua",
+    "name": "Zorua",
+    "dex_number": 570,
+    "dex_order": 570,
+    "slot_type": "base"
+  },
+  {
+    "id": "zoroark",
+    "name": "Zoroark",
+    "dex_number": 571,
+    "dex_order": 571,
+    "slot_type": "base"
+  },
+  {
+    "id": "minccino",
+    "name": "Minccino",
+    "dex_number": 572,
+    "dex_order": 572,
+    "slot_type": "base"
+  },
+  {
+    "id": "cinccino",
+    "name": "Cinccino",
+    "dex_number": 573,
+    "dex_order": 573,
+    "slot_type": "base"
+  },
+  {
+    "id": "gothita",
+    "name": "Gothita",
+    "dex_number": 574,
+    "dex_order": 574,
+    "slot_type": "base"
+  },
+  {
+    "id": "gothorita",
+    "name": "Gothorita",
+    "dex_number": 575,
+    "dex_order": 575,
+    "slot_type": "base"
+  },
+  {
+    "id": "gothitelle",
+    "name": "Gothitelle",
+    "dex_number": 576,
+    "dex_order": 576,
+    "slot_type": "base"
+  },
+  {
+    "id": "solosis",
+    "name": "Solosis",
+    "dex_number": 577,
+    "dex_order": 577,
+    "slot_type": "base"
+  },
+  {
+    "id": "duosion",
+    "name": "Duosion",
+    "dex_number": 578,
+    "dex_order": 578,
+    "slot_type": "base"
+  },
+  {
+    "id": "reuniclus",
+    "name": "Reuniclus",
+    "dex_number": 579,
+    "dex_order": 579,
+    "slot_type": "base"
+  },
+  {
+    "id": "ducklett",
+    "name": "Ducklett",
+    "dex_number": 580,
+    "dex_order": 580,
+    "slot_type": "base"
+  },
+  {
+    "id": "swanna",
+    "name": "Swanna",
+    "dex_number": 581,
+    "dex_order": 581,
+    "slot_type": "base"
+  },
+  {
+    "id": "vanillite",
+    "name": "Vanillite",
+    "dex_number": 582,
+    "dex_order": 582,
+    "slot_type": "base"
+  },
+  {
+    "id": "vanillish",
+    "name": "Vanillish",
+    "dex_number": 583,
+    "dex_order": 583,
+    "slot_type": "base"
+  },
+  {
+    "id": "vanilluxe",
+    "name": "Vanilluxe",
+    "dex_number": 584,
+    "dex_order": 584,
+    "slot_type": "base"
+  },
+  {
+    "id": "deerling",
+    "name": "Deerling",
+    "dex_number": 585,
+    "dex_order": 585,
+    "slot_type": "base"
+  },
+  {
+    "id": "sawsbuck",
+    "name": "Sawsbuck",
+    "dex_number": 586,
+    "dex_order": 586,
+    "slot_type": "base"
+  },
+  {
+    "id": "emolga",
+    "name": "Emolga",
+    "dex_number": 587,
+    "dex_order": 587,
+    "slot_type": "base"
+  },
+  {
+    "id": "karrablast",
+    "name": "Karrablast",
+    "dex_number": 588,
+    "dex_order": 588,
+    "slot_type": "base"
+  },
+  {
+    "id": "escavalier",
+    "name": "Escavalier",
+    "dex_number": 589,
+    "dex_order": 589,
+    "slot_type": "base"
+  },
+  {
+    "id": "foongus",
+    "name": "Foongus",
+    "dex_number": 590,
+    "dex_order": 590,
+    "slot_type": "base"
+  },
+  {
+    "id": "amoonguss",
+    "name": "Amoonguss",
+    "dex_number": 591,
+    "dex_order": 591,
+    "slot_type": "base"
+  },
+  {
+    "id": "frillish-male",
+    "name": "Frillish Male",
+    "dex_number": 592,
+    "dex_order": 592,
+    "slot_type": "base"
+  },
+  {
+    "id": "jellicent-male",
+    "name": "Jellicent Male",
+    "dex_number": 593,
+    "dex_order": 593,
+    "slot_type": "base"
+  },
+  {
+    "id": "alomomola",
+    "name": "Alomomola",
+    "dex_number": 594,
+    "dex_order": 594,
+    "slot_type": "base"
+  },
+  {
+    "id": "joltik",
+    "name": "Joltik",
+    "dex_number": 595,
+    "dex_order": 595,
+    "slot_type": "base"
+  },
+  {
+    "id": "galvantula",
+    "name": "Galvantula",
+    "dex_number": 596,
+    "dex_order": 596,
+    "slot_type": "base"
+  },
+  {
+    "id": "ferroseed",
+    "name": "Ferroseed",
+    "dex_number": 597,
+    "dex_order": 597,
+    "slot_type": "base"
+  },
+  {
+    "id": "ferrothorn",
+    "name": "Ferrothorn",
+    "dex_number": 598,
+    "dex_order": 598,
+    "slot_type": "base"
+  },
+  {
+    "id": "klink",
+    "name": "Klink",
+    "dex_number": 599,
+    "dex_order": 599,
+    "slot_type": "base"
+  },
+  {
+    "id": "klang",
+    "name": "Klang",
+    "dex_number": 600,
+    "dex_order": 600,
+    "slot_type": "base"
+  },
+  {
+    "id": "klinklang",
+    "name": "Klinklang",
+    "dex_number": 601,
+    "dex_order": 601,
+    "slot_type": "base"
+  },
+  {
+    "id": "tynamo",
+    "name": "Tynamo",
+    "dex_number": 602,
+    "dex_order": 602,
+    "slot_type": "base"
+  },
+  {
+    "id": "eelektrik",
+    "name": "Eelektrik",
+    "dex_number": 603,
+    "dex_order": 603,
+    "slot_type": "base"
+  },
+  {
+    "id": "eelektross",
+    "name": "Eelektross",
+    "dex_number": 604,
+    "dex_order": 604,
+    "slot_type": "base"
+  },
+  {
+    "id": "elgyem",
+    "name": "Elgyem",
+    "dex_number": 605,
+    "dex_order": 605,
+    "slot_type": "base"
+  },
+  {
+    "id": "beheeyem",
+    "name": "Beheeyem",
+    "dex_number": 606,
+    "dex_order": 606,
+    "slot_type": "base"
+  },
+  {
+    "id": "litwick",
+    "name": "Litwick",
+    "dex_number": 607,
+    "dex_order": 607,
+    "slot_type": "base"
+  },
+  {
+    "id": "lampent",
+    "name": "Lampent",
+    "dex_number": 608,
+    "dex_order": 608,
+    "slot_type": "base"
+  },
+  {
+    "id": "chandelure",
+    "name": "Chandelure",
+    "dex_number": 609,
+    "dex_order": 609,
+    "slot_type": "base"
+  },
+  {
+    "id": "axew",
+    "name": "Axew",
+    "dex_number": 610,
+    "dex_order": 610,
+    "slot_type": "base"
+  },
+  {
+    "id": "fraxure",
+    "name": "Fraxure",
+    "dex_number": 611,
+    "dex_order": 611,
+    "slot_type": "base"
+  },
+  {
+    "id": "haxorus",
+    "name": "Haxorus",
+    "dex_number": 612,
+    "dex_order": 612,
+    "slot_type": "base"
+  },
+  {
+    "id": "cubchoo",
+    "name": "Cubchoo",
+    "dex_number": 613,
+    "dex_order": 613,
+    "slot_type": "base"
+  },
+  {
+    "id": "beartic",
+    "name": "Beartic",
+    "dex_number": 614,
+    "dex_order": 614,
+    "slot_type": "base"
+  },
+  {
+    "id": "cryogonal",
+    "name": "Cryogonal",
+    "dex_number": 615,
+    "dex_order": 615,
+    "slot_type": "base"
+  },
+  {
+    "id": "shelmet",
+    "name": "Shelmet",
+    "dex_number": 616,
+    "dex_order": 616,
+    "slot_type": "base"
+  },
+  {
+    "id": "accelgor",
+    "name": "Accelgor",
+    "dex_number": 617,
+    "dex_order": 617,
+    "slot_type": "base"
+  },
+  {
+    "id": "stunfisk",
+    "name": "Stunfisk",
+    "dex_number": 618,
+    "dex_order": 618,
+    "slot_type": "base"
+  },
+  {
+    "id": "mienfoo",
+    "name": "Mienfoo",
+    "dex_number": 619,
+    "dex_order": 619,
+    "slot_type": "base"
+  },
+  {
+    "id": "mienshao",
+    "name": "Mienshao",
+    "dex_number": 620,
+    "dex_order": 620,
+    "slot_type": "base"
+  },
+  {
+    "id": "druddigon",
+    "name": "Druddigon",
+    "dex_number": 621,
+    "dex_order": 621,
+    "slot_type": "base"
+  },
+  {
+    "id": "golett",
+    "name": "Golett",
+    "dex_number": 622,
+    "dex_order": 622,
+    "slot_type": "base"
+  },
+  {
+    "id": "golurk",
+    "name": "Golurk",
+    "dex_number": 623,
+    "dex_order": 623,
+    "slot_type": "base"
+  },
+  {
+    "id": "pawniard",
+    "name": "Pawniard",
+    "dex_number": 624,
+    "dex_order": 624,
+    "slot_type": "base"
+  },
+  {
+    "id": "bisharp",
+    "name": "Bisharp",
+    "dex_number": 625,
+    "dex_order": 625,
+    "slot_type": "base"
+  },
+  {
+    "id": "bouffalant",
+    "name": "Bouffalant",
+    "dex_number": 626,
+    "dex_order": 626,
+    "slot_type": "base"
+  },
+  {
+    "id": "rufflet",
+    "name": "Rufflet",
+    "dex_number": 627,
+    "dex_order": 627,
+    "slot_type": "base"
+  },
+  {
+    "id": "braviary",
+    "name": "Braviary",
+    "dex_number": 628,
+    "dex_order": 628,
+    "slot_type": "base"
+  },
+  {
+    "id": "vullaby",
+    "name": "Vullaby",
+    "dex_number": 629,
+    "dex_order": 629,
+    "slot_type": "base"
+  },
+  {
+    "id": "mandibuzz",
+    "name": "Mandibuzz",
+    "dex_number": 630,
+    "dex_order": 630,
+    "slot_type": "base"
+  },
+  {
+    "id": "heatmor",
+    "name": "Heatmor",
+    "dex_number": 631,
+    "dex_order": 631,
+    "slot_type": "base"
+  },
+  {
+    "id": "durant",
+    "name": "Durant",
+    "dex_number": 632,
+    "dex_order": 632,
+    "slot_type": "base"
+  },
+  {
+    "id": "deino",
+    "name": "Deino",
+    "dex_number": 633,
+    "dex_order": 633,
+    "slot_type": "base"
+  },
+  {
+    "id": "zweilous",
+    "name": "Zweilous",
+    "dex_number": 634,
+    "dex_order": 634,
+    "slot_type": "base"
+  },
+  {
+    "id": "hydreigon",
+    "name": "Hydreigon",
+    "dex_number": 635,
+    "dex_order": 635,
+    "slot_type": "base"
+  },
+  {
+    "id": "larvesta",
+    "name": "Larvesta",
+    "dex_number": 636,
+    "dex_order": 636,
+    "slot_type": "base"
+  },
+  {
+    "id": "volcarona",
+    "name": "Volcarona",
+    "dex_number": 637,
+    "dex_order": 637,
+    "slot_type": "base"
+  },
+  {
+    "id": "cobalion",
+    "name": "Cobalion",
+    "dex_number": 638,
+    "dex_order": 638,
+    "slot_type": "base"
+  },
+  {
+    "id": "terrakion",
+    "name": "Terrakion",
+    "dex_number": 639,
+    "dex_order": 639,
+    "slot_type": "base"
+  },
+  {
+    "id": "virizion",
+    "name": "Virizion",
+    "dex_number": 640,
+    "dex_order": 640,
+    "slot_type": "base"
+  },
+  {
+    "id": "tornadus-incarnate",
+    "name": "Tornadus Incarnate",
+    "dex_number": 641,
+    "dex_order": 641,
+    "slot_type": "base"
+  },
+  {
+    "id": "thundurus-incarnate",
+    "name": "Thundurus Incarnate",
+    "dex_number": 642,
+    "dex_order": 642,
+    "slot_type": "base"
+  },
+  {
+    "id": "reshiram",
+    "name": "Reshiram",
+    "dex_number": 643,
+    "dex_order": 643,
+    "slot_type": "base"
+  },
+  {
+    "id": "zekrom",
+    "name": "Zekrom",
+    "dex_number": 644,
+    "dex_order": 644,
+    "slot_type": "base"
+  },
+  {
+    "id": "landorus-incarnate",
+    "name": "Landorus Incarnate",
+    "dex_number": 645,
+    "dex_order": 645,
+    "slot_type": "base"
+  },
+  {
+    "id": "kyurem",
+    "name": "Kyurem",
+    "dex_number": 646,
+    "dex_order": 646,
+    "slot_type": "base"
+  },
+  {
+    "id": "keldeo-ordinary",
+    "name": "Keldeo Ordinary",
+    "dex_number": 647,
+    "dex_order": 647,
+    "slot_type": "base"
+  },
+  {
+    "id": "meloetta-aria",
+    "name": "Meloetta Aria",
+    "dex_number": 648,
+    "dex_order": 648,
+    "slot_type": "base"
+  },
+  {
+    "id": "genesect",
+    "name": "Genesect",
+    "dex_number": 649,
+    "dex_order": 649,
+    "slot_type": "base"
+  },
+  {
+    "id": "chespin",
+    "name": "Chespin",
+    "dex_number": 650,
+    "dex_order": 650,
+    "slot_type": "base"
+  },
+  {
+    "id": "quilladin",
+    "name": "Quilladin",
+    "dex_number": 651,
+    "dex_order": 651,
+    "slot_type": "base"
+  },
+  {
+    "id": "chesnaught",
+    "name": "Chesnaught",
+    "dex_number": 652,
+    "dex_order": 652,
+    "slot_type": "base"
+  },
+  {
+    "id": "fennekin",
+    "name": "Fennekin",
+    "dex_number": 653,
+    "dex_order": 653,
+    "slot_type": "base"
+  },
+  {
+    "id": "braixen",
+    "name": "Braixen",
+    "dex_number": 654,
+    "dex_order": 654,
+    "slot_type": "base"
+  },
+  {
+    "id": "delphox",
+    "name": "Delphox",
+    "dex_number": 655,
+    "dex_order": 655,
+    "slot_type": "base"
+  },
+  {
+    "id": "froakie",
+    "name": "Froakie",
+    "dex_number": 656,
+    "dex_order": 656,
+    "slot_type": "base"
+  },
+  {
+    "id": "frogadier",
+    "name": "Frogadier",
+    "dex_number": 657,
+    "dex_order": 657,
+    "slot_type": "base"
+  },
+  {
+    "id": "greninja",
+    "name": "Greninja",
+    "dex_number": 658,
+    "dex_order": 658,
+    "slot_type": "base"
+  },
+  {
+    "id": "bunnelby",
+    "name": "Bunnelby",
+    "dex_number": 659,
+    "dex_order": 659,
+    "slot_type": "base"
+  },
+  {
+    "id": "diggersby",
+    "name": "Diggersby",
+    "dex_number": 660,
+    "dex_order": 660,
+    "slot_type": "base"
+  },
+  {
+    "id": "fletchling",
+    "name": "Fletchling",
+    "dex_number": 661,
+    "dex_order": 661,
+    "slot_type": "base"
+  },
+  {
+    "id": "fletchinder",
+    "name": "Fletchinder",
+    "dex_number": 662,
+    "dex_order": 662,
+    "slot_type": "base"
+  },
+  {
+    "id": "talonflame",
+    "name": "Talonflame",
+    "dex_number": 663,
+    "dex_order": 663,
+    "slot_type": "base"
+  },
+  {
+    "id": "scatterbug",
+    "name": "Scatterbug",
+    "dex_number": 664,
+    "dex_order": 664,
+    "slot_type": "base"
+  },
+  {
+    "id": "spewpa",
+    "name": "Spewpa",
+    "dex_number": 665,
+    "dex_order": 665,
+    "slot_type": "base"
+  },
+  {
+    "id": "vivillon",
+    "name": "Vivillon",
+    "dex_number": 666,
+    "dex_order": 666,
+    "slot_type": "base"
+  },
+  {
+    "id": "litleo",
+    "name": "Litleo",
+    "dex_number": 667,
+    "dex_order": 667,
+    "slot_type": "base"
+  },
+  {
+    "id": "pyroar-male",
+    "name": "Pyroar Male",
+    "dex_number": 668,
+    "dex_order": 668,
+    "slot_type": "base"
+  },
+  {
+    "id": "flabebe",
+    "name": "Flabebe",
+    "dex_number": 669,
+    "dex_order": 669,
+    "slot_type": "base"
+  },
+  {
+    "id": "floette",
+    "name": "Floette",
+    "dex_number": 670,
+    "dex_order": 670,
+    "slot_type": "base"
+  },
+  {
+    "id": "florges",
+    "name": "Florges",
+    "dex_number": 671,
+    "dex_order": 671,
+    "slot_type": "base"
+  },
+  {
+    "id": "skiddo",
+    "name": "Skiddo",
+    "dex_number": 672,
+    "dex_order": 672,
+    "slot_type": "base"
+  },
+  {
+    "id": "gogoat",
+    "name": "Gogoat",
+    "dex_number": 673,
+    "dex_order": 673,
+    "slot_type": "base"
+  },
+  {
+    "id": "pancham",
+    "name": "Pancham",
+    "dex_number": 674,
+    "dex_order": 674,
+    "slot_type": "base"
+  },
+  {
+    "id": "pangoro",
+    "name": "Pangoro",
+    "dex_number": 675,
+    "dex_order": 675,
+    "slot_type": "base"
+  },
+  {
+    "id": "furfrou",
+    "name": "Furfrou",
+    "dex_number": 676,
+    "dex_order": 676,
+    "slot_type": "base"
+  },
+  {
+    "id": "espurr",
+    "name": "Espurr",
+    "dex_number": 677,
+    "dex_order": 677,
+    "slot_type": "base"
+  },
+  {
+    "id": "meowstic-male",
+    "name": "Meowstic Male",
+    "dex_number": 678,
+    "dex_order": 678,
+    "slot_type": "base"
+  },
+  {
+    "id": "honedge",
+    "name": "Honedge",
+    "dex_number": 679,
+    "dex_order": 679,
+    "slot_type": "base"
+  },
+  {
+    "id": "doublade",
+    "name": "Doublade",
+    "dex_number": 680,
+    "dex_order": 680,
+    "slot_type": "base"
+  },
+  {
+    "id": "aegislash-shield",
+    "name": "Aegislash Shield",
+    "dex_number": 681,
+    "dex_order": 681,
+    "slot_type": "base"
+  },
+  {
+    "id": "spritzee",
+    "name": "Spritzee",
+    "dex_number": 682,
+    "dex_order": 682,
+    "slot_type": "base"
+  },
+  {
+    "id": "aromatisse",
+    "name": "Aromatisse",
+    "dex_number": 683,
+    "dex_order": 683,
+    "slot_type": "base"
+  },
+  {
+    "id": "swirlix",
+    "name": "Swirlix",
+    "dex_number": 684,
+    "dex_order": 684,
+    "slot_type": "base"
+  },
+  {
+    "id": "slurpuff",
+    "name": "Slurpuff",
+    "dex_number": 685,
+    "dex_order": 685,
+    "slot_type": "base"
+  },
+  {
+    "id": "inkay",
+    "name": "Inkay",
+    "dex_number": 686,
+    "dex_order": 686,
+    "slot_type": "base"
+  },
+  {
+    "id": "malamar",
+    "name": "Malamar",
+    "dex_number": 687,
+    "dex_order": 687,
+    "slot_type": "base"
+  },
+  {
+    "id": "binacle",
+    "name": "Binacle",
+    "dex_number": 688,
+    "dex_order": 688,
+    "slot_type": "base"
+  },
+  {
+    "id": "barbaracle",
+    "name": "Barbaracle",
+    "dex_number": 689,
+    "dex_order": 689,
+    "slot_type": "base"
+  },
+  {
+    "id": "skrelp",
+    "name": "Skrelp",
+    "dex_number": 690,
+    "dex_order": 690,
+    "slot_type": "base"
+  },
+  {
+    "id": "dragalge",
+    "name": "Dragalge",
+    "dex_number": 691,
+    "dex_order": 691,
+    "slot_type": "base"
+  },
+  {
+    "id": "clauncher",
+    "name": "Clauncher",
+    "dex_number": 692,
+    "dex_order": 692,
+    "slot_type": "base"
+  },
+  {
+    "id": "clawitzer",
+    "name": "Clawitzer",
+    "dex_number": 693,
+    "dex_order": 693,
+    "slot_type": "base"
+  },
+  {
+    "id": "helioptile",
+    "name": "Helioptile",
+    "dex_number": 694,
+    "dex_order": 694,
+    "slot_type": "base"
+  },
+  {
+    "id": "heliolisk",
+    "name": "Heliolisk",
+    "dex_number": 695,
+    "dex_order": 695,
+    "slot_type": "base"
+  },
+  {
+    "id": "tyrunt",
+    "name": "Tyrunt",
+    "dex_number": 696,
+    "dex_order": 696,
+    "slot_type": "base"
+  },
+  {
+    "id": "tyrantrum",
+    "name": "Tyrantrum",
+    "dex_number": 697,
+    "dex_order": 697,
+    "slot_type": "base"
+  },
+  {
+    "id": "amaura",
+    "name": "Amaura",
+    "dex_number": 698,
+    "dex_order": 698,
+    "slot_type": "base"
+  },
+  {
+    "id": "aurorus",
+    "name": "Aurorus",
+    "dex_number": 699,
+    "dex_order": 699,
+    "slot_type": "base"
+  },
+  {
+    "id": "sylveon",
+    "name": "Sylveon",
+    "dex_number": 700,
+    "dex_order": 700,
+    "slot_type": "base"
+  },
+  {
+    "id": "hawlucha",
+    "name": "Hawlucha",
+    "dex_number": 701,
+    "dex_order": 701,
+    "slot_type": "base"
+  },
+  {
+    "id": "dedenne",
+    "name": "Dedenne",
+    "dex_number": 702,
+    "dex_order": 702,
+    "slot_type": "base"
+  },
+  {
+    "id": "carbink",
+    "name": "Carbink",
+    "dex_number": 703,
+    "dex_order": 703,
+    "slot_type": "base"
+  },
+  {
+    "id": "goomy",
+    "name": "Goomy",
+    "dex_number": 704,
+    "dex_order": 704,
+    "slot_type": "base"
+  },
+  {
+    "id": "sliggoo",
+    "name": "Sliggoo",
+    "dex_number": 705,
+    "dex_order": 705,
+    "slot_type": "base"
+  },
+  {
+    "id": "goodra",
+    "name": "Goodra",
+    "dex_number": 706,
+    "dex_order": 706,
+    "slot_type": "base"
+  },
+  {
+    "id": "klefki",
+    "name": "Klefki",
+    "dex_number": 707,
+    "dex_order": 707,
+    "slot_type": "base"
+  },
+  {
+    "id": "phantump",
+    "name": "Phantump",
+    "dex_number": 708,
+    "dex_order": 708,
+    "slot_type": "base"
+  },
+  {
+    "id": "trevenant",
+    "name": "Trevenant",
+    "dex_number": 709,
+    "dex_order": 709,
+    "slot_type": "base"
+  },
+  {
+    "id": "pumpkaboo-average",
+    "name": "Pumpkaboo Average",
+    "dex_number": 710,
+    "dex_order": 710,
+    "slot_type": "base"
+  },
+  {
+    "id": "gourgeist-average",
+    "name": "Gourgeist Average",
+    "dex_number": 711,
+    "dex_order": 711,
+    "slot_type": "base"
+  },
+  {
+    "id": "bergmite",
+    "name": "Bergmite",
+    "dex_number": 712,
+    "dex_order": 712,
+    "slot_type": "base"
+  },
+  {
+    "id": "avalugg",
+    "name": "Avalugg",
+    "dex_number": 713,
+    "dex_order": 713,
+    "slot_type": "base"
+  },
+  {
+    "id": "noibat",
+    "name": "Noibat",
+    "dex_number": 714,
+    "dex_order": 714,
+    "slot_type": "base"
+  },
+  {
+    "id": "noivern",
+    "name": "Noivern",
+    "dex_number": 715,
+    "dex_order": 715,
+    "slot_type": "base"
+  },
+  {
+    "id": "xerneas",
+    "name": "Xerneas",
+    "dex_number": 716,
+    "dex_order": 716,
+    "slot_type": "base"
+  },
+  {
+    "id": "yveltal",
+    "name": "Yveltal",
+    "dex_number": 717,
+    "dex_order": 717,
+    "slot_type": "base"
+  },
+  {
+    "id": "zygarde-50",
+    "name": "Zygarde 50",
+    "dex_number": 718,
+    "dex_order": 718,
+    "slot_type": "base"
+  },
+  {
+    "id": "diancie",
+    "name": "Diancie",
+    "dex_number": 719,
+    "dex_order": 719,
+    "slot_type": "base"
+  },
+  {
+    "id": "hoopa",
+    "name": "Hoopa",
+    "dex_number": 720,
+    "dex_order": 720,
+    "slot_type": "base"
+  },
+  {
+    "id": "volcanion",
+    "name": "Volcanion",
+    "dex_number": 721,
+    "dex_order": 721,
+    "slot_type": "base"
+  },
+  {
+    "id": "rowlet",
+    "name": "Rowlet",
+    "dex_number": 722,
+    "dex_order": 722,
+    "slot_type": "base"
+  },
+  {
+    "id": "dartrix",
+    "name": "Dartrix",
+    "dex_number": 723,
+    "dex_order": 723,
+    "slot_type": "base"
+  },
+  {
+    "id": "decidueye",
+    "name": "Decidueye",
+    "dex_number": 724,
+    "dex_order": 724,
+    "slot_type": "base"
+  },
+  {
+    "id": "litten",
+    "name": "Litten",
+    "dex_number": 725,
+    "dex_order": 725,
+    "slot_type": "base"
+  },
+  {
+    "id": "torracat",
+    "name": "Torracat",
+    "dex_number": 726,
+    "dex_order": 726,
+    "slot_type": "base"
+  },
+  {
+    "id": "incineroar",
+    "name": "Incineroar",
+    "dex_number": 727,
+    "dex_order": 727,
+    "slot_type": "base"
+  },
+  {
+    "id": "popplio",
+    "name": "Popplio",
+    "dex_number": 728,
+    "dex_order": 728,
+    "slot_type": "base"
+  },
+  {
+    "id": "brionne",
+    "name": "Brionne",
+    "dex_number": 729,
+    "dex_order": 729,
+    "slot_type": "base"
+  },
+  {
+    "id": "primarina",
+    "name": "Primarina",
+    "dex_number": 730,
+    "dex_order": 730,
+    "slot_type": "base"
+  },
+  {
+    "id": "pikipek",
+    "name": "Pikipek",
+    "dex_number": 731,
+    "dex_order": 731,
+    "slot_type": "base"
+  },
+  {
+    "id": "trumbeak",
+    "name": "Trumbeak",
+    "dex_number": 732,
+    "dex_order": 732,
+    "slot_type": "base"
+  },
+  {
+    "id": "toucannon",
+    "name": "Toucannon",
+    "dex_number": 733,
+    "dex_order": 733,
+    "slot_type": "base"
+  },
+  {
+    "id": "yungoos",
+    "name": "Yungoos",
+    "dex_number": 734,
+    "dex_order": 734,
+    "slot_type": "base"
+  },
+  {
+    "id": "gumshoos",
+    "name": "Gumshoos",
+    "dex_number": 735,
+    "dex_order": 735,
+    "slot_type": "base"
+  },
+  {
+    "id": "grubbin",
+    "name": "Grubbin",
+    "dex_number": 736,
+    "dex_order": 736,
+    "slot_type": "base"
+  },
+  {
+    "id": "charjabug",
+    "name": "Charjabug",
+    "dex_number": 737,
+    "dex_order": 737,
+    "slot_type": "base"
+  },
+  {
+    "id": "vikavolt",
+    "name": "Vikavolt",
+    "dex_number": 738,
+    "dex_order": 738,
+    "slot_type": "base"
+  },
+  {
+    "id": "crabrawler",
+    "name": "Crabrawler",
+    "dex_number": 739,
+    "dex_order": 739,
+    "slot_type": "base"
+  },
+  {
+    "id": "crabominable",
+    "name": "Crabominable",
+    "dex_number": 740,
+    "dex_order": 740,
+    "slot_type": "base"
+  },
+  {
+    "id": "oricorio-baile",
+    "name": "Oricorio Baile",
+    "dex_number": 741,
+    "dex_order": 741,
+    "slot_type": "base"
+  },
+  {
+    "id": "cutiefly",
+    "name": "Cutiefly",
+    "dex_number": 742,
+    "dex_order": 742,
+    "slot_type": "base"
+  },
+  {
+    "id": "ribombee",
+    "name": "Ribombee",
+    "dex_number": 743,
+    "dex_order": 743,
+    "slot_type": "base"
+  },
+  {
+    "id": "rockruff",
+    "name": "Rockruff",
+    "dex_number": 744,
+    "dex_order": 744,
+    "slot_type": "base"
+  },
+  {
+    "id": "lycanroc-midday",
+    "name": "Lycanroc Midday",
+    "dex_number": 745,
+    "dex_order": 745,
+    "slot_type": "base"
+  },
+  {
+    "id": "wishiwashi-solo",
+    "name": "Wishiwashi Solo",
+    "dex_number": 746,
+    "dex_order": 746,
+    "slot_type": "base"
+  },
+  {
+    "id": "mareanie",
+    "name": "Mareanie",
+    "dex_number": 747,
+    "dex_order": 747,
+    "slot_type": "base"
+  },
+  {
+    "id": "toxapex",
+    "name": "Toxapex",
+    "dex_number": 748,
+    "dex_order": 748,
+    "slot_type": "base"
+  },
+  {
+    "id": "mudbray",
+    "name": "Mudbray",
+    "dex_number": 749,
+    "dex_order": 749,
+    "slot_type": "base"
+  },
+  {
+    "id": "mudsdale",
+    "name": "Mudsdale",
+    "dex_number": 750,
+    "dex_order": 750,
+    "slot_type": "base"
+  },
+  {
+    "id": "dewpider",
+    "name": "Dewpider",
+    "dex_number": 751,
+    "dex_order": 751,
+    "slot_type": "base"
+  },
+  {
+    "id": "araquanid",
+    "name": "Araquanid",
+    "dex_number": 752,
+    "dex_order": 752,
+    "slot_type": "base"
+  },
+  {
+    "id": "fomantis",
+    "name": "Fomantis",
+    "dex_number": 753,
+    "dex_order": 753,
+    "slot_type": "base"
+  },
+  {
+    "id": "lurantis",
+    "name": "Lurantis",
+    "dex_number": 754,
+    "dex_order": 754,
+    "slot_type": "base"
+  },
+  {
+    "id": "morelull",
+    "name": "Morelull",
+    "dex_number": 755,
+    "dex_order": 755,
+    "slot_type": "base"
+  },
+  {
+    "id": "shiinotic",
+    "name": "Shiinotic",
+    "dex_number": 756,
+    "dex_order": 756,
+    "slot_type": "base"
+  },
+  {
+    "id": "salandit",
+    "name": "Salandit",
+    "dex_number": 757,
+    "dex_order": 757,
+    "slot_type": "base"
+  },
+  {
+    "id": "salazzle",
+    "name": "Salazzle",
+    "dex_number": 758,
+    "dex_order": 758,
+    "slot_type": "base"
+  },
+  {
+    "id": "stufful",
+    "name": "Stufful",
+    "dex_number": 759,
+    "dex_order": 759,
+    "slot_type": "base"
+  },
+  {
+    "id": "bewear",
+    "name": "Bewear",
+    "dex_number": 760,
+    "dex_order": 760,
+    "slot_type": "base"
+  },
+  {
+    "id": "bounsweet",
+    "name": "Bounsweet",
+    "dex_number": 761,
+    "dex_order": 761,
+    "slot_type": "base"
+  },
+  {
+    "id": "steenee",
+    "name": "Steenee",
+    "dex_number": 762,
+    "dex_order": 762,
+    "slot_type": "base"
+  },
+  {
+    "id": "tsareena",
+    "name": "Tsareena",
+    "dex_number": 763,
+    "dex_order": 763,
+    "slot_type": "base"
+  },
+  {
+    "id": "comfey",
+    "name": "Comfey",
+    "dex_number": 764,
+    "dex_order": 764,
+    "slot_type": "base"
+  },
+  {
+    "id": "oranguru",
+    "name": "Oranguru",
+    "dex_number": 765,
+    "dex_order": 765,
+    "slot_type": "base"
+  },
+  {
+    "id": "passimian",
+    "name": "Passimian",
+    "dex_number": 766,
+    "dex_order": 766,
+    "slot_type": "base"
+  },
+  {
+    "id": "wimpod",
+    "name": "Wimpod",
+    "dex_number": 767,
+    "dex_order": 767,
+    "slot_type": "base"
+  },
+  {
+    "id": "golisopod",
+    "name": "Golisopod",
+    "dex_number": 768,
+    "dex_order": 768,
+    "slot_type": "base"
+  },
+  {
+    "id": "sandygast",
+    "name": "Sandygast",
+    "dex_number": 769,
+    "dex_order": 769,
+    "slot_type": "base"
+  },
+  {
+    "id": "palossand",
+    "name": "Palossand",
+    "dex_number": 770,
+    "dex_order": 770,
+    "slot_type": "base"
+  },
+  {
+    "id": "pyukumuku",
+    "name": "Pyukumuku",
+    "dex_number": 771,
+    "dex_order": 771,
+    "slot_type": "base"
+  },
+  {
+    "id": "type-null",
+    "name": "Type Null",
+    "dex_number": 772,
+    "dex_order": 772,
+    "slot_type": "base"
+  },
+  {
+    "id": "silvally",
+    "name": "Silvally",
+    "dex_number": 773,
+    "dex_order": 773,
+    "slot_type": "base"
+  },
+  {
+    "id": "minior-red-meteor",
+    "name": "Minior Red Meteor",
+    "dex_number": 774,
+    "dex_order": 774,
+    "slot_type": "base"
+  },
+  {
+    "id": "komala",
+    "name": "Komala",
+    "dex_number": 775,
+    "dex_order": 775,
+    "slot_type": "base"
+  },
+  {
+    "id": "turtonator",
+    "name": "Turtonator",
+    "dex_number": 776,
+    "dex_order": 776,
+    "slot_type": "base"
+  },
+  {
+    "id": "togedemaru",
+    "name": "Togedemaru",
+    "dex_number": 777,
+    "dex_order": 777,
+    "slot_type": "base"
+  },
+  {
+    "id": "mimikyu-disguised",
+    "name": "Mimikyu Disguised",
+    "dex_number": 778,
+    "dex_order": 778,
+    "slot_type": "base"
+  },
+  {
+    "id": "bruxish",
+    "name": "Bruxish",
+    "dex_number": 779,
+    "dex_order": 779,
+    "slot_type": "base"
+  },
+  {
+    "id": "drampa",
+    "name": "Drampa",
+    "dex_number": 780,
+    "dex_order": 780,
+    "slot_type": "base"
+  },
+  {
+    "id": "dhelmise",
+    "name": "Dhelmise",
+    "dex_number": 781,
+    "dex_order": 781,
+    "slot_type": "base"
+  },
+  {
+    "id": "jangmo-o",
+    "name": "Jangmo O",
+    "dex_number": 782,
+    "dex_order": 782,
+    "slot_type": "base"
+  },
+  {
+    "id": "hakamo-o",
+    "name": "Hakamo O",
+    "dex_number": 783,
+    "dex_order": 783,
+    "slot_type": "base"
+  },
+  {
+    "id": "kommo-o",
+    "name": "Kommo O",
+    "dex_number": 784,
+    "dex_order": 784,
+    "slot_type": "base"
+  },
+  {
+    "id": "tapu-koko",
+    "name": "Tapu Koko",
+    "dex_number": 785,
+    "dex_order": 785,
+    "slot_type": "base"
+  },
+  {
+    "id": "tapu-lele",
+    "name": "Tapu Lele",
+    "dex_number": 786,
+    "dex_order": 786,
+    "slot_type": "base"
+  },
+  {
+    "id": "tapu-bulu",
+    "name": "Tapu Bulu",
+    "dex_number": 787,
+    "dex_order": 787,
+    "slot_type": "base"
+  },
+  {
+    "id": "tapu-fini",
+    "name": "Tapu Fini",
+    "dex_number": 788,
+    "dex_order": 788,
+    "slot_type": "base"
+  },
+  {
+    "id": "cosmog",
+    "name": "Cosmog",
+    "dex_number": 789,
+    "dex_order": 789,
+    "slot_type": "base"
+  },
+  {
+    "id": "cosmoem",
+    "name": "Cosmoem",
+    "dex_number": 790,
+    "dex_order": 790,
+    "slot_type": "base"
+  },
+  {
+    "id": "solgaleo",
+    "name": "Solgaleo",
+    "dex_number": 791,
+    "dex_order": 791,
+    "slot_type": "base"
+  },
+  {
+    "id": "lunala",
+    "name": "Lunala",
+    "dex_number": 792,
+    "dex_order": 792,
+    "slot_type": "base"
+  },
+  {
+    "id": "nihilego",
+    "name": "Nihilego",
+    "dex_number": 793,
+    "dex_order": 793,
+    "slot_type": "base"
+  },
+  {
+    "id": "buzzwole",
+    "name": "Buzzwole",
+    "dex_number": 794,
+    "dex_order": 794,
+    "slot_type": "base"
+  },
+  {
+    "id": "pheromosa",
+    "name": "Pheromosa",
+    "dex_number": 795,
+    "dex_order": 795,
+    "slot_type": "base"
+  },
+  {
+    "id": "xurkitree",
+    "name": "Xurkitree",
+    "dex_number": 796,
+    "dex_order": 796,
+    "slot_type": "base"
+  },
+  {
+    "id": "celesteela",
+    "name": "Celesteela",
+    "dex_number": 797,
+    "dex_order": 797,
+    "slot_type": "base"
+  },
+  {
+    "id": "kartana",
+    "name": "Kartana",
+    "dex_number": 798,
+    "dex_order": 798,
+    "slot_type": "base"
+  },
+  {
+    "id": "guzzlord",
+    "name": "Guzzlord",
+    "dex_number": 799,
+    "dex_order": 799,
+    "slot_type": "base"
+  },
+  {
+    "id": "necrozma",
+    "name": "Necrozma",
+    "dex_number": 800,
+    "dex_order": 800,
+    "slot_type": "base"
+  },
+  {
+    "id": "magearna",
+    "name": "Magearna",
+    "dex_number": 801,
+    "dex_order": 801,
+    "slot_type": "base"
+  },
+  {
+    "id": "marshadow",
+    "name": "Marshadow",
+    "dex_number": 802,
+    "dex_order": 802,
+    "slot_type": "base"
+  },
+  {
+    "id": "poipole",
+    "name": "Poipole",
+    "dex_number": 803,
+    "dex_order": 803,
+    "slot_type": "base"
+  },
+  {
+    "id": "naganadel",
+    "name": "Naganadel",
+    "dex_number": 804,
+    "dex_order": 804,
+    "slot_type": "base"
+  },
+  {
+    "id": "stakataka",
+    "name": "Stakataka",
+    "dex_number": 805,
+    "dex_order": 805,
+    "slot_type": "base"
+  },
+  {
+    "id": "blacephalon",
+    "name": "Blacephalon",
+    "dex_number": 806,
+    "dex_order": 806,
+    "slot_type": "base"
+  },
+  {
+    "id": "zeraora",
+    "name": "Zeraora",
+    "dex_number": 807,
+    "dex_order": 807,
+    "slot_type": "base"
+  },
+  {
+    "id": "meltan",
+    "name": "Meltan",
+    "dex_number": 808,
+    "dex_order": 808,
+    "slot_type": "base"
+  },
+  {
+    "id": "melmetal",
+    "name": "Melmetal",
+    "dex_number": 809,
+    "dex_order": 809,
+    "slot_type": "base"
+  },
+  {
+    "id": "grookey",
+    "name": "Grookey",
+    "dex_number": 810,
+    "dex_order": 810,
+    "slot_type": "base"
+  },
+  {
+    "id": "thwackey",
+    "name": "Thwackey",
+    "dex_number": 811,
+    "dex_order": 811,
+    "slot_type": "base"
+  },
+  {
+    "id": "rillaboom",
+    "name": "Rillaboom",
+    "dex_number": 812,
+    "dex_order": 812,
+    "slot_type": "base"
+  },
+  {
+    "id": "scorbunny",
+    "name": "Scorbunny",
+    "dex_number": 813,
+    "dex_order": 813,
+    "slot_type": "base"
+  },
+  {
+    "id": "raboot",
+    "name": "Raboot",
+    "dex_number": 814,
+    "dex_order": 814,
+    "slot_type": "base"
+  },
+  {
+    "id": "cinderace",
+    "name": "Cinderace",
+    "dex_number": 815,
+    "dex_order": 815,
+    "slot_type": "base"
+  },
+  {
+    "id": "sobble",
+    "name": "Sobble",
+    "dex_number": 816,
+    "dex_order": 816,
+    "slot_type": "base"
+  },
+  {
+    "id": "drizzile",
+    "name": "Drizzile",
+    "dex_number": 817,
+    "dex_order": 817,
+    "slot_type": "base"
+  },
+  {
+    "id": "inteleon",
+    "name": "Inteleon",
+    "dex_number": 818,
+    "dex_order": 818,
+    "slot_type": "base"
+  },
+  {
+    "id": "skwovet",
+    "name": "Skwovet",
+    "dex_number": 819,
+    "dex_order": 819,
+    "slot_type": "base"
+  },
+  {
+    "id": "greedent",
+    "name": "Greedent",
+    "dex_number": 820,
+    "dex_order": 820,
+    "slot_type": "base"
+  },
+  {
+    "id": "rookidee",
+    "name": "Rookidee",
+    "dex_number": 821,
+    "dex_order": 821,
+    "slot_type": "base"
+  },
+  {
+    "id": "corvisquire",
+    "name": "Corvisquire",
+    "dex_number": 822,
+    "dex_order": 822,
+    "slot_type": "base"
+  },
+  {
+    "id": "corviknight",
+    "name": "Corviknight",
+    "dex_number": 823,
+    "dex_order": 823,
+    "slot_type": "base"
+  },
+  {
+    "id": "blipbug",
+    "name": "Blipbug",
+    "dex_number": 824,
+    "dex_order": 824,
+    "slot_type": "base"
+  },
+  {
+    "id": "dottler",
+    "name": "Dottler",
+    "dex_number": 825,
+    "dex_order": 825,
+    "slot_type": "base"
+  },
+  {
+    "id": "orbeetle",
+    "name": "Orbeetle",
+    "dex_number": 826,
+    "dex_order": 826,
+    "slot_type": "base"
+  },
+  {
+    "id": "nickit",
+    "name": "Nickit",
+    "dex_number": 827,
+    "dex_order": 827,
+    "slot_type": "base"
+  },
+  {
+    "id": "thievul",
+    "name": "Thievul",
+    "dex_number": 828,
+    "dex_order": 828,
+    "slot_type": "base"
+  },
+  {
+    "id": "gossifleur",
+    "name": "Gossifleur",
+    "dex_number": 829,
+    "dex_order": 829,
+    "slot_type": "base"
+  },
+  {
+    "id": "eldegoss",
+    "name": "Eldegoss",
+    "dex_number": 830,
+    "dex_order": 830,
+    "slot_type": "base"
+  },
+  {
+    "id": "wooloo",
+    "name": "Wooloo",
+    "dex_number": 831,
+    "dex_order": 831,
+    "slot_type": "base"
+  },
+  {
+    "id": "dubwool",
+    "name": "Dubwool",
+    "dex_number": 832,
+    "dex_order": 832,
+    "slot_type": "base"
+  },
+  {
+    "id": "chewtle",
+    "name": "Chewtle",
+    "dex_number": 833,
+    "dex_order": 833,
+    "slot_type": "base"
+  },
+  {
+    "id": "drednaw",
+    "name": "Drednaw",
+    "dex_number": 834,
+    "dex_order": 834,
+    "slot_type": "base"
+  },
+  {
+    "id": "yamper",
+    "name": "Yamper",
+    "dex_number": 835,
+    "dex_order": 835,
+    "slot_type": "base"
+  },
+  {
+    "id": "boltund",
+    "name": "Boltund",
+    "dex_number": 836,
+    "dex_order": 836,
+    "slot_type": "base"
+  },
+  {
+    "id": "rolycoly",
+    "name": "Rolycoly",
+    "dex_number": 837,
+    "dex_order": 837,
+    "slot_type": "base"
+  },
+  {
+    "id": "carkol",
+    "name": "Carkol",
+    "dex_number": 838,
+    "dex_order": 838,
+    "slot_type": "base"
+  },
+  {
+    "id": "coalossal",
+    "name": "Coalossal",
+    "dex_number": 839,
+    "dex_order": 839,
+    "slot_type": "base"
+  },
+  {
+    "id": "applin",
+    "name": "Applin",
+    "dex_number": 840,
+    "dex_order": 840,
+    "slot_type": "base"
+  },
+  {
+    "id": "flapple",
+    "name": "Flapple",
+    "dex_number": 841,
+    "dex_order": 841,
+    "slot_type": "base"
+  },
+  {
+    "id": "appletun",
+    "name": "Appletun",
+    "dex_number": 842,
+    "dex_order": 842,
+    "slot_type": "base"
+  },
+  {
+    "id": "silicobra",
+    "name": "Silicobra",
+    "dex_number": 843,
+    "dex_order": 843,
+    "slot_type": "base"
+  },
+  {
+    "id": "sandaconda",
+    "name": "Sandaconda",
+    "dex_number": 844,
+    "dex_order": 844,
+    "slot_type": "base"
+  },
+  {
+    "id": "cramorant",
+    "name": "Cramorant",
+    "dex_number": 845,
+    "dex_order": 845,
+    "slot_type": "base"
+  },
+  {
+    "id": "arrokuda",
+    "name": "Arrokuda",
+    "dex_number": 846,
+    "dex_order": 846,
+    "slot_type": "base"
+  },
+  {
+    "id": "barraskewda",
+    "name": "Barraskewda",
+    "dex_number": 847,
+    "dex_order": 847,
+    "slot_type": "base"
+  },
+  {
+    "id": "toxel",
+    "name": "Toxel",
+    "dex_number": 848,
+    "dex_order": 848,
+    "slot_type": "base"
+  },
+  {
+    "id": "toxtricity-amped",
+    "name": "Toxtricity Amped",
+    "dex_number": 849,
+    "dex_order": 849,
+    "slot_type": "base"
+  },
+  {
+    "id": "sizzlipede",
+    "name": "Sizzlipede",
+    "dex_number": 850,
+    "dex_order": 850,
+    "slot_type": "base"
+  },
+  {
+    "id": "centiskorch",
+    "name": "Centiskorch",
+    "dex_number": 851,
+    "dex_order": 851,
+    "slot_type": "base"
+  },
+  {
+    "id": "clobbopus",
+    "name": "Clobbopus",
+    "dex_number": 852,
+    "dex_order": 852,
+    "slot_type": "base"
+  },
+  {
+    "id": "grapploct",
+    "name": "Grapploct",
+    "dex_number": 853,
+    "dex_order": 853,
+    "slot_type": "base"
+  },
+  {
+    "id": "sinistea",
+    "name": "Sinistea",
+    "dex_number": 854,
+    "dex_order": 854,
+    "slot_type": "base"
+  },
+  {
+    "id": "polteageist",
+    "name": "Polteageist",
+    "dex_number": 855,
+    "dex_order": 855,
+    "slot_type": "base"
+  },
+  {
+    "id": "hatenna",
+    "name": "Hatenna",
+    "dex_number": 856,
+    "dex_order": 856,
+    "slot_type": "base"
+  },
+  {
+    "id": "hattrem",
+    "name": "Hattrem",
+    "dex_number": 857,
+    "dex_order": 857,
+    "slot_type": "base"
+  },
+  {
+    "id": "hatterene",
+    "name": "Hatterene",
+    "dex_number": 858,
+    "dex_order": 858,
+    "slot_type": "base"
+  },
+  {
+    "id": "impidimp",
+    "name": "Impidimp",
+    "dex_number": 859,
+    "dex_order": 859,
+    "slot_type": "base"
+  },
+  {
+    "id": "morgrem",
+    "name": "Morgrem",
+    "dex_number": 860,
+    "dex_order": 860,
+    "slot_type": "base"
+  },
+  {
+    "id": "grimmsnarl",
+    "name": "Grimmsnarl",
+    "dex_number": 861,
+    "dex_order": 861,
+    "slot_type": "base"
+  },
+  {
+    "id": "obstagoon",
+    "name": "Obstagoon",
+    "dex_number": 862,
+    "dex_order": 862,
+    "slot_type": "base"
+  },
+  {
+    "id": "perrserker",
+    "name": "Perrserker",
+    "dex_number": 863,
+    "dex_order": 863,
+    "slot_type": "base"
+  },
+  {
+    "id": "cursola",
+    "name": "Cursola",
+    "dex_number": 864,
+    "dex_order": 864,
+    "slot_type": "base"
+  },
+  {
+    "id": "sirfetchd",
+    "name": "Sirfetchd",
+    "dex_number": 865,
+    "dex_order": 865,
+    "slot_type": "base"
+  },
+  {
+    "id": "mr-rime",
+    "name": "Mr Rime",
+    "dex_number": 866,
+    "dex_order": 866,
+    "slot_type": "base"
+  },
+  {
+    "id": "runerigus",
+    "name": "Runerigus",
+    "dex_number": 867,
+    "dex_order": 867,
+    "slot_type": "base"
+  },
+  {
+    "id": "milcery",
+    "name": "Milcery",
+    "dex_number": 868,
+    "dex_order": 868,
+    "slot_type": "base"
+  },
+  {
+    "id": "alcremie",
+    "name": "Alcremie",
+    "dex_number": 869,
+    "dex_order": 869,
+    "slot_type": "base"
+  },
+  {
+    "id": "falinks",
+    "name": "Falinks",
+    "dex_number": 870,
+    "dex_order": 870,
+    "slot_type": "base"
+  },
+  {
+    "id": "pincurchin",
+    "name": "Pincurchin",
+    "dex_number": 871,
+    "dex_order": 871,
+    "slot_type": "base"
+  },
+  {
+    "id": "snom",
+    "name": "Snom",
+    "dex_number": 872,
+    "dex_order": 872,
+    "slot_type": "base"
+  },
+  {
+    "id": "frosmoth",
+    "name": "Frosmoth",
+    "dex_number": 873,
+    "dex_order": 873,
+    "slot_type": "base"
+  },
+  {
+    "id": "stonjourner",
+    "name": "Stonjourner",
+    "dex_number": 874,
+    "dex_order": 874,
+    "slot_type": "base"
+  },
+  {
+    "id": "eiscue-ice",
+    "name": "Eiscue Ice",
+    "dex_number": 875,
+    "dex_order": 875,
+    "slot_type": "base"
+  },
+  {
+    "id": "indeedee-male",
+    "name": "Indeedee Male",
+    "dex_number": 876,
+    "dex_order": 876,
+    "slot_type": "base"
+  },
+  {
+    "id": "morpeko-full-belly",
+    "name": "Morpeko Full Belly",
+    "dex_number": 877,
+    "dex_order": 877,
+    "slot_type": "base"
+  },
+  {
+    "id": "cufant",
+    "name": "Cufant",
+    "dex_number": 878,
+    "dex_order": 878,
+    "slot_type": "base"
+  },
+  {
+    "id": "copperajah",
+    "name": "Copperajah",
+    "dex_number": 879,
+    "dex_order": 879,
+    "slot_type": "base"
+  },
+  {
+    "id": "dracozolt",
+    "name": "Dracozolt",
+    "dex_number": 880,
+    "dex_order": 880,
+    "slot_type": "base"
+  },
+  {
+    "id": "arctozolt",
+    "name": "Arctozolt",
+    "dex_number": 881,
+    "dex_order": 881,
+    "slot_type": "base"
+  },
+  {
+    "id": "dracovish",
+    "name": "Dracovish",
+    "dex_number": 882,
+    "dex_order": 882,
+    "slot_type": "base"
+  },
+  {
+    "id": "arctovish",
+    "name": "Arctovish",
+    "dex_number": 883,
+    "dex_order": 883,
+    "slot_type": "base"
+  },
+  {
+    "id": "duraludon",
+    "name": "Duraludon",
+    "dex_number": 884,
+    "dex_order": 884,
+    "slot_type": "base"
+  },
+  {
+    "id": "dreepy",
+    "name": "Dreepy",
+    "dex_number": 885,
+    "dex_order": 885,
+    "slot_type": "base"
+  },
+  {
+    "id": "drakloak",
+    "name": "Drakloak",
+    "dex_number": 886,
+    "dex_order": 886,
+    "slot_type": "base"
+  },
+  {
+    "id": "dragapult",
+    "name": "Dragapult",
+    "dex_number": 887,
+    "dex_order": 887,
+    "slot_type": "base"
+  },
+  {
+    "id": "zacian",
+    "name": "Zacian",
+    "dex_number": 888,
+    "dex_order": 888,
+    "slot_type": "base"
+  },
+  {
+    "id": "zamazenta",
+    "name": "Zamazenta",
+    "dex_number": 889,
+    "dex_order": 889,
+    "slot_type": "base"
+  },
+  {
+    "id": "eternatus",
+    "name": "Eternatus",
+    "dex_number": 890,
+    "dex_order": 890,
+    "slot_type": "base"
+  },
+  {
+    "id": "kubfu",
+    "name": "Kubfu",
+    "dex_number": 891,
+    "dex_order": 891,
+    "slot_type": "base"
+  },
+  {
+    "id": "urshifu-single-strike",
+    "name": "Urshifu Single Strike",
+    "dex_number": 892,
+    "dex_order": 892,
+    "slot_type": "base"
+  },
+  {
+    "id": "zarude",
+    "name": "Zarude",
+    "dex_number": 893,
+    "dex_order": 893,
+    "slot_type": "base"
+  },
+  {
+    "id": "regieleki",
+    "name": "Regieleki",
+    "dex_number": 894,
+    "dex_order": 894,
+    "slot_type": "base"
+  },
+  {
+    "id": "regidrago",
+    "name": "Regidrago",
+    "dex_number": 895,
+    "dex_order": 895,
+    "slot_type": "base"
+  },
+  {
+    "id": "glastrier",
+    "name": "Glastrier",
+    "dex_number": 896,
+    "dex_order": 896,
+    "slot_type": "base"
+  },
+  {
+    "id": "spectrier",
+    "name": "Spectrier",
+    "dex_number": 897,
+    "dex_order": 897,
+    "slot_type": "base"
+  },
+  {
+    "id": "calyrex",
+    "name": "Calyrex",
+    "dex_number": 898,
+    "dex_order": 898,
+    "slot_type": "base"
+  },
+  {
+    "id": "wyrdeer",
+    "name": "Wyrdeer",
+    "dex_number": 899,
+    "dex_order": 899,
+    "slot_type": "base"
+  },
+  {
+    "id": "kleavor",
+    "name": "Kleavor",
+    "dex_number": 900,
+    "dex_order": 900,
+    "slot_type": "base"
+  },
+  {
+    "id": "ursaluna",
+    "name": "Ursaluna",
+    "dex_number": 901,
+    "dex_order": 901,
+    "slot_type": "base"
+  },
+  {
+    "id": "basculegion-male",
+    "name": "Basculegion Male",
+    "dex_number": 902,
+    "dex_order": 902,
+    "slot_type": "base"
+  },
+  {
+    "id": "sneasler",
+    "name": "Sneasler",
+    "dex_number": 903,
+    "dex_order": 903,
+    "slot_type": "base"
+  },
+  {
+    "id": "overqwil",
+    "name": "Overqwil",
+    "dex_number": 904,
+    "dex_order": 904,
+    "slot_type": "base"
+  },
+  {
+    "id": "enamorus-incarnate",
+    "name": "Enamorus Incarnate",
+    "dex_number": 905,
+    "dex_order": 905,
+    "slot_type": "base"
+  },
+  {
+    "id": "sprigatito",
+    "name": "Sprigatito",
+    "dex_number": 906,
+    "dex_order": 906,
+    "slot_type": "base"
+  },
+  {
+    "id": "floragato",
+    "name": "Floragato",
+    "dex_number": 907,
+    "dex_order": 907,
+    "slot_type": "base"
+  },
+  {
+    "id": "meowscarada",
+    "name": "Meowscarada",
+    "dex_number": 908,
+    "dex_order": 908,
+    "slot_type": "base"
+  },
+  {
+    "id": "fuecoco",
+    "name": "Fuecoco",
+    "dex_number": 909,
+    "dex_order": 909,
+    "slot_type": "base"
+  },
+  {
+    "id": "crocalor",
+    "name": "Crocalor",
+    "dex_number": 910,
+    "dex_order": 910,
+    "slot_type": "base"
+  },
+  {
+    "id": "skeledirge",
+    "name": "Skeledirge",
+    "dex_number": 911,
+    "dex_order": 911,
+    "slot_type": "base"
+  },
+  {
+    "id": "quaxly",
+    "name": "Quaxly",
+    "dex_number": 912,
+    "dex_order": 912,
+    "slot_type": "base"
+  },
+  {
+    "id": "quaxwell",
+    "name": "Quaxwell",
+    "dex_number": 913,
+    "dex_order": 913,
+    "slot_type": "base"
+  },
+  {
+    "id": "quaquaval",
+    "name": "Quaquaval",
+    "dex_number": 914,
+    "dex_order": 914,
+    "slot_type": "base"
+  },
+  {
+    "id": "lechonk",
+    "name": "Lechonk",
+    "dex_number": 915,
+    "dex_order": 915,
+    "slot_type": "base"
+  },
+  {
+    "id": "oinkologne-male",
+    "name": "Oinkologne Male",
+    "dex_number": 916,
+    "dex_order": 916,
+    "slot_type": "base"
+  },
+  {
+    "id": "tarountula",
+    "name": "Tarountula",
+    "dex_number": 917,
+    "dex_order": 917,
+    "slot_type": "base"
+  },
+  {
+    "id": "spidops",
+    "name": "Spidops",
+    "dex_number": 918,
+    "dex_order": 918,
+    "slot_type": "base"
+  },
+  {
+    "id": "nymble",
+    "name": "Nymble",
+    "dex_number": 919,
+    "dex_order": 919,
+    "slot_type": "base"
+  },
+  {
+    "id": "lokix",
+    "name": "Lokix",
+    "dex_number": 920,
+    "dex_order": 920,
+    "slot_type": "base"
+  },
+  {
+    "id": "pawmi",
+    "name": "Pawmi",
+    "dex_number": 921,
+    "dex_order": 921,
+    "slot_type": "base"
+  },
+  {
+    "id": "pawmo",
+    "name": "Pawmo",
+    "dex_number": 922,
+    "dex_order": 922,
+    "slot_type": "base"
+  },
+  {
+    "id": "pawmot",
+    "name": "Pawmot",
+    "dex_number": 923,
+    "dex_order": 923,
+    "slot_type": "base"
+  },
+  {
+    "id": "tandemaus",
+    "name": "Tandemaus",
+    "dex_number": 924,
+    "dex_order": 924,
+    "slot_type": "base"
+  },
+  {
+    "id": "maushold-family-of-four",
+    "name": "Maushold Family Of Four",
+    "dex_number": 925,
+    "dex_order": 925,
+    "slot_type": "base"
+  },
+  {
+    "id": "fidough",
+    "name": "Fidough",
+    "dex_number": 926,
+    "dex_order": 926,
+    "slot_type": "base"
+  },
+  {
+    "id": "dachsbun",
+    "name": "Dachsbun",
+    "dex_number": 927,
+    "dex_order": 927,
+    "slot_type": "base"
+  },
+  {
+    "id": "smoliv",
+    "name": "Smoliv",
+    "dex_number": 928,
+    "dex_order": 928,
+    "slot_type": "base"
+  },
+  {
+    "id": "dolliv",
+    "name": "Dolliv",
+    "dex_number": 929,
+    "dex_order": 929,
+    "slot_type": "base"
+  },
+  {
+    "id": "arboliva",
+    "name": "Arboliva",
+    "dex_number": 930,
+    "dex_order": 930,
+    "slot_type": "base"
+  },
+  {
+    "id": "squawkabilly-green-plumage",
+    "name": "Squawkabilly Green Plumage",
+    "dex_number": 931,
+    "dex_order": 931,
+    "slot_type": "base"
+  },
+  {
+    "id": "nacli",
+    "name": "Nacli",
+    "dex_number": 932,
+    "dex_order": 932,
+    "slot_type": "base"
+  },
+  {
+    "id": "naclstack",
+    "name": "Naclstack",
+    "dex_number": 933,
+    "dex_order": 933,
+    "slot_type": "base"
+  },
+  {
+    "id": "garganacl",
+    "name": "Garganacl",
+    "dex_number": 934,
+    "dex_order": 934,
+    "slot_type": "base"
+  },
+  {
+    "id": "charcadet",
+    "name": "Charcadet",
+    "dex_number": 935,
+    "dex_order": 935,
+    "slot_type": "base"
+  },
+  {
+    "id": "armarouge",
+    "name": "Armarouge",
+    "dex_number": 936,
+    "dex_order": 936,
+    "slot_type": "base"
+  },
+  {
+    "id": "ceruledge",
+    "name": "Ceruledge",
+    "dex_number": 937,
+    "dex_order": 937,
+    "slot_type": "base"
+  },
+  {
+    "id": "tadbulb",
+    "name": "Tadbulb",
+    "dex_number": 938,
+    "dex_order": 938,
+    "slot_type": "base"
+  },
+  {
+    "id": "bellibolt",
+    "name": "Bellibolt",
+    "dex_number": 939,
+    "dex_order": 939,
+    "slot_type": "base"
+  },
+  {
+    "id": "wattrel",
+    "name": "Wattrel",
+    "dex_number": 940,
+    "dex_order": 940,
+    "slot_type": "base"
+  },
+  {
+    "id": "kilowattrel",
+    "name": "Kilowattrel",
+    "dex_number": 941,
+    "dex_order": 941,
+    "slot_type": "base"
+  },
+  {
+    "id": "maschiff",
+    "name": "Maschiff",
+    "dex_number": 942,
+    "dex_order": 942,
+    "slot_type": "base"
+  },
+  {
+    "id": "mabosstiff",
+    "name": "Mabosstiff",
+    "dex_number": 943,
+    "dex_order": 943,
+    "slot_type": "base"
+  },
+  {
+    "id": "shroodle",
+    "name": "Shroodle",
+    "dex_number": 944,
+    "dex_order": 944,
+    "slot_type": "base"
+  },
+  {
+    "id": "grafaiai",
+    "name": "Grafaiai",
+    "dex_number": 945,
+    "dex_order": 945,
+    "slot_type": "base"
+  },
+  {
+    "id": "bramblin",
+    "name": "Bramblin",
+    "dex_number": 946,
+    "dex_order": 946,
+    "slot_type": "base"
+  },
+  {
+    "id": "brambleghast",
+    "name": "Brambleghast",
+    "dex_number": 947,
+    "dex_order": 947,
+    "slot_type": "base"
+  },
+  {
+    "id": "toedscool",
+    "name": "Toedscool",
+    "dex_number": 948,
+    "dex_order": 948,
+    "slot_type": "base"
+  },
+  {
+    "id": "toedscruel",
+    "name": "Toedscruel",
+    "dex_number": 949,
+    "dex_order": 949,
+    "slot_type": "base"
+  },
+  {
+    "id": "klawf",
+    "name": "Klawf",
+    "dex_number": 950,
+    "dex_order": 950,
+    "slot_type": "base"
+  },
+  {
+    "id": "capsakid",
+    "name": "Capsakid",
+    "dex_number": 951,
+    "dex_order": 951,
+    "slot_type": "base"
+  },
+  {
+    "id": "scovillain",
+    "name": "Scovillain",
+    "dex_number": 952,
+    "dex_order": 952,
+    "slot_type": "base"
+  },
+  {
+    "id": "rellor",
+    "name": "Rellor",
+    "dex_number": 953,
+    "dex_order": 953,
+    "slot_type": "base"
+  },
+  {
+    "id": "rabsca",
+    "name": "Rabsca",
+    "dex_number": 954,
+    "dex_order": 954,
+    "slot_type": "base"
+  },
+  {
+    "id": "flittle",
+    "name": "Flittle",
+    "dex_number": 955,
+    "dex_order": 955,
+    "slot_type": "base"
+  },
+  {
+    "id": "espathra",
+    "name": "Espathra",
+    "dex_number": 956,
+    "dex_order": 956,
+    "slot_type": "base"
+  },
+  {
+    "id": "tinkatink",
+    "name": "Tinkatink",
+    "dex_number": 957,
+    "dex_order": 957,
+    "slot_type": "base"
+  },
+  {
+    "id": "tinkatuff",
+    "name": "Tinkatuff",
+    "dex_number": 958,
+    "dex_order": 958,
+    "slot_type": "base"
+  },
+  {
+    "id": "tinkaton",
+    "name": "Tinkaton",
+    "dex_number": 959,
+    "dex_order": 959,
+    "slot_type": "base"
+  },
+  {
+    "id": "wiglett",
+    "name": "Wiglett",
+    "dex_number": 960,
+    "dex_order": 960,
+    "slot_type": "base"
+  },
+  {
+    "id": "wugtrio",
+    "name": "Wugtrio",
+    "dex_number": 961,
+    "dex_order": 961,
+    "slot_type": "base"
+  },
+  {
+    "id": "bombirdier",
+    "name": "Bombirdier",
+    "dex_number": 962,
+    "dex_order": 962,
+    "slot_type": "base"
+  },
+  {
+    "id": "finizen",
+    "name": "Finizen",
+    "dex_number": 963,
+    "dex_order": 963,
+    "slot_type": "base"
+  },
+  {
+    "id": "palafin-zero",
+    "name": "Palafin Zero",
+    "dex_number": 964,
+    "dex_order": 964,
+    "slot_type": "base"
+  },
+  {
+    "id": "varoom",
+    "name": "Varoom",
+    "dex_number": 965,
+    "dex_order": 965,
+    "slot_type": "base"
+  },
+  {
+    "id": "revavroom",
+    "name": "Revavroom",
+    "dex_number": 966,
+    "dex_order": 966,
+    "slot_type": "base"
+  },
+  {
+    "id": "cyclizar",
+    "name": "Cyclizar",
+    "dex_number": 967,
+    "dex_order": 967,
+    "slot_type": "base"
+  },
+  {
+    "id": "orthworm",
+    "name": "Orthworm",
+    "dex_number": 968,
+    "dex_order": 968,
+    "slot_type": "base"
+  },
+  {
+    "id": "glimmet",
+    "name": "Glimmet",
+    "dex_number": 969,
+    "dex_order": 969,
+    "slot_type": "base"
+  },
+  {
+    "id": "glimmora",
+    "name": "Glimmora",
+    "dex_number": 970,
+    "dex_order": 970,
+    "slot_type": "base"
+  },
+  {
+    "id": "greavard",
+    "name": "Greavard",
+    "dex_number": 971,
+    "dex_order": 971,
+    "slot_type": "base"
+  },
+  {
+    "id": "houndstone",
+    "name": "Houndstone",
+    "dex_number": 972,
+    "dex_order": 972,
+    "slot_type": "base"
+  },
+  {
+    "id": "flamigo",
+    "name": "Flamigo",
+    "dex_number": 973,
+    "dex_order": 973,
+    "slot_type": "base"
+  },
+  {
+    "id": "cetoddle",
+    "name": "Cetoddle",
+    "dex_number": 974,
+    "dex_order": 974,
+    "slot_type": "base"
+  },
+  {
+    "id": "cetitan",
+    "name": "Cetitan",
+    "dex_number": 975,
+    "dex_order": 975,
+    "slot_type": "base"
+  },
+  {
+    "id": "veluza",
+    "name": "Veluza",
+    "dex_number": 976,
+    "dex_order": 976,
+    "slot_type": "base"
+  },
+  {
+    "id": "dondozo",
+    "name": "Dondozo",
+    "dex_number": 977,
+    "dex_order": 977,
+    "slot_type": "base"
+  },
+  {
+    "id": "tatsugiri-curly",
+    "name": "Tatsugiri Curly",
+    "dex_number": 978,
+    "dex_order": 978,
+    "slot_type": "base"
+  },
+  {
+    "id": "annihilape",
+    "name": "Annihilape",
+    "dex_number": 979,
+    "dex_order": 979,
+    "slot_type": "base"
+  },
+  {
+    "id": "clodsire",
+    "name": "Clodsire",
+    "dex_number": 980,
+    "dex_order": 980,
+    "slot_type": "base"
+  },
+  {
+    "id": "farigiraf",
+    "name": "Farigiraf",
+    "dex_number": 981,
+    "dex_order": 981,
+    "slot_type": "base"
+  },
+  {
+    "id": "dudunsparce-two-segment",
+    "name": "Dudunsparce Two Segment",
+    "dex_number": 982,
+    "dex_order": 982,
+    "slot_type": "base"
+  },
+  {
+    "id": "kingambit",
+    "name": "Kingambit",
+    "dex_number": 983,
+    "dex_order": 983,
+    "slot_type": "base"
+  },
+  {
+    "id": "great-tusk",
+    "name": "Great Tusk",
+    "dex_number": 984,
+    "dex_order": 984,
+    "slot_type": "base"
+  },
+  {
+    "id": "scream-tail",
+    "name": "Scream Tail",
+    "dex_number": 985,
+    "dex_order": 985,
+    "slot_type": "base"
+  },
+  {
+    "id": "brute-bonnet",
+    "name": "Brute Bonnet",
+    "dex_number": 986,
+    "dex_order": 986,
+    "slot_type": "base"
+  },
+  {
+    "id": "flutter-mane",
+    "name": "Flutter Mane",
+    "dex_number": 987,
+    "dex_order": 987,
+    "slot_type": "base"
+  },
+  {
+    "id": "slither-wing",
+    "name": "Slither Wing",
+    "dex_number": 988,
+    "dex_order": 988,
+    "slot_type": "base"
+  },
+  {
+    "id": "sandy-shocks",
+    "name": "Sandy Shocks",
+    "dex_number": 989,
+    "dex_order": 989,
+    "slot_type": "base"
+  },
+  {
+    "id": "iron-treads",
+    "name": "Iron Treads",
+    "dex_number": 990,
+    "dex_order": 990,
+    "slot_type": "base"
+  },
+  {
+    "id": "iron-bundle",
+    "name": "Iron Bundle",
+    "dex_number": 991,
+    "dex_order": 991,
+    "slot_type": "base"
+  },
+  {
+    "id": "iron-hands",
+    "name": "Iron Hands",
+    "dex_number": 992,
+    "dex_order": 992,
+    "slot_type": "base"
+  },
+  {
+    "id": "iron-jugulis",
+    "name": "Iron Jugulis",
+    "dex_number": 993,
+    "dex_order": 993,
+    "slot_type": "base"
+  },
+  {
+    "id": "iron-moth",
+    "name": "Iron Moth",
+    "dex_number": 994,
+    "dex_order": 994,
+    "slot_type": "base"
+  },
+  {
+    "id": "iron-thorns",
+    "name": "Iron Thorns",
+    "dex_number": 995,
+    "dex_order": 995,
+    "slot_type": "base"
+  },
+  {
+    "id": "frigibax",
+    "name": "Frigibax",
+    "dex_number": 996,
+    "dex_order": 996,
+    "slot_type": "base"
+  },
+  {
+    "id": "arctibax",
+    "name": "Arctibax",
+    "dex_number": 997,
+    "dex_order": 997,
+    "slot_type": "base"
+  },
+  {
+    "id": "baxcalibur",
+    "name": "Baxcalibur",
+    "dex_number": 998,
+    "dex_order": 998,
+    "slot_type": "base"
+  },
+  {
+    "id": "gimmighoul",
+    "name": "Gimmighoul",
+    "dex_number": 999,
+    "dex_order": 999,
+    "slot_type": "base"
+  },
+  {
+    "id": "gholdengo",
+    "name": "Gholdengo",
+    "dex_number": 1000,
+    "dex_order": 1000,
+    "slot_type": "base"
+  },
+  {
+    "id": "wo-chien",
+    "name": "Wo Chien",
+    "dex_number": 1001,
+    "dex_order": 1001,
+    "slot_type": "base"
+  },
+  {
+    "id": "chien-pao",
+    "name": "Chien Pao",
+    "dex_number": 1002,
+    "dex_order": 1002,
+    "slot_type": "base"
+  },
+  {
+    "id": "ting-lu",
+    "name": "Ting Lu",
+    "dex_number": 1003,
+    "dex_order": 1003,
+    "slot_type": "base"
+  },
+  {
+    "id": "chi-yu",
+    "name": "Chi Yu",
+    "dex_number": 1004,
+    "dex_order": 1004,
+    "slot_type": "base"
+  },
+  {
+    "id": "roaring-moon",
+    "name": "Roaring Moon",
+    "dex_number": 1005,
+    "dex_order": 1005,
+    "slot_type": "base"
+  },
+  {
+    "id": "iron-valiant",
+    "name": "Iron Valiant",
+    "dex_number": 1006,
+    "dex_order": 1006,
+    "slot_type": "base"
+  },
+  {
+    "id": "koraidon",
+    "name": "Koraidon",
+    "dex_number": 1007,
+    "dex_order": 1007,
+    "slot_type": "base"
+  },
+  {
+    "id": "miraidon",
+    "name": "Miraidon",
+    "dex_number": 1008,
+    "dex_order": 1008,
+    "slot_type": "base"
+  },
+  {
+    "id": "walking-wake",
+    "name": "Walking Wake",
+    "dex_number": 1009,
+    "dex_order": 1009,
+    "slot_type": "base"
+  },
+  {
+    "id": "iron-leaves",
+    "name": "Iron Leaves",
+    "dex_number": 1010,
+    "dex_order": 1010,
+    "slot_type": "base"
+  },
+  {
+    "id": "dipplin",
+    "name": "Dipplin",
+    "dex_number": 1011,
+    "dex_order": 1011,
+    "slot_type": "base"
+  },
+  {
+    "id": "poltchageist",
+    "name": "Poltchageist",
+    "dex_number": 1012,
+    "dex_order": 1012,
+    "slot_type": "base"
+  },
+  {
+    "id": "sinistcha",
+    "name": "Sinistcha",
+    "dex_number": 1013,
+    "dex_order": 1013,
+    "slot_type": "base"
+  },
+  {
+    "id": "okidogi",
+    "name": "Okidogi",
+    "dex_number": 1014,
+    "dex_order": 1014,
+    "slot_type": "base"
+  },
+  {
+    "id": "munkidori",
+    "name": "Munkidori",
+    "dex_number": 1015,
+    "dex_order": 1015,
+    "slot_type": "base"
+  },
+  {
+    "id": "fezandipiti",
+    "name": "Fezandipiti",
+    "dex_number": 1016,
+    "dex_order": 1016,
+    "slot_type": "base"
+  },
+  {
+    "id": "ogerpon",
+    "name": "Ogerpon",
+    "dex_number": 1017,
+    "dex_order": 1017,
+    "slot_type": "base"
+  },
+  {
+    "id": "archaludon",
+    "name": "Archaludon",
+    "dex_number": 1018,
+    "dex_order": 1018,
+    "slot_type": "base"
+  },
+  {
+    "id": "hydrapple",
+    "name": "Hydrapple",
+    "dex_number": 1019,
+    "dex_order": 1019,
+    "slot_type": "base"
+  },
+  {
+    "id": "gouging-fire",
+    "name": "Gouging Fire",
+    "dex_number": 1020,
+    "dex_order": 1020,
+    "slot_type": "base"
+  },
+  {
+    "id": "raging-bolt",
+    "name": "Raging Bolt",
+    "dex_number": 1021,
+    "dex_order": 1021,
+    "slot_type": "base"
+  },
+  {
+    "id": "iron-boulder",
+    "name": "Iron Boulder",
+    "dex_number": 1022,
+    "dex_order": 1022,
+    "slot_type": "base"
+  },
+  {
+    "id": "iron-crown",
+    "name": "Iron Crown",
+    "dex_number": 1023,
+    "dex_order": 1023,
+    "slot_type": "base"
+  },
+  {
+    "id": "terapagos",
+    "name": "Terapagos",
+    "dex_number": 1024,
+    "dex_order": 1024,
+    "slot_type": "base"
+  },
+  {
+    "id": "pecharunt",
+    "name": "Pecharunt",
+    "dex_number": 1025,
+    "dex_order": 1025,
+    "slot_type": "base"
+  },
+  {
+    "id": "venusaur-mega",
+    "name": "Venusaur Mega",
+    "dex_number": 10033,
+    "dex_order": 1026,
+    "slot_type": "mega"
+  },
+  {
+    "id": "charizard-mega-x",
+    "name": "Charizard Mega X",
+    "dex_number": 10034,
+    "dex_order": 1027,
+    "slot_type": "mega"
+  },
+  {
+    "id": "charizard-mega-y",
+    "name": "Charizard Mega Y",
+    "dex_number": 10035,
+    "dex_order": 1028,
+    "slot_type": "mega"
+  },
+  {
+    "id": "blastoise-mega",
+    "name": "Blastoise Mega",
+    "dex_number": 10036,
+    "dex_order": 1029,
+    "slot_type": "mega"
+  },
+  {
+    "id": "beedrill-mega",
+    "name": "Beedrill Mega",
+    "dex_number": 10090,
+    "dex_order": 1030,
+    "slot_type": "mega"
+  },
+  {
+    "id": "pidgeot-mega",
+    "name": "Pidgeot Mega",
+    "dex_number": 10073,
+    "dex_order": 1031,
+    "slot_type": "mega"
+  },
+  {
+    "id": "slowbro-mega",
+    "name": "Slowbro Mega",
+    "dex_number": 10071,
+    "dex_order": 1032,
+    "slot_type": "mega"
+  },
+  {
+    "id": "gengar-mega",
+    "name": "Gengar Mega",
+    "dex_number": 10038,
+    "dex_order": 1033,
+    "slot_type": "mega"
+  },
+  {
+    "id": "kangaskhan-mega",
+    "name": "Kangaskhan Mega",
+    "dex_number": 10039,
+    "dex_order": 1034,
+    "slot_type": "mega"
+  },
+  {
+    "id": "pinsir-mega",
+    "name": "Pinsir Mega",
+    "dex_number": 10040,
+    "dex_order": 1035,
+    "slot_type": "mega"
+  },
+  {
+    "id": "gyarados-mega",
+    "name": "Gyarados Mega",
+    "dex_number": 10041,
+    "dex_order": 1036,
+    "slot_type": "mega"
+  },
+  {
+    "id": "aerodactyl-mega",
+    "name": "Aerodactyl Mega",
+    "dex_number": 10042,
+    "dex_order": 1037,
+    "slot_type": "mega"
+  },
+  {
+    "id": "mewtwo-mega-x",
+    "name": "Mewtwo Mega X",
+    "dex_number": 10043,
+    "dex_order": 1038,
+    "slot_type": "mega"
+  },
+  {
+    "id": "mewtwo-mega-y",
+    "name": "Mewtwo Mega Y",
+    "dex_number": 10044,
+    "dex_order": 1039,
+    "slot_type": "mega"
+  },
+  {
+    "id": "ampharos-mega",
+    "name": "Ampharos Mega",
+    "dex_number": 10045,
+    "dex_order": 1040,
+    "slot_type": "mega"
+  },
+  {
+    "id": "scizor-mega",
+    "name": "Scizor Mega",
+    "dex_number": 10046,
+    "dex_order": 1041,
+    "slot_type": "mega"
+  },
+  {
+    "id": "heracross-mega",
+    "name": "Heracross Mega",
+    "dex_number": 10047,
+    "dex_order": 1042,
+    "slot_type": "mega"
+  },
+  {
+    "id": "houndoom-mega",
+    "name": "Houndoom Mega",
+    "dex_number": 10048,
+    "dex_order": 1043,
+    "slot_type": "mega"
+  },
+  {
+    "id": "tyranitar-mega",
+    "name": "Tyranitar Mega",
+    "dex_number": 10049,
+    "dex_order": 1044,
+    "slot_type": "mega"
+  },
+  {
+    "id": "blaziken-mega",
+    "name": "Blaziken Mega",
+    "dex_number": 10050,
+    "dex_order": 1045,
+    "slot_type": "mega"
+  },
+  {
+    "id": "gardevoir-mega",
+    "name": "Gardevoir Mega",
+    "dex_number": 10051,
+    "dex_order": 1046,
+    "slot_type": "mega"
+  },
+  {
+    "id": "mawile-mega",
+    "name": "Mawile Mega",
+    "dex_number": 10052,
+    "dex_order": 1047,
+    "slot_type": "mega"
+  },
+  {
+    "id": "aggron-mega",
+    "name": "Aggron Mega",
+    "dex_number": 10053,
+    "dex_order": 1048,
+    "slot_type": "mega"
+  },
+  {
+    "id": "medicham-mega",
+    "name": "Medicham Mega",
+    "dex_number": 10054,
+    "dex_order": 1049,
+    "slot_type": "mega"
+  },
+  {
+    "id": "manectric-mega",
+    "name": "Manectric Mega",
+    "dex_number": 10055,
+    "dex_order": 1050,
+    "slot_type": "mega"
+  },
+  {
+    "id": "banette-mega",
+    "name": "Banette Mega",
+    "dex_number": 10056,
+    "dex_order": 1051,
+    "slot_type": "mega"
+  },
+  {
+    "id": "absol-mega",
+    "name": "Absol Mega",
+    "dex_number": 10057,
+    "dex_order": 1052,
+    "slot_type": "mega"
+  },
+  {
+    "id": "garchomp-mega",
+    "name": "Garchomp Mega",
+    "dex_number": 10058,
+    "dex_order": 1053,
+    "slot_type": "mega"
+  },
+  {
+    "id": "lucario-mega",
+    "name": "Lucario Mega",
+    "dex_number": 10059,
+    "dex_order": 1054,
+    "slot_type": "mega"
+  },
+  {
+    "id": "abomasnow-mega",
+    "name": "Abomasnow Mega",
+    "dex_number": 10060,
+    "dex_order": 1055,
+    "slot_type": "mega"
+  },
+  {
+    "id": "alakazam-mega",
+    "name": "Alakazam Mega",
+    "dex_number": 10037,
+    "dex_order": 1056,
+    "slot_type": "mega"
+  },
+  {
+    "id": "steelix-mega",
+    "name": "Steelix Mega",
+    "dex_number": 10072,
+    "dex_order": 1057,
+    "slot_type": "mega"
+  },
+  {
+    "id": "sceptile-mega",
+    "name": "Sceptile Mega",
+    "dex_number": 10065,
+    "dex_order": 1058,
+    "slot_type": "mega"
+  },
+  {
+    "id": "swampert-mega",
+    "name": "Swampert Mega",
+    "dex_number": 10064,
+    "dex_order": 1059,
+    "slot_type": "mega"
+  },
+  {
+    "id": "sableye-mega",
+    "name": "Sableye Mega",
+    "dex_number": 10066,
+    "dex_order": 1060,
+    "slot_type": "mega"
+  },
+  {
+    "id": "sharpedo-mega",
+    "name": "Sharpedo Mega",
+    "dex_number": 10070,
+    "dex_order": 1061,
+    "slot_type": "mega"
+  },
+  {
+    "id": "camerupt-mega",
+    "name": "Camerupt Mega",
+    "dex_number": 10087,
+    "dex_order": 1062,
+    "slot_type": "mega"
+  },
+  {
+    "id": "altaria-mega",
+    "name": "Altaria Mega",
+    "dex_number": 10067,
+    "dex_order": 1063,
+    "slot_type": "mega"
+  },
+  {
+    "id": "glalie-mega",
+    "name": "Glalie Mega",
+    "dex_number": 10074,
+    "dex_order": 1064,
+    "slot_type": "mega"
+  },
+  {
+    "id": "salamence-mega",
+    "name": "Salamence Mega",
+    "dex_number": 10089,
+    "dex_order": 1065,
+    "slot_type": "mega"
+  },
+  {
+    "id": "metagross-mega",
+    "name": "Metagross Mega",
+    "dex_number": 10076,
+    "dex_order": 1066,
+    "slot_type": "mega"
+  },
+  {
+    "id": "latias-mega",
+    "name": "Latias Mega",
+    "dex_number": 10062,
+    "dex_order": 1067,
+    "slot_type": "mega"
+  },
+  {
+    "id": "latios-mega",
+    "name": "Latios Mega",
+    "dex_number": 10063,
+    "dex_order": 1068,
+    "slot_type": "mega"
+  },
+  {
+    "id": "rayquaza-mega",
+    "name": "Rayquaza Mega",
+    "dex_number": 10079,
+    "dex_order": 1069,
+    "slot_type": "mega"
+  },
+  {
+    "id": "lopunny-mega",
+    "name": "Lopunny Mega",
+    "dex_number": 10088,
+    "dex_order": 1070,
+    "slot_type": "mega"
+  },
+  {
+    "id": "gallade-mega",
+    "name": "Gallade Mega",
+    "dex_number": 10068,
+    "dex_order": 1071,
+    "slot_type": "mega"
+  },
+  {
+    "id": "audino-mega",
+    "name": "Audino Mega",
+    "dex_number": 10069,
+    "dex_order": 1072,
+    "slot_type": "mega"
+  },
+  {
+    "id": "diancie-mega",
+    "name": "Diancie Mega",
+    "dex_number": 10075,
+    "dex_order": 1073,
+    "slot_type": "mega"
+  },
+  {
+    "id": "alcremie-gmax",
+    "name": "Alcremie (Gigantamax)",
+    "dex_number": 10223,
+    "dex_order": 1074,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "appletun-gmax",
+    "name": "Appletun (Gigantamax)",
+    "dex_number": 10217,
+    "dex_order": 1075,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "butterfree-gmax",
+    "name": "Butterfree (Gigantamax)",
+    "dex_number": 10198,
+    "dex_order": 1076,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "centiskorch-gmax",
+    "name": "Centiskorch (Gigantamax)",
+    "dex_number": 10220,
+    "dex_order": 1077,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "charizard-gmax",
+    "name": "Charizard (Gigantamax)",
+    "dex_number": 10196,
+    "dex_order": 1078,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "coalossal-gmax",
+    "name": "Coalossal (Gigantamax)",
+    "dex_number": 10215,
+    "dex_order": 1079,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "copperajah-gmax",
+    "name": "Copperajah (Gigantamax)",
+    "dex_number": 10224,
+    "dex_order": 1080,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "corviknight-gmax",
+    "name": "Corviknight (Gigantamax)",
+    "dex_number": 10212,
+    "dex_order": 1081,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "drednaw-gmax",
+    "name": "Drednaw (Gigantamax)",
+    "dex_number": 10214,
+    "dex_order": 1082,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "duraludon-gmax",
+    "name": "Duraludon (Gigantamax)",
+    "dex_number": 10225,
+    "dex_order": 1083,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "eevee-gmax",
+    "name": "Eevee (Gigantamax)",
+    "dex_number": 10205,
+    "dex_order": 1084,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "flapple-gmax",
+    "name": "Flapple (Gigantamax)",
+    "dex_number": 10216,
+    "dex_order": 1085,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "garbodor-gmax",
+    "name": "Garbodor (Gigantamax)",
+    "dex_number": 10207,
+    "dex_order": 1086,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "gengar-gmax",
+    "name": "Gengar (Gigantamax)",
+    "dex_number": 10202,
+    "dex_order": 1087,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "grimmsnarl-gmax",
+    "name": "Grimmsnarl (Gigantamax)",
+    "dex_number": 10222,
+    "dex_order": 1088,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "hatterene-gmax",
+    "name": "Hatterene (Gigantamax)",
+    "dex_number": 10221,
+    "dex_order": 1089,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "kingler-gmax",
+    "name": "Kingler (Gigantamax)",
+    "dex_number": 10203,
+    "dex_order": 1090,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "lapras-gmax",
+    "name": "Lapras (Gigantamax)",
+    "dex_number": 10204,
+    "dex_order": 1091,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "machamp-gmax",
+    "name": "Machamp (Gigantamax)",
+    "dex_number": 10201,
+    "dex_order": 1092,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "melmetal-gmax",
+    "name": "Melmetal (Gigantamax)",
+    "dex_number": 10208,
+    "dex_order": 1093,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "meowth-gmax",
+    "name": "Meowth (Gigantamax)",
+    "dex_number": 10200,
+    "dex_order": 1094,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "orbeetle-gmax",
+    "name": "Orbeetle (Gigantamax)",
+    "dex_number": 10213,
+    "dex_order": 1095,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "pikachu-gmax",
+    "name": "Pikachu (Gigantamax)",
+    "dex_number": 10199,
+    "dex_order": 1096,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "sandaconda-gmax",
+    "name": "Sandaconda (Gigantamax)",
+    "dex_number": 10218,
+    "dex_order": 1097,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "snorlax-gmax",
+    "name": "Snorlax (Gigantamax)",
+    "dex_number": 10206,
+    "dex_order": 1098,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "toxtricity-gmax",
+    "name": "Toxtricity (Gigantamax)",
+    "dex_number": 0,
+    "dex_order": 1099,
+    "slot_type": "gmax"
+  },
+  {
+    "id": "urshifu-gmax",
+    "name": "Urshifu (Gigantamax)",
+    "dex_number": 0,
+    "dex_order": 1100,
+    "slot_type": "gmax"
+  }
+]
