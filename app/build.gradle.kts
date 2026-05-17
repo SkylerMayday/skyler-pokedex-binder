@@ -78,6 +78,9 @@ dependencies {
     // Coil
     implementation(libs.coil.compose)
 
+    // Material Components (provides Theme.MaterialComponents for themes.xml / edge-to-edge)
+    implementation(libs.material)
+
     // Accompanist
     implementation(libs.accompanist.permissions)
 

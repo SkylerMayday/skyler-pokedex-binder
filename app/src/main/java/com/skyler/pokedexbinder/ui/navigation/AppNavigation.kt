@@ -30,7 +30,7 @@ fun AppNavigation() {
     val navController = rememberNavController()
     val bottomItems = listOf(
         Triple(Screen.MainBinder, "Binder", Icons.Default.Home),
-        Triple(Screen.SecondaryBinder, "History", Icons.Default.Menu)
+        Triple(Screen.SecondaryBinder, "Secondary", Icons.Default.Menu)
     )
 
     Scaffold(
