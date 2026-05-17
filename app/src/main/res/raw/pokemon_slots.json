@@ -7175,528 +7175,892 @@
     "slot_type": "base"
   },
   {
+    "id": "rattata-alola",
+    "name": "Alolan Rattata",
+    "dex_number": 19,
+    "dex_order": 1026,
+    "slot_type": "regional"
+  },
+  {
+    "id": "raticate-alola",
+    "name": "Alolan Raticate",
+    "dex_number": 20,
+    "dex_order": 1027,
+    "slot_type": "regional"
+  },
+  {
+    "id": "raticate-totem-alola",
+    "name": "Alolan Raticate",
+    "dex_number": 20,
+    "dex_order": 1028,
+    "slot_type": "regional"
+  },
+  {
+    "id": "raichu-alola",
+    "name": "Alolan Raichu",
+    "dex_number": 26,
+    "dex_order": 1029,
+    "slot_type": "regional"
+  },
+  {
+    "id": "sandshrew-alola",
+    "name": "Alolan Sandshrew",
+    "dex_number": 27,
+    "dex_order": 1030,
+    "slot_type": "regional"
+  },
+  {
+    "id": "sandslash-alola",
+    "name": "Alolan Sandslash",
+    "dex_number": 28,
+    "dex_order": 1031,
+    "slot_type": "regional"
+  },
+  {
+    "id": "vulpix-alola",
+    "name": "Alolan Vulpix",
+    "dex_number": 37,
+    "dex_order": 1032,
+    "slot_type": "regional"
+  },
+  {
+    "id": "ninetales-alola",
+    "name": "Alolan Ninetales",
+    "dex_number": 38,
+    "dex_order": 1033,
+    "slot_type": "regional"
+  },
+  {
+    "id": "diglett-alola",
+    "name": "Alolan Diglett",
+    "dex_number": 50,
+    "dex_order": 1034,
+    "slot_type": "regional"
+  },
+  {
+    "id": "dugtrio-alola",
+    "name": "Alolan Dugtrio",
+    "dex_number": 51,
+    "dex_order": 1035,
+    "slot_type": "regional"
+  },
+  {
+    "id": "meowth-alola",
+    "name": "Alolan Meowth",
+    "dex_number": 52,
+    "dex_order": 1036,
+    "slot_type": "regional"
+  },
+  {
+    "id": "meowth-galar",
+    "name": "Galarian Meowth",
+    "dex_number": 52,
+    "dex_order": 1037,
+    "slot_type": "regional"
+  },
+  {
+    "id": "persian-alola",
+    "name": "Alolan Persian",
+    "dex_number": 53,
+    "dex_order": 1038,
+    "slot_type": "regional"
+  },
+  {
+    "id": "growlithe-hisui",
+    "name": "Hisuian Growlithe",
+    "dex_number": 58,
+    "dex_order": 1039,
+    "slot_type": "regional"
+  },
+  {
+    "id": "arcanine-hisui",
+    "name": "Hisuian Arcanine",
+    "dex_number": 59,
+    "dex_order": 1040,
+    "slot_type": "regional"
+  },
+  {
+    "id": "geodude-alola",
+    "name": "Alolan Geodude",
+    "dex_number": 74,
+    "dex_order": 1041,
+    "slot_type": "regional"
+  },
+  {
+    "id": "graveler-alola",
+    "name": "Alolan Graveler",
+    "dex_number": 75,
+    "dex_order": 1042,
+    "slot_type": "regional"
+  },
+  {
+    "id": "golem-alola",
+    "name": "Alolan Golem",
+    "dex_number": 76,
+    "dex_order": 1043,
+    "slot_type": "regional"
+  },
+  {
+    "id": "ponyta-galar",
+    "name": "Galarian Ponyta",
+    "dex_number": 77,
+    "dex_order": 1044,
+    "slot_type": "regional"
+  },
+  {
+    "id": "rapidash-galar",
+    "name": "Galarian Rapidash",
+    "dex_number": 78,
+    "dex_order": 1045,
+    "slot_type": "regional"
+  },
+  {
+    "id": "slowpoke-galar",
+    "name": "Galarian Slowpoke",
+    "dex_number": 79,
+    "dex_order": 1046,
+    "slot_type": "regional"
+  },
+  {
+    "id": "slowbro-galar",
+    "name": "Galarian Slowbro",
+    "dex_number": 80,
+    "dex_order": 1047,
+    "slot_type": "regional"
+  },
+  {
+    "id": "grimer-alola",
+    "name": "Alolan Grimer",
+    "dex_number": 88,
+    "dex_order": 1048,
+    "slot_type": "regional"
+  },
+  {
+    "id": "muk-alola",
+    "name": "Alolan Muk",
+    "dex_number": 89,
+    "dex_order": 1049,
+    "slot_type": "regional"
+  },
+  {
+    "id": "voltorb-hisui",
+    "name": "Hisuian Voltorb",
+    "dex_number": 100,
+    "dex_order": 1050,
+    "slot_type": "regional"
+  },
+  {
+    "id": "electrode-hisui",
+    "name": "Hisuian Electrode",
+    "dex_number": 101,
+    "dex_order": 1051,
+    "slot_type": "regional"
+  },
+  {
+    "id": "exeggutor-alola",
+    "name": "Alolan Exeggutor",
+    "dex_number": 103,
+    "dex_order": 1052,
+    "slot_type": "regional"
+  },
+  {
+    "id": "marowak-alola",
+    "name": "Alolan Marowak",
+    "dex_number": 105,
+    "dex_order": 1053,
+    "slot_type": "regional"
+  },
+  {
+    "id": "weezing-galar",
+    "name": "Galarian Weezing",
+    "dex_number": 110,
+    "dex_order": 1054,
+    "slot_type": "regional"
+  },
+  {
+    "id": "tauros-paldea-combat-breed",
+    "name": "Paldean Tauros",
+    "dex_number": 128,
+    "dex_order": 1055,
+    "slot_type": "regional"
+  },
+  {
+    "id": "tauros-paldea-blaze-breed",
+    "name": "Paldean Tauros",
+    "dex_number": 128,
+    "dex_order": 1056,
+    "slot_type": "regional"
+  },
+  {
+    "id": "tauros-paldea-aqua-breed",
+    "name": "Paldean Tauros",
+    "dex_number": 128,
+    "dex_order": 1057,
+    "slot_type": "regional"
+  },
+  {
+    "id": "articuno-galar",
+    "name": "Galarian Articuno",
+    "dex_number": 144,
+    "dex_order": 1058,
+    "slot_type": "regional"
+  },
+  {
+    "id": "zapdos-galar",
+    "name": "Galarian Zapdos",
+    "dex_number": 145,
+    "dex_order": 1059,
+    "slot_type": "regional"
+  },
+  {
+    "id": "moltres-galar",
+    "name": "Galarian Moltres",
+    "dex_number": 146,
+    "dex_order": 1060,
+    "slot_type": "regional"
+  },
+  {
+    "id": "typhlosion-hisui",
+    "name": "Hisuian Typhlosion",
+    "dex_number": 157,
+    "dex_order": 1061,
+    "slot_type": "regional"
+  },
+  {
+    "id": "wooper-paldea",
+    "name": "Paldean Wooper",
+    "dex_number": 194,
+    "dex_order": 1062,
+    "slot_type": "regional"
+  },
+  {
+    "id": "slowking-galar",
+    "name": "Galarian Slowking",
+    "dex_number": 199,
+    "dex_order": 1063,
+    "slot_type": "regional"
+  },
+  {
+    "id": "qwilfish-hisui",
+    "name": "Hisuian Qwilfish",
+    "dex_number": 211,
+    "dex_order": 1064,
+    "slot_type": "regional"
+  },
+  {
+    "id": "sneasel-hisui",
+    "name": "Hisuian Sneasel",
+    "dex_number": 215,
+    "dex_order": 1065,
+    "slot_type": "regional"
+  },
+  {
+    "id": "corsola-galar",
+    "name": "Galarian Corsola",
+    "dex_number": 222,
+    "dex_order": 1066,
+    "slot_type": "regional"
+  },
+  {
+    "id": "linoone-galar",
+    "name": "Galarian Linoone",
+    "dex_number": 264,
+    "dex_order": 1067,
+    "slot_type": "regional"
+  },
+  {
+    "id": "samurott-hisui",
+    "name": "Hisuian Samurott",
+    "dex_number": 503,
+    "dex_order": 1068,
+    "slot_type": "regional"
+  },
+  {
+    "id": "lilligant-hisui",
+    "name": "Hisuian Lilligant",
+    "dex_number": 549,
+    "dex_order": 1069,
+    "slot_type": "regional"
+  },
+  {
+    "id": "darumaka-galar",
+    "name": "Galarian Darumaka",
+    "dex_number": 554,
+    "dex_order": 1070,
+    "slot_type": "regional"
+  },
+  {
+    "id": "yamask-galar",
+    "name": "Galarian Yamask",
+    "dex_number": 562,
+    "dex_order": 1071,
+    "slot_type": "regional"
+  },
+  {
+    "id": "zorua-hisui",
+    "name": "Hisuian Zorua",
+    "dex_number": 570,
+    "dex_order": 1072,
+    "slot_type": "regional"
+  },
+  {
+    "id": "zoroark-hisui",
+    "name": "Hisuian Zoroark",
+    "dex_number": 571,
+    "dex_order": 1073,
+    "slot_type": "regional"
+  },
+  {
+    "id": "braviary-hisui",
+    "name": "Hisuian Braviary",
+    "dex_number": 628,
+    "dex_order": 1074,
+    "slot_type": "regional"
+  },
+  {
+    "id": "sliggoo-hisui",
+    "name": "Hisuian Sliggoo",
+    "dex_number": 705,
+    "dex_order": 1075,
+    "slot_type": "regional"
+  },
+  {
+    "id": "avalugg-hisui",
+    "name": "Hisuian Avalugg",
+    "dex_number": 713,
+    "dex_order": 1076,
+    "slot_type": "regional"
+  },
+  {
+    "id": "decidueye-hisui",
+    "name": "Hisuian Decidueye",
+    "dex_number": 724,
+    "dex_order": 1077,
+    "slot_type": "regional"
+  },
+  {
     "id": "venusaur-mega",
     "name": "Venusaur Mega",
     "dex_number": 10033,
-    "dex_order": 1026,
+    "dex_order": 1078,
     "slot_type": "mega"
   },
   {
     "id": "charizard-mega-x",
     "name": "Charizard Mega X",
     "dex_number": 10034,
-    "dex_order": 1027,
+    "dex_order": 1079,
     "slot_type": "mega"
   },
   {
     "id": "charizard-mega-y",
     "name": "Charizard Mega Y",
     "dex_number": 10035,
-    "dex_order": 1028,
+    "dex_order": 1080,
     "slot_type": "mega"
   },
   {
     "id": "blastoise-mega",
     "name": "Blastoise Mega",
     "dex_number": 10036,
-    "dex_order": 1029,
+    "dex_order": 1081,
     "slot_type": "mega"
   },
   {
     "id": "beedrill-mega",
     "name": "Beedrill Mega",
     "dex_number": 10090,
-    "dex_order": 1030,
+    "dex_order": 1082,
     "slot_type": "mega"
   },
   {
     "id": "pidgeot-mega",
     "name": "Pidgeot Mega",
     "dex_number": 10073,
-    "dex_order": 1031,
+    "dex_order": 1083,
     "slot_type": "mega"
   },
   {
     "id": "slowbro-mega",
     "name": "Slowbro Mega",
     "dex_number": 10071,
-    "dex_order": 1032,
+    "dex_order": 1084,
     "slot_type": "mega"
   },
   {
     "id": "gengar-mega",
     "name": "Gengar Mega",
     "dex_number": 10038,
-    "dex_order": 1033,
+    "dex_order": 1085,
     "slot_type": "mega"
   },
   {
     "id": "kangaskhan-mega",
     "name": "Kangaskhan Mega",
     "dex_number": 10039,
-    "dex_order": 1034,
+    "dex_order": 1086,
     "slot_type": "mega"
   },
   {
     "id": "pinsir-mega",
     "name": "Pinsir Mega",
     "dex_number": 10040,
-    "dex_order": 1035,
+    "dex_order": 1087,
     "slot_type": "mega"
   },
   {
     "id": "gyarados-mega",
     "name": "Gyarados Mega",
     "dex_number": 10041,
-    "dex_order": 1036,
+    "dex_order": 1088,
     "slot_type": "mega"
   },
   {
     "id": "aerodactyl-mega",
     "name": "Aerodactyl Mega",
     "dex_number": 10042,
-    "dex_order": 1037,
+    "dex_order": 1089,
     "slot_type": "mega"
   },
   {
     "id": "mewtwo-mega-x",
     "name": "Mewtwo Mega X",
     "dex_number": 10043,
-    "dex_order": 1038,
+    "dex_order": 1090,
     "slot_type": "mega"
   },
   {
     "id": "mewtwo-mega-y",
     "name": "Mewtwo Mega Y",
     "dex_number": 10044,
-    "dex_order": 1039,
+    "dex_order": 1091,
     "slot_type": "mega"
   },
   {
     "id": "ampharos-mega",
     "name": "Ampharos Mega",
     "dex_number": 10045,
-    "dex_order": 1040,
+    "dex_order": 1092,
     "slot_type": "mega"
   },
   {
     "id": "scizor-mega",
     "name": "Scizor Mega",
     "dex_number": 10046,
-    "dex_order": 1041,
+    "dex_order": 1093,
     "slot_type": "mega"
   },
   {
     "id": "heracross-mega",
     "name": "Heracross Mega",
     "dex_number": 10047,
-    "dex_order": 1042,
+    "dex_order": 1094,
     "slot_type": "mega"
   },
   {
     "id": "houndoom-mega",
     "name": "Houndoom Mega",
     "dex_number": 10048,
-    "dex_order": 1043,
+    "dex_order": 1095,
     "slot_type": "mega"
   },
   {
     "id": "tyranitar-mega",
     "name": "Tyranitar Mega",
     "dex_number": 10049,
-    "dex_order": 1044,
+    "dex_order": 1096,
     "slot_type": "mega"
   },
   {
     "id": "blaziken-mega",
     "name": "Blaziken Mega",
     "dex_number": 10050,
-    "dex_order": 1045,
+    "dex_order": 1097,
     "slot_type": "mega"
   },
   {
     "id": "gardevoir-mega",
     "name": "Gardevoir Mega",
     "dex_number": 10051,
-    "dex_order": 1046,
+    "dex_order": 1098,
     "slot_type": "mega"
   },
   {
     "id": "mawile-mega",
     "name": "Mawile Mega",
     "dex_number": 10052,
-    "dex_order": 1047,
+    "dex_order": 1099,
     "slot_type": "mega"
   },
   {
     "id": "aggron-mega",
     "name": "Aggron Mega",
     "dex_number": 10053,
-    "dex_order": 1048,
+    "dex_order": 1100,
     "slot_type": "mega"
   },
   {
     "id": "medicham-mega",
     "name": "Medicham Mega",
     "dex_number": 10054,
-    "dex_order": 1049,
+    "dex_order": 1101,
     "slot_type": "mega"
   },
   {
     "id": "manectric-mega",
     "name": "Manectric Mega",
     "dex_number": 10055,
-    "dex_order": 1050,
+    "dex_order": 1102,
     "slot_type": "mega"
   },
   {
     "id": "banette-mega",
     "name": "Banette Mega",
     "dex_number": 10056,
-    "dex_order": 1051,
+    "dex_order": 1103,
     "slot_type": "mega"
   },
   {
     "id": "absol-mega",
     "name": "Absol Mega",
     "dex_number": 10057,
-    "dex_order": 1052,
+    "dex_order": 1104,
     "slot_type": "mega"
   },
   {
     "id": "garchomp-mega",
     "name": "Garchomp Mega",
     "dex_number": 10058,
-    "dex_order": 1053,
+    "dex_order": 1105,
     "slot_type": "mega"
   },
   {
     "id": "lucario-mega",
     "name": "Lucario Mega",
     "dex_number": 10059,
-    "dex_order": 1054,
+    "dex_order": 1106,
     "slot_type": "mega"
   },
   {
     "id": "abomasnow-mega",
     "name": "Abomasnow Mega",
     "dex_number": 10060,
-    "dex_order": 1055,
+    "dex_order": 1107,
     "slot_type": "mega"
   },
   {
     "id": "alakazam-mega",
     "name": "Alakazam Mega",
     "dex_number": 10037,
-    "dex_order": 1056,
+    "dex_order": 1108,
     "slot_type": "mega"
   },
   {
     "id": "steelix-mega",
     "name": "Steelix Mega",
     "dex_number": 10072,
-    "dex_order": 1057,
+    "dex_order": 1109,
     "slot_type": "mega"
   },
   {
     "id": "sceptile-mega",
     "name": "Sceptile Mega",
     "dex_number": 10065,
-    "dex_order": 1058,
+    "dex_order": 1110,
     "slot_type": "mega"
   },
   {
     "id": "swampert-mega",
     "name": "Swampert Mega",
     "dex_number": 10064,
-    "dex_order": 1059,
+    "dex_order": 1111,
     "slot_type": "mega"
   },
   {
     "id": "sableye-mega",
     "name": "Sableye Mega",
     "dex_number": 10066,
-    "dex_order": 1060,
+    "dex_order": 1112,
     "slot_type": "mega"
   },
   {
     "id": "sharpedo-mega",
     "name": "Sharpedo Mega",
     "dex_number": 10070,
-    "dex_order": 1061,
+    "dex_order": 1113,
     "slot_type": "mega"
   },
   {
     "id": "camerupt-mega",
     "name": "Camerupt Mega",
     "dex_number": 10087,
-    "dex_order": 1062,
+    "dex_order": 1114,
     "slot_type": "mega"
   },
   {
     "id": "altaria-mega",
     "name": "Altaria Mega",
     "dex_number": 10067,
-    "dex_order": 1063,
+    "dex_order": 1115,
     "slot_type": "mega"
   },
   {
     "id": "glalie-mega",
     "name": "Glalie Mega",
     "dex_number": 10074,
-    "dex_order": 1064,
+    "dex_order": 1116,
     "slot_type": "mega"
   },
   {
     "id": "salamence-mega",
     "name": "Salamence Mega",
     "dex_number": 10089,
-    "dex_order": 1065,
+    "dex_order": 1117,
     "slot_type": "mega"
   },
   {
     "id": "metagross-mega",
     "name": "Metagross Mega",
     "dex_number": 10076,
-    "dex_order": 1066,
+    "dex_order": 1118,
     "slot_type": "mega"
   },
   {
     "id": "latias-mega",
     "name": "Latias Mega",
     "dex_number": 10062,
-    "dex_order": 1067,
+    "dex_order": 1119,
     "slot_type": "mega"
   },
   {
     "id": "latios-mega",
     "name": "Latios Mega",
     "dex_number": 10063,
-    "dex_order": 1068,
+    "dex_order": 1120,
     "slot_type": "mega"
   },
   {
     "id": "rayquaza-mega",
     "name": "Rayquaza Mega",
     "dex_number": 10079,
-    "dex_order": 1069,
+    "dex_order": 1121,
     "slot_type": "mega"
   },
   {
     "id": "lopunny-mega",
     "name": "Lopunny Mega",
     "dex_number": 10088,
-    "dex_order": 1070,
+    "dex_order": 1122,
     "slot_type": "mega"
   },
   {
     "id": "gallade-mega",
     "name": "Gallade Mega",
     "dex_number": 10068,
-    "dex_order": 1071,
+    "dex_order": 1123,
     "slot_type": "mega"
   },
   {
     "id": "audino-mega",
     "name": "Audino Mega",
     "dex_number": 10069,
-    "dex_order": 1072,
+    "dex_order": 1124,
     "slot_type": "mega"
   },
   {
     "id": "diancie-mega",
     "name": "Diancie Mega",
     "dex_number": 10075,
-    "dex_order": 1073,
+    "dex_order": 1125,
     "slot_type": "mega"
   },
   {
     "id": "alcremie-gmax",
     "name": "Alcremie (Gigantamax)",
     "dex_number": 10223,
-    "dex_order": 1074,
+    "dex_order": 1126,
     "slot_type": "gmax"
   },
   {
     "id": "appletun-gmax",
     "name": "Appletun (Gigantamax)",
     "dex_number": 10217,
-    "dex_order": 1075,
+    "dex_order": 1127,
     "slot_type": "gmax"
   },
   {
     "id": "butterfree-gmax",
     "name": "Butterfree (Gigantamax)",
     "dex_number": 10198,
-    "dex_order": 1076,
+    "dex_order": 1128,
     "slot_type": "gmax"
   },
   {
     "id": "centiskorch-gmax",
     "name": "Centiskorch (Gigantamax)",
     "dex_number": 10220,
-    "dex_order": 1077,
+    "dex_order": 1129,
     "slot_type": "gmax"
   },
   {
     "id": "charizard-gmax",
     "name": "Charizard (Gigantamax)",
     "dex_number": 10196,
-    "dex_order": 1078,
+    "dex_order": 1130,
     "slot_type": "gmax"
   },
   {
     "id": "coalossal-gmax",
     "name": "Coalossal (Gigantamax)",
     "dex_number": 10215,
-    "dex_order": 1079,
+    "dex_order": 1131,
     "slot_type": "gmax"
   },
   {
     "id": "copperajah-gmax",
     "name": "Copperajah (Gigantamax)",
     "dex_number": 10224,
-    "dex_order": 1080,
+    "dex_order": 1132,
     "slot_type": "gmax"
   },
   {
     "id": "corviknight-gmax",
     "name": "Corviknight (Gigantamax)",
     "dex_number": 10212,
-    "dex_order": 1081,
+    "dex_order": 1133,
     "slot_type": "gmax"
   },
   {
     "id": "drednaw-gmax",
     "name": "Drednaw (Gigantamax)",
     "dex_number": 10214,
-    "dex_order": 1082,
+    "dex_order": 1134,
     "slot_type": "gmax"
   },
   {
     "id": "duraludon-gmax",
     "name": "Duraludon (Gigantamax)",
     "dex_number": 10225,
-    "dex_order": 1083,
+    "dex_order": 1135,
     "slot_type": "gmax"
   },
   {
     "id": "eevee-gmax",
     "name": "Eevee (Gigantamax)",
     "dex_number": 10205,
-    "dex_order": 1084,
+    "dex_order": 1136,
     "slot_type": "gmax"
   },
   {
     "id": "flapple-gmax",
     "name": "Flapple (Gigantamax)",
     "dex_number": 10216,
-    "dex_order": 1085,
+    "dex_order": 1137,
     "slot_type": "gmax"
   },
   {
     "id": "garbodor-gmax",
     "name": "Garbodor (Gigantamax)",
     "dex_number": 10207,
-    "dex_order": 1086,
+    "dex_order": 1138,
     "slot_type": "gmax"
   },
   {
     "id": "gengar-gmax",
     "name": "Gengar (Gigantamax)",
     "dex_number": 10202,
-    "dex_order": 1087,
+    "dex_order": 1139,
     "slot_type": "gmax"
   },
   {
     "id": "grimmsnarl-gmax",
     "name": "Grimmsnarl (Gigantamax)",
     "dex_number": 10222,
-    "dex_order": 1088,
+    "dex_order": 1140,
     "slot_type": "gmax"
   },
   {
     "id": "hatterene-gmax",
     "name": "Hatterene (Gigantamax)",
     "dex_number": 10221,
-    "dex_order": 1089,
+    "dex_order": 1141,
     "slot_type": "gmax"
   },
   {
     "id": "kingler-gmax",
     "name": "Kingler (Gigantamax)",
     "dex_number": 10203,
-    "dex_order": 1090,
+    "dex_order": 1142,
     "slot_type": "gmax"
   },
   {
     "id": "lapras-gmax",
     "name": "Lapras (Gigantamax)",
     "dex_number": 10204,
-    "dex_order": 1091,
+    "dex_order": 1143,
     "slot_type": "gmax"
   },
   {
     "id": "machamp-gmax",
     "name": "Machamp (Gigantamax)",
     "dex_number": 10201,
-    "dex_order": 1092,
+    "dex_order": 1144,
     "slot_type": "gmax"
   },
   {
     "id": "melmetal-gmax",
     "name": "Melmetal (Gigantamax)",
     "dex_number": 10208,
-    "dex_order": 1093,
+    "dex_order": 1145,
     "slot_type": "gmax"
   },
   {
     "id": "meowth-gmax",
     "name": "Meowth (Gigantamax)",
     "dex_number": 10200,
-    "dex_order": 1094,
+    "dex_order": 1146,
     "slot_type": "gmax"
   },
   {
     "id": "orbeetle-gmax",
     "name": "Orbeetle (Gigantamax)",
     "dex_number": 10213,
-    "dex_order": 1095,
+    "dex_order": 1147,
     "slot_type": "gmax"
   },
   {
     "id": "pikachu-gmax",
     "name": "Pikachu (Gigantamax)",
     "dex_number": 10199,
-    "dex_order": 1096,
+    "dex_order": 1148,
     "slot_type": "gmax"
   },
   {
     "id": "sandaconda-gmax",
     "name": "Sandaconda (Gigantamax)",
     "dex_number": 10218,
-    "dex_order": 1097,
+    "dex_order": 1149,
     "slot_type": "gmax"
   },
   {
     "id": "snorlax-gmax",
     "name": "Snorlax (Gigantamax)",
     "dex_number": 10206,
-    "dex_order": 1098,
+    "dex_order": 1150,
     "slot_type": "gmax"
   },
   {
     "id": "toxtricity-gmax",
     "name": "Toxtricity (Gigantamax)",
     "dex_number": 0,
-    "dex_order": 1099,
+    "dex_order": 1151,
     "slot_type": "gmax"
   },
   {
     "id": "urshifu-gmax",
     "name": "Urshifu (Gigantamax)",
     "dex_number": 0,
-    "dex_order": 1100,
+    "dex_order": 1152,
     "slot_type": "gmax"
   }
 ]

@@ -89,17 +89,23 @@ def fetch_regional_variants(base_slots: list) -> list:
                 continue
             if not any(kw in vname for kw in regional_keywords):
                 continue
-            display = vname.replace("-", " ").title()
-            query = f'name:"{display}"'
+            region_map = {"alola": "Alolan", "galar": "Galarian", "hisui": "Hisuian", "paldea": "Paldean"}
+            for kw, prefix in region_map.items():
+                if kw in vname:
+                    tcg_name = f"{prefix} {slot['name']}"
+                    break
+            else:
+                continue  # skip non-regional variants we don't have a prefix for
+            query = f'name:"{tcg_name}"'
             if tcg_has_card(query):
                 variants.append({
                     "id": vname,
-                    "name": display,
+                    "name": tcg_name,
                     "dex_number": slot["dex_number"],
                     "dex_order": order,
                     "slot_type": "regional"
                 })
-                print(f"  Regional variant with card: {vname}")
+                print(f"  Regional variant with card: {vname} -> {tcg_name}")
                 order += 1
             time.sleep(0.05)
 
