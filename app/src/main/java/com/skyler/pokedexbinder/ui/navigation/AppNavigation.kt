@@ -19,6 +19,7 @@ import com.skyler.pokedexbinder.ui.mainbinder.MainBinderScreen
 import com.skyler.pokedexbinder.ui.manualsearch.ManualSearchScreen
 import com.skyler.pokedexbinder.ui.scanner.ScannerScreen
 import com.skyler.pokedexbinder.ui.secondarybinder.SecondaryBinderScreen
+import com.skyler.pokedexbinder.ui.secondarybinder.SecondaryBinderViewModel
 import com.skyler.pokedexbinder.ui.slotdetail.SlotDetailScreen
 
 sealed class Screen(val route: String) {
@@ -33,6 +34,7 @@ sealed class Screen(val route: String) {
     object ManualSearch : Screen("manual_search/{pokemonId}") {
         fun createRoute(pokemonId: String) = "manual_search/$pokemonId"
     }
+    object AddToSecondary : Screen("add_to_secondary")
 }
 
 @Composable
@@ -75,7 +77,11 @@ fun AppNavigation() {
                     navController.navigate(Screen.SlotDetail.createRoute(pokemonId))
                 })
             }
-            composable(Screen.SecondaryBinder.route) { SecondaryBinderScreen() }
+            composable(Screen.SecondaryBinder.route) {
+                SecondaryBinderScreen(
+                    onAddCard = { navController.navigate(Screen.AddToSecondary.route) }
+                )
+            }
             composable(
                 route = Screen.SlotDetail.route,
                 arguments = listOf(navArgument("pokemonId") { type = NavType.StringType })
@@ -112,6 +118,16 @@ fun AppNavigation() {
                 ManualSearchScreen(
                     onCardSelected = { card ->
                         assignmentVm.assign(pokemonId, card)
+                        navController.popBackStack()
+                    },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.AddToSecondary.route) {
+                val secondaryVm: SecondaryBinderViewModel = hiltViewModel()
+                ManualSearchScreen(
+                    onCardSelected = { card ->
+                        secondaryVm.addCard(card)
                         navController.popBackStack()
                     },
                     onBack = { navController.popBackStack() }

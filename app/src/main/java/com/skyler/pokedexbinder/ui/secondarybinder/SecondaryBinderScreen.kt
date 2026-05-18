@@ -3,6 +3,8 @@ package com.skyler.pokedexbinder.ui.secondarybinder
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -16,19 +18,25 @@ import coil.compose.AsyncImage
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SecondaryBinderScreen(
+    onAddCard: () -> Unit = {},
     viewModel: SecondaryBinderViewModel = hiltViewModel()
 ) {
     val entries by viewModel.entries.collectAsState(initial = emptyList())
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Card History") }) }
+        topBar = { TopAppBar(title = { Text("Card History") }) },
+        floatingActionButton = {
+            FloatingActionButton(onClick = onAddCard) {
+                Icon(Icons.Default.Add, contentDescription = "Add card manually")
+            }
+        }
     ) { padding ->
         if (entries.isEmpty()) {
             Box(
                 modifier = Modifier.padding(padding).fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Text("No replaced cards yet")
+                Text("No cards yet — tap + to add one")
             }
         } else {
             LazyColumn(modifier = Modifier.padding(padding)) {

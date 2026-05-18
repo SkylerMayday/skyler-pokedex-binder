@@ -48,25 +48,21 @@ class MainBinderViewModel @Inject constructor(
     }
 
     private fun buildGrouped(slots: List<PokemonSlot>): List<BinderDisplayItem> {
-        val base = slots.filter { it.slotType == SlotType.BASE }
-        val regional = slots.filter { it.slotType == SlotType.REGIONAL }
+        val baseAndRegional = slots.filter { it.slotType == SlotType.BASE || it.slotType == SlotType.REGIONAL }
         val mega = slots.filter { it.slotType == SlotType.MEGA }
         val gmax = slots.filter { it.slotType == SlotType.GMAX }
 
         val items = mutableListOf<BinderDisplayItem>()
 
-        // Base Pokémon split by generation
+        // Base + regional Pokémon split by generation; regionals follow their base form
         for ((genName, range) in GENERATIONS) {
-            val genSlots = base.filter { it.dexNumber in range }
+            val genSlots = baseAndRegional
+                .filter { it.dexNumber in range }
+                .sortedWith(compareBy({ it.dexNumber }, { if (it.slotType == SlotType.BASE) 0 else 1 }))
             if (genSlots.isNotEmpty()) {
                 items += BinderDisplayItem.Header(genName)
                 items += genSlots.map { BinderDisplayItem.Slot(it) }
             }
-        }
-
-        if (regional.isNotEmpty()) {
-            items += BinderDisplayItem.Header("Regional Variants")
-            items += regional.map { BinderDisplayItem.Slot(it) }
         }
 
         if (mega.isNotEmpty()) {
