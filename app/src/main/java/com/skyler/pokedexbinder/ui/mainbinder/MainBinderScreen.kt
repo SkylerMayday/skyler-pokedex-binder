@@ -3,13 +3,21 @@ package com.skyler.pokedexbinder.ui.mainbinder
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,16 +32,33 @@ fun MainBinderScreen(
     viewModel: MainBinderViewModel = hiltViewModel()
 ) {
     val displayItems by viewModel.displayItems.collectAsState()
+    var query by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("Pokédex Binder") })
         }
     ) { padding ->
+        Column(modifier = Modifier.padding(padding)) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = {
+                    query = it
+                    viewModel.setSearch(it)
+                },
+                placeholder = { Text("Search by name or #number") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { viewModel.setSearch(query) }),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            )
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
             contentPadding = PaddingValues(8.dp),
-            modifier = Modifier.padding(padding)
+            modifier = Modifier.weight(1f)
         ) {
             displayItems.forEach { item ->
                 when (item) {
@@ -62,6 +87,7 @@ fun MainBinderScreen(
                 }
             }
         }
+        } // end Column
     }
 }
 
