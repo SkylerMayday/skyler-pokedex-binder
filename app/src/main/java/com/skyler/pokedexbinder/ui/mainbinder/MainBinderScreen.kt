@@ -6,14 +6,10 @@ import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -24,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.skyler.pokedexbinder.data.model.PokemonSlot
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,13 +30,24 @@ fun MainBinderScreen(
 ) {
     val displayItems by viewModel.displayItems.collectAsState()
     var query by remember { mutableStateOf("") }
+    val gridState = rememberLazyGridState()
+    val coroutineScope = rememberCoroutineScope()
+
+    // Map of section title → item index in displayItems (only when not searching)
+    val sectionIndices: List<Pair<String, Int>> = remember(displayItems) {
+        displayItems.mapIndexedNotNull { index, item ->
+            if (item is BinderDisplayItem.Header) item.title to index else null
+        }
+    }
+
+    var dropdownExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Pokédex Binder") })
-        }
+        topBar = { TopAppBar(title = { Text("Pokédex Binder") }) }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
+
+            // Search bar
             OutlinedTextField(
                 value = query,
                 onValueChange = {
@@ -53,41 +61,73 @@ fun MainBinderScreen(
                 keyboardActions = KeyboardActions(onSearch = { viewModel.setSearch(query) }),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
             )
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
-            contentPadding = PaddingValues(8.dp),
-            modifier = Modifier.weight(1f)
-        ) {
-            displayItems.forEach { item ->
-                when (item) {
-                    is BinderDisplayItem.Header -> {
-                        item(
-                            key = "header_${item.title}",
-                            span = { GridItemSpan(maxLineSpan) }
-                        ) {
-                            Text(
-                                text = item.title,
-                                style = MaterialTheme.typography.titleSmall,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 4.dp, vertical = 8.dp)
-                            )
-                        }
+
+            // Section jump dropdown — only shown when not searching
+            if (query.isBlank() && sectionIndices.isNotEmpty()) {
+                Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+                    OutlinedButton(
+                        onClick = { dropdownExpanded = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Jump to section", modifier = Modifier.weight(1f))
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
                     }
-                    is BinderDisplayItem.Slot -> {
-                        item(key = item.pokemonSlot.id) {
-                            SlotCard(
-                                slot = item.pokemonSlot,
-                                onClick = { onSlotClick(item.pokemonSlot.id) }
+                    DropdownMenu(
+                        expanded = dropdownExpanded,
+                        onDismissRequest = { dropdownExpanded = false },
+                        modifier = Modifier.fillMaxWidth(0.9f)
+                    ) {
+                        sectionIndices.forEach { (title, index) ->
+                            DropdownMenuItem(
+                                text = { Text(title) },
+                                onClick = {
+                                    dropdownExpanded = false
+                                    coroutineScope.launch {
+                                        gridState.animateScrollToItem(index)
+                                    }
+                                }
                             )
                         }
                     }
                 }
             }
+
+            LazyVerticalGrid(
+                state = gridState,
+                columns = GridCells.Fixed(3),
+                contentPadding = PaddingValues(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                displayItems.forEach { item ->
+                    when (item) {
+                        is BinderDisplayItem.Header -> {
+                            item(
+                                key = "header_${item.title}",
+                                span = { GridItemSpan(maxLineSpan) }
+                            ) {
+                                Text(
+                                    text = item.title,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 4.dp, vertical = 8.dp)
+                                )
+                            }
+                        }
+                        is BinderDisplayItem.Slot -> {
+                            item(key = item.pokemonSlot.id) {
+                                SlotCard(
+                                    slot = item.pokemonSlot,
+                                    onClick = { onSlotClick(item.pokemonSlot.id) }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
-        } // end Column
     }
 }
 
