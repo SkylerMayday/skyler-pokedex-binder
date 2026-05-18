@@ -35,5 +35,6 @@ class SlotDetailViewModelTest {
             assertEquals("pikachu", awaitItem()?.id)
             cancelAndIgnoreRemainingEvents()
         }
+        assertFalse(vm.isLoading.value)
     }
 }

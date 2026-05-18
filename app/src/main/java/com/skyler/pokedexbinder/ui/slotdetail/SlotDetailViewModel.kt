@@ -18,9 +18,14 @@ class SlotDetailViewModel @Inject constructor(
     private val _slot = MutableStateFlow<PokemonSlot?>(null)
     val slot: StateFlow<PokemonSlot?> = _slot
 
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
     fun loadSlot(pokemonId: String) {
+        _isLoading.value = true
         viewModelScope.launch {
             _slot.value = binderRepository.getSlotByPokemonId(pokemonId)
+            _isLoading.value = false
         }
     }
 }

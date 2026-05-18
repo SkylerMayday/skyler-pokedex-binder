@@ -23,6 +23,7 @@ fun SlotDetailScreen(
 ) {
     LaunchedEffect(pokemonId) { viewModel.loadSlot(pokemonId) }
     val slot by viewModel.slot.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     Scaffold(
         topBar = {
@@ -41,13 +42,29 @@ fun SlotDetailScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            if (slot?.isOccupied == true) {
-                AsyncImage(
-                    model = slot!!.assignedCardImageUrl,
-                    contentDescription = "Assigned card",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxWidth().weight(1f)
-                )
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (slot?.isOccupied == true) {
+                if (slot!!.assignedCardImageUrl != null) {
+                    AsyncImage(
+                        model = slot!!.assignedCardImageUrl,
+                        contentDescription = "Assigned card",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxWidth().weight(1f)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Card image unavailable", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
                 Button(onClick = { onScanCard(pokemonId) }, modifier = Modifier.fillMaxWidth()) {
                     Text("Replace with Scanned Card")
                 }
