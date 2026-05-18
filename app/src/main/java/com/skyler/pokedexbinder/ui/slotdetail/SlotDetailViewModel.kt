@@ -6,8 +6,11 @@ import com.skyler.pokedexbinder.data.model.PokemonSlot
 import com.skyler.pokedexbinder.repository.BinderRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 @HiltViewModel
@@ -15,17 +18,19 @@ class SlotDetailViewModel @Inject constructor(
     private val binderRepository: BinderRepository
 ) : ViewModel() {
 
-    private val _slot = MutableStateFlow<PokemonSlot?>(null)
-    val slot: StateFlow<PokemonSlot?> = _slot
+    private val _pokemonId = MutableStateFlow("")
 
-    private val _isLoading = MutableStateFlow(true)
-    val isLoading: StateFlow<Boolean> = _isLoading
+    val slot: StateFlow<PokemonSlot?> = _pokemonId
+        .flatMapLatest { id ->
+            if (id.isEmpty()) flowOf(null)
+            else binderRepository.observeSlot(id)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    // Always false — loading is now implicit in the Flow (Room is near-instant)
+    val isLoading: StateFlow<Boolean> = MutableStateFlow(false)
 
     fun loadSlot(pokemonId: String) {
-        _isLoading.value = true
-        viewModelScope.launch {
-            _slot.value = binderRepository.getSlotByPokemonId(pokemonId)
-            _isLoading.value = false
-        }
+        _pokemonId.value = pokemonId
     }
 }

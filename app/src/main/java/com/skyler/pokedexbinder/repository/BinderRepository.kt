@@ -21,6 +21,9 @@ class BinderRepository @Inject constructor(
     suspend fun getSlotByPokemonId(pokemonId: String): PokemonSlot? =
         mainBinderDao.getByPokemonId(pokemonId)?.toDomain()
 
+    fun observeSlot(pokemonId: String): Flow<PokemonSlot?> =
+        mainBinderDao.observeByPokemonId(pokemonId).map { it?.toDomain() }
+
     suspend fun assignCard(pokemonId: String, cardId: String, cardImageUrl: String) {
         val existing = mainBinderDao.getByPokemonId(pokemonId) ?: return
         mainBinderDao.upsert(

@@ -11,6 +11,9 @@ interface MainBinderDao {
     @Query("SELECT * FROM main_binder WHERE pokemonId = :pokemonId")
     suspend fun getByPokemonId(pokemonId: String): MainBinderEntry?
 
+    @Query("SELECT * FROM main_binder WHERE pokemonId = :pokemonId")
+    fun observeByPokemonId(pokemonId: String): Flow<MainBinderEntry?>
+
     @Upsert
     suspend fun upsert(entry: MainBinderEntry)
 

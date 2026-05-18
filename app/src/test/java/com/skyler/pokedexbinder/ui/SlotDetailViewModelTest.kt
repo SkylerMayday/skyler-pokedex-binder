@@ -5,9 +5,10 @@ import com.skyler.pokedexbinder.data.model.PokemonSlot
 import com.skyler.pokedexbinder.data.model.SlotType
 import com.skyler.pokedexbinder.repository.BinderRepository
 import com.skyler.pokedexbinder.ui.slotdetail.SlotDetailViewModel
-import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.*
@@ -25,14 +26,19 @@ class SlotDetailViewModelTest {
     @Test
     fun `slot state loads by pokemonId`() = runTest {
         val slot = PokemonSlot("pikachu", "Pikachu", 25, 25, SlotType.BASE)
-        coEvery { binderRepo.getSlotByPokemonId("pikachu") } returns slot
+        every { binderRepo.observeSlot("pikachu") } returns flowOf(slot)
 
         val vm = SlotDetailViewModel(binderRepo)
         vm.loadSlot("pikachu")
-        advanceUntilIdle()
 
         vm.slot.test {
-            assertEquals("pikachu", awaitItem()?.id)
+            // First emission may be null (initial stateIn value), second is the slot
+            val first = awaitItem()
+            if (first == null) {
+                assertEquals("pikachu", awaitItem()?.id)
+            } else {
+                assertEquals("pikachu", first.id)
+            }
             cancelAndIgnoreRemainingEvents()
         }
         assertFalse(vm.isLoading.value)
