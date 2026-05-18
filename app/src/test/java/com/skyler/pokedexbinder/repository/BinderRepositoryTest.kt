@@ -45,7 +45,7 @@ class BinderRepositoryTest {
 
     @Test
     fun `assignCard upserts entry with card info`() = runTest {
-        val existing = MainBinderEntry("charizard", "Charizard", 6)
+        val existing = MainBinderEntry("charizard", "Charizard", dexNumber = 6, dexOrder = 6)
         coEvery { mainDao.getByPokemonId("charizard") } returns existing
         val repo = BinderRepository(mainDao)
 

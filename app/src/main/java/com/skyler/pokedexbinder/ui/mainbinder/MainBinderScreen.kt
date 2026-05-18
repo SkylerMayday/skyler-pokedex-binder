@@ -23,7 +23,7 @@ fun MainBinderScreen(
     onSlotClick: (String) -> Unit,
     viewModel: MainBinderViewModel = hiltViewModel()
 ) {
-    val slots by viewModel.slots.collectAsState()
+    val displayItems by viewModel.displayItems.collectAsState()
 
     Scaffold(
         topBar = {
@@ -35,8 +35,31 @@ fun MainBinderScreen(
             contentPadding = PaddingValues(8.dp),
             modifier = Modifier.padding(padding)
         ) {
-            items(slots, key = { it.id }) { slot ->
-                SlotCard(slot = slot, onClick = { onSlotClick(slot.id) })
+            displayItems.forEach { item ->
+                when (item) {
+                    is BinderDisplayItem.Header -> {
+                        item(
+                            key = "header_${item.title}",
+                            span = { GridItemSpan(maxLineSpan) }
+                        ) {
+                            Text(
+                                text = item.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 4.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+                    is BinderDisplayItem.Slot -> {
+                        item(key = item.pokemonSlot.id) {
+                            SlotCard(
+                                slot = item.pokemonSlot,
+                                onClick = { onSlotClick(item.pokemonSlot.id) }
+                            )
+                        }
+                    }
+                }
             }
         }
     }
