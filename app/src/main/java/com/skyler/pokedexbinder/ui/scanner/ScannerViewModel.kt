@@ -35,15 +35,18 @@ class ScannerViewModel @Inject constructor(
     private val _state = MutableStateFlow<ScannerState>(ScannerState.Idle)
     val state: StateFlow<ScannerState> = _state
 
+    private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+
     fun processImage(imageProxy: ImageProxy) {
         _state.value = ScannerState.Scanning
         viewModelScope.launch {
             try {
-                val image = InputImage.fromMediaImage(
-                    imageProxy.image!!,
-                    imageProxy.imageInfo.rotationDegrees
-                )
-                val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+                val mediaImage = imageProxy.image ?: run {
+                    imageProxy.close()
+                    _state.value = ScannerState.Error("Failed to read image")
+                    return@launch
+                }
+                val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
                 val result = recognizer.process(image).await()
                 imageProxy.close()
 
@@ -85,4 +88,13 @@ class ScannerViewModel @Inject constructor(
     }
 
     fun reset() { _state.value = ScannerState.Idle }
+
+    fun onCaptureError(message: String) {
+        _state.value = ScannerState.Error(message)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        recognizer.close()
+    }
 }

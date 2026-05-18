@@ -72,7 +72,7 @@ fun ScannerScreen(
                                             viewModel.processImage(image)
                                         }
                                         override fun onError(exc: ImageCaptureException) {
-                                            viewModel.reset()
+                                            viewModel.onCaptureError(exc.message ?: "Capture failed")
                                         }
                                     }
                                 )
@@ -158,6 +158,7 @@ private fun CardConfirmation(card: TcgCard, onConfirm: () -> Unit, onDismiss: ()
         AsyncImage(
             model = card.imageUrl,
             contentDescription = card.name,
+            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
             modifier = Modifier.weight(1f).fillMaxWidth()
         )
         Text("${card.name} · ${card.setName} · #${card.number}")
