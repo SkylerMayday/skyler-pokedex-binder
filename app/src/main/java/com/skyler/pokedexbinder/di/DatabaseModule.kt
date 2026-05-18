@@ -17,7 +17,9 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): PokedexDatabase =
-        Room.databaseBuilder(context, PokedexDatabase::class.java, "pokedex_binder.db").build()
+        Room.databaseBuilder(context, PokedexDatabase::class.java, "pokedex_binder.db")
+            .fallbackToDestructiveMigration()
+            .build()
 
     @Provides
     fun provideMainBinderDao(db: PokedexDatabase): MainBinderDao = db.mainBinderDao()

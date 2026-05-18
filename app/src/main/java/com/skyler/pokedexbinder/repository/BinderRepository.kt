@@ -51,7 +51,9 @@ class BinderRepository @Inject constructor(
                 MainBinderEntry(
                     pokemonId = obj.getString("id"),
                     pokemonName = obj.getString("name"),
-                    dexOrder = obj.getInt("dex_order")
+                    dexNumber = obj.getInt("dex_number"),
+                    dexOrder = obj.getInt("dex_order"),
+                    slotType = obj.getString("slot_type")
                 )
             }
             mainBinderDao.insertAll(entries)
@@ -63,9 +65,14 @@ class BinderRepository @Inject constructor(
     private fun MainBinderEntry.toDomain() = PokemonSlot(
         id = pokemonId,
         name = pokemonName,
-        dexNumber = 0,
+        dexNumber = dexNumber,
         dexOrder = dexOrder,
-        slotType = SlotType.BASE,
+        slotType = when (slotType) {
+            "REGIONAL" -> SlotType.REGIONAL
+            "MEGA" -> SlotType.MEGA
+            "GMAX" -> SlotType.GMAX
+            else -> SlotType.BASE
+        },
         assignedCardId = assignedCardId,
         assignedCardImageUrl = assignedCardImageUrl
     )

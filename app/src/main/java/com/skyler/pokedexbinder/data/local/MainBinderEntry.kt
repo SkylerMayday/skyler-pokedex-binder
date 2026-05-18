@@ -7,7 +7,9 @@ import androidx.room.PrimaryKey
 data class MainBinderEntry(
     @PrimaryKey val pokemonId: String,
     val pokemonName: String,
+    val dexNumber: Int = 0,
     val dexOrder: Int,
+    val slotType: String = "BASE",
     val assignedCardId: String? = null,
     val assignedCardImageUrl: String? = null
 )
