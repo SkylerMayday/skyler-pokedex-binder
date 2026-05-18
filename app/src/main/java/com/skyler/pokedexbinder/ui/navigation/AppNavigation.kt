@@ -8,12 +8,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
+import com.skyler.pokedexbinder.ui.AssignmentViewModel
 import com.skyler.pokedexbinder.ui.mainbinder.MainBinderScreen
+import com.skyler.pokedexbinder.ui.manualsearch.ManualSearchScreen
+import com.skyler.pokedexbinder.ui.scanner.ScannerScreen
 import com.skyler.pokedexbinder.ui.secondarybinder.SecondaryBinderScreen
 import com.skyler.pokedexbinder.ui.slotdetail.SlotDetailScreen
 
@@ -22,6 +26,12 @@ sealed class Screen(val route: String) {
     object SecondaryBinder : Screen("secondary_binder")
     object SlotDetail : Screen("slot_detail/{pokemonId}") {
         fun createRoute(pokemonId: String) = "slot_detail/$pokemonId"
+    }
+    object Scanner : Screen("scanner/{pokemonId}") {
+        fun createRoute(pokemonId: String) = "scanner/$pokemonId"
+    }
+    object ManualSearch : Screen("manual_search/{pokemonId}") {
+        fun createRoute(pokemonId: String) = "manual_search/$pokemonId"
     }
 }
 
@@ -70,8 +80,40 @@ fun AppNavigation() {
                 route = Screen.SlotDetail.route,
                 arguments = listOf(navArgument("pokemonId") { type = NavType.StringType })
             ) { backStack ->
+                val pokemonId = backStack.arguments?.getString("pokemonId") ?: ""
                 SlotDetailScreen(
-                    pokemonId = backStack.arguments?.getString("pokemonId") ?: "",
+                    pokemonId = pokemonId,
+                    onBack = { navController.popBackStack() },
+                    onScanCard = { pid -> navController.navigate(Screen.Scanner.createRoute(pid)) },
+                    onManualSearch = { pid -> navController.navigate(Screen.ManualSearch.createRoute(pid)) }
+                )
+            }
+            composable(
+                route = Screen.Scanner.route,
+                arguments = listOf(navArgument("pokemonId") { type = NavType.StringType })
+            ) { backStack ->
+                val pokemonId = backStack.arguments?.getString("pokemonId") ?: ""
+                val assignmentVm: AssignmentViewModel = hiltViewModel()
+                ScannerScreen(
+                    pokemonId = pokemonId,
+                    onCardSelected = { card ->
+                        assignmentVm.assign(pokemonId, card)
+                        navController.popBackStack()
+                    },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = Screen.ManualSearch.route,
+                arguments = listOf(navArgument("pokemonId") { type = NavType.StringType })
+            ) { backStack ->
+                val pokemonId = backStack.arguments?.getString("pokemonId") ?: ""
+                val assignmentVm: AssignmentViewModel = hiltViewModel()
+                ManualSearchScreen(
+                    onCardSelected = { card ->
+                        assignmentVm.assign(pokemonId, card)
+                        navController.popBackStack()
+                    },
                     onBack = { navController.popBackStack() }
                 )
             }
