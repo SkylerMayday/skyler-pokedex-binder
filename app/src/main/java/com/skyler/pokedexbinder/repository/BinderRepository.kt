@@ -67,10 +67,10 @@ class BinderRepository @Inject constructor(
         name = pokemonName,
         dexNumber = dexNumber,
         dexOrder = dexOrder,
-        slotType = when (slotType) {
-            "REGIONAL" -> SlotType.REGIONAL
-            "MEGA" -> SlotType.MEGA
-            "GMAX" -> SlotType.GMAX
+        slotType = when (slotType.lowercase()) {
+            "regional" -> SlotType.REGIONAL
+            "mega" -> SlotType.MEGA
+            "gmax" -> SlotType.GMAX
             else -> SlotType.BASE
         },
         assignedCardId = assignedCardId,
