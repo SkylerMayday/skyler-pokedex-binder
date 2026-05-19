@@ -9,7 +9,9 @@ data class TcgCardDto(
     val name: String,
     val number: String,
     val set: TcgSetDto,
-    val images: TcgImagesDto
+    val images: TcgImagesDto,
+    val hp: String? = null,
+    val artist: String? = null
 )
 
 @JsonClass(generateAdapter = true)

@@ -6,7 +6,9 @@ data class TcgCard(
     val number: String,
     val setName: String,
     val imageUrl: String,
-    val pokemonNames: List<String>
+    val pokemonNames: List<String>,
+    val hp: String? = null,
+    val artist: String? = null
 ) {
     val primaryPokemonName: String get() = pokemonNames.firstOrNull() ?: name
 }
