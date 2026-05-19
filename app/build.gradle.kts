@@ -73,7 +73,6 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.coroutines.android)
-    implementation(libs.coroutines.play.services)
 
     // Room
     implementation(libs.room.runtime)
@@ -91,13 +90,6 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
-
-    // ML Kit
-    implementation(libs.mlkit.text.recognition)
-    implementation(libs.mlkit.text.recognition.korean)
-    implementation(libs.mlkit.text.recognition.japanese)
-    implementation(libs.mlkit.text.recognition.chinese)
-    implementation(libs.mlkit.translate)
 
     // CameraX
     implementation(libs.camerax.core)
