@@ -1,9 +1,17 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+}
+
+// Load signing credentials from keystore.properties (never commit this file)
+val keystoreProps = Properties().also { props ->
+    val propsFile = rootProject.file("keystore.properties")
+    if (propsFile.exists()) props.load(propsFile.inputStream())
 }
 
 android {
@@ -19,10 +27,21 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file(keystoreProps["storeFile"] as String)
+            storePassword = keystoreProps["storePassword"] as String
+            keyAlias = keystoreProps["keyAlias"] as String
+            keyPassword = keystoreProps["keyPassword"] as String
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
@@ -35,6 +54,9 @@ android {
     buildFeatures { compose = true }
 }
 
+// Android Studio Narwhal (AI-253 / Kotlin plugin 2.2.x) requests this task during project sync
+tasks.register("prepareKotlinBuildScriptModel")
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -45,6 +67,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.coroutines.android)
     implementation(libs.coroutines.play.services)
@@ -68,6 +91,10 @@ dependencies {
 
     // ML Kit
     implementation(libs.mlkit.text.recognition)
+    implementation(libs.mlkit.text.recognition.korean)
+    implementation(libs.mlkit.text.recognition.japanese)
+    implementation(libs.mlkit.text.recognition.chinese)
+    implementation(libs.mlkit.translate)
 
     // CameraX
     implementation(libs.camerax.core)
@@ -81,6 +108,12 @@ dependencies {
     // Material Components (provides Theme.MaterialComponents for themes.xml / edge-to-edge)
     implementation(libs.material)
 
+    // Reorderable (drag-to-reorder for LazyColumn)
+    implementation(libs.reorderable)
+
+    // DataStore (settings persistence)
+    implementation(libs.datastore.preferences)
+
     // Accompanist
     implementation(libs.accompanist.permissions)
 
@@ -89,6 +122,7 @@ dependencies {
     testImplementation(libs.mockk)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.turbine)
+    testImplementation(libs.okhttp.mockwebserver)
     androidTestImplementation(libs.junit.ext)
     androidTestImplementation(libs.espresso)
     androidTestImplementation(libs.room.testing)
