@@ -68,15 +68,19 @@ class GeminiCardScannerTest {
         assertNull(result.artist)
     }
 
-    @Test(expected = RateLimitException::class)
+    @Test
     fun `scan throws RateLimitException on 429`() = runTest {
         server.enqueue(MockResponse().setResponseCode(429))
-        scanner.scan(bitmap, "test-key")
+        var caught: Exception? = null
+        try { scanner.scan(bitmap, "test-key") } catch (e: Exception) { caught = e }
+        assert(caught is RateLimitException) { "Expected RateLimitException but got $caught" }
     }
 
-    @Test(expected = java.io.IOException::class)
+    @Test
     fun `scan throws IOException on 500`() = runTest {
         server.enqueue(MockResponse().setResponseCode(500))
-        scanner.scan(bitmap, "test-key")
+        var caught: Exception? = null
+        try { scanner.scan(bitmap, "test-key") } catch (e: Exception) { caught = e }
+        assert(caught is java.io.IOException) { "Expected IOException but got $caught" }
     }
 }
