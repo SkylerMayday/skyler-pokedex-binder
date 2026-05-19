@@ -17,6 +17,7 @@ class PerceptualHasher @Inject constructor(
         val small = Bitmap.createScaledBitmap(bitmap, 16, 16, false)
         val pixels = IntArray(256)
         small.getPixels(pixels, 0, 16, 0, 0, 16, 16)
+        small.recycle()
         val grays = pixels.map { px ->
             val r = (px shr 16) and 0xFF
             val g = (px shr 8) and 0xFF
@@ -47,8 +48,8 @@ class PerceptualHasher @Inject constructor(
     private suspend fun downloadBitmap(url: String): Bitmap? = withContext(Dispatchers.IO) {
         runCatching {
             val bytes = okHttpClient.newCall(Request.Builder().url(url).build())
-                .execute().body!!.bytes()
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                .execute().body?.bytes()
+            bytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
         }.getOrNull()
     }
 }
