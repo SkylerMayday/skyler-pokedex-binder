@@ -1,88 +1,110 @@
 package com.skyler.pokedexbinder.ui.scanner
 
+import android.graphics.Bitmap
 import androidx.camera.core.ImageProxy
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.skyler.pokedexbinder.data.local.SecondaryBinderDao
+import com.skyler.pokedexbinder.data.local.SecondaryBinderEntry
 import com.skyler.pokedexbinder.data.model.TcgCard
-import com.skyler.pokedexbinder.domain.OcrCardParser
+import com.skyler.pokedexbinder.domain.AssignCardUseCase
+import com.skyler.pokedexbinder.domain.GeminiCardScanner
+import com.skyler.pokedexbinder.domain.PerceptualHasher
+import com.skyler.pokedexbinder.domain.RateLimitException
 import com.skyler.pokedexbinder.domain.SmartThresholdUseCase
 import com.skyler.pokedexbinder.repository.CardSearchRepository
+import com.skyler.pokedexbinder.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 sealed class ScannerState {
     object Idle : ScannerState()
     object Scanning : ScannerState()
+    object NoApiKey : ScannerState()
+    object RateLimited : ScannerState()
     data class HighConfidence(val card: TcgCard) : ScannerState()
     data class LowConfidence(val cards: List<TcgCard>) : ScannerState()
     data class Error(val message: String) : ScannerState()
+    data class Success(val card: TcgCard, val slotName: String) : ScannerState()
 }
 
 @HiltViewModel
 class ScannerViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
+    private val geminiCardScanner: GeminiCardScanner,
     private val cardSearchRepository: CardSearchRepository,
-    private val ocrCardParser: OcrCardParser,
-    private val smartThresholdUseCase: SmartThresholdUseCase
+    private val perceptualHasher: PerceptualHasher,
+    private val smartThresholdUseCase: SmartThresholdUseCase,
+    private val assignCardUseCase: AssignCardUseCase,
+    private val secondaryBinderDao: SecondaryBinderDao,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
+
+    private val slotId: String = savedStateHandle.get<String>("slotId") ?: ""
+    private val slotName: String = savedStateHandle.get<String>("pokemonName") ?: ""
+    private val isSecondary: Boolean = savedStateHandle.get<Boolean>("isSecondary") ?: false
 
     private val _state = MutableStateFlow<ScannerState>(ScannerState.Idle)
     val state: StateFlow<ScannerState> = _state
 
-    private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    private var capturedBitmap: Bitmap? = null
 
     fun processImage(imageProxy: ImageProxy) {
         _state.value = ScannerState.Scanning
         viewModelScope.launch {
             try {
-                val mediaImage = imageProxy.image ?: run {
-                    imageProxy.close()
-                    _state.value = ScannerState.Error("Failed to read image")
+                val apiKey = settingsRepository.getGeminiApiKey()
+                if (apiKey.isBlank()) {
+                    _state.value = ScannerState.NoApiKey
                     return@launch
                 }
-                val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-                val result = recognizer.process(image).await()
-                imageProxy.close()
+                val bitmap = imageProxy.toBitmap()
+                capturedBitmap = bitmap
 
-                val parsed = ocrCardParser.parse(result.text)
-                if (parsed.cardName.isBlank()) {
-                    _state.value = ScannerState.Error("Could not read card text. Try again.")
+                val parsed = geminiCardScanner.scan(bitmap, apiKey)
+                val candidates = cardSearchRepository.searchByParsedInfo(parsed)
+
+                if (candidates.isEmpty()) {
+                    _state.value = ScannerState.LowConfidence(emptyList())
                     return@launch
                 }
 
-                val cards = if (parsed.cardNumber != null) {
-                    cardSearchRepository.searchByNameAndNumber(parsed.cardName, parsed.cardNumber)
-                } else {
-                    cardSearchRepository.searchByName(parsed.cardName)
-                }
-
-                val confidence = smartThresholdUseCase.evaluate(cards, parsed.cardName, parsed.cardNumber)
+                val best = perceptualHasher.findBestMatch(candidates, bitmap) ?: candidates.first()
+                val confidence = smartThresholdUseCase.evaluate(candidates, best.name, best.number)
                 _state.value = if (confidence.isHighConfidence && confidence.topCard != null) {
                     ScannerState.HighConfidence(confidence.topCard)
                 } else {
-                    ScannerState.LowConfidence(cards)
+                    ScannerState.LowConfidence(candidates)
                 }
+            } catch (e: RateLimitException) {
+                _state.value = ScannerState.RateLimited
             } catch (e: Exception) {
-                imageProxy.close()
                 _state.value = ScannerState.Error(e.message ?: "Scan failed")
+            } finally {
+                imageProxy.close()
             }
         }
     }
 
-    fun searchManually(query: String) {
-        _state.value = ScannerState.Scanning
+    fun confirmCard(card: TcgCard) {
         viewModelScope.launch {
-            try {
-                val cards = cardSearchRepository.searchByName(query)
-                _state.value = ScannerState.LowConfidence(cards)
-            } catch (e: Exception) {
-                _state.value = ScannerState.Error(e.message ?: "Search failed")
+            if (isSecondary) {
+                secondaryBinderDao.insertAtEnd(
+                    SecondaryBinderEntry(
+                        pokemonId = card.pokemonNames.firstOrNull() ?: "",
+                        pokemonName = card.name,
+                        cardId = card.id,
+                        cardImageUrl = card.imageUrl
+                    )
+                )
+                _state.value = ScannerState.Success(card, "Secondary Binder")
+            } else {
+                assignCardUseCase.assign(slotId, card)
+                _state.value = ScannerState.Success(card, slotName)
             }
         }
     }
@@ -91,10 +113,5 @@ class ScannerViewModel @Inject constructor(
 
     fun onCaptureError(message: String) {
         _state.value = ScannerState.Error(message)
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        recognizer.close()
     }
 }
