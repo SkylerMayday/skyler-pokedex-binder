@@ -63,6 +63,9 @@ class GeminiCardScannerTest {
 
         assertEquals("Pikachu", result.cardName)
         assertNull(result.cardNumber)
+        assertNull(result.setTotal)
+        assertNull(result.hp)
+        assertNull(result.artist)
     }
 
     @Test(expected = RateLimitException::class)
