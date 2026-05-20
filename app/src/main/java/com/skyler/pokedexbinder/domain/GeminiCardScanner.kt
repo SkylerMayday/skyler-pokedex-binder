@@ -90,9 +90,19 @@ class GeminiCardScanner @Inject constructor(
     }
 
     private fun bitmapToBase64(bitmap: Bitmap): String {
+        val scaled = scaleBitmap(bitmap, maxDim = 1024)
         val out = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 80, out)
+        scaled.compress(Bitmap.CompressFormat.JPEG, 80, out)
+        if (scaled !== bitmap) scaled.recycle()
         return Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+    }
+
+    private fun scaleBitmap(bitmap: Bitmap, maxDim: Int): Bitmap {
+        val w = bitmap.width
+        val h = bitmap.height
+        if (w <= maxDim && h <= maxDim) return bitmap
+        val scale = maxDim.toFloat() / maxOf(w, h)
+        return Bitmap.createScaledBitmap(bitmap, (w * scale).toInt(), (h * scale).toInt(), true)
     }
 
     private fun buildRequestJson(prompt: String, base64: String): String =
