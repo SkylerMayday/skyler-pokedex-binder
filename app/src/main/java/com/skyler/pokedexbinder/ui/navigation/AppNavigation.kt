@@ -1,10 +1,5 @@
 package com.skyler.pokedexbinder.ui.navigation
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Menu
@@ -12,7 +7,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -20,7 +14,6 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.skyler.pokedexbinder.R
-import com.skyler.pokedexbinder.data.model.PokemonSlot
 import com.skyler.pokedexbinder.ui.mainbinder.MainBinderScreen
 import com.skyler.pokedexbinder.ui.manualsearch.ManualSearchScreen
 import com.skyler.pokedexbinder.ui.quickscan.QuickScanScreen
@@ -67,9 +60,6 @@ fun AppNavigation() {
     val settingsVm: SettingsViewModel = hiltViewModel()
     val settings by settingsVm.settings.collectAsState()
 
-    var scanChoiceSlot by remember { mutableStateOf<PokemonSlot?>(null) }
-    var showGlobalScanSheet by remember { mutableStateOf(false) }
-
     fun navigateTo(route: String) {
         navController.navigate(route) {
             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
@@ -89,7 +79,11 @@ fun AppNavigation() {
                 )
                 NavigationBarItem(
                     selected = false,
-                    onClick = { showGlobalScanSheet = true },
+                    onClick = {
+                        val isOnSecondary = currentDest?.hierarchy
+                            ?.any { it.route == Screen.SecondaryBinder.route } == true
+                        navController.navigate(Screen.Scanner.createRoute(isSecondary = isOnSecondary))
+                    },
                     icon = { Icon(Icons.Default.CameraAlt, contentDescription = "Scan") },
                     label = { Text("Scan") }
                 )
@@ -115,7 +109,9 @@ fun AppNavigation() {
                         if (slot.isOccupied) {
                             navController.navigate(Screen.SlotDetail.createRoute(slot.id))
                         } else {
-                            scanChoiceSlot = slot
+                            navController.navigate(
+                                Screen.QuickScan.createRoute(pokemonName = slot.name, slotId = slot.id)
+                            )
                         }
                     },
                     onSettingsClick = { navController.navigate(Screen.Settings.route) }
@@ -175,7 +171,7 @@ fun AppNavigation() {
                     onSearchManually = {
                         navController.popBackStack()
                         if (isSecondary) navController.navigate(Screen.AddToSecondary.route)
-                        // For main binder: popping back returns to the scan/search choice sheet
+                        else navController.navigate(Screen.QuickScan.createRoute())
                     },
                     onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
                     onBack = { navController.popBackStack() }
@@ -194,61 +190,4 @@ fun AppNavigation() {
         }
     }
 
-    // Global scan bottom sheet — shown when the Scan tab in the bottom nav is tapped
-    if (showGlobalScanSheet) {
-        val isOnSecondary = currentDest?.hierarchy?.any { it.route == Screen.SecondaryBinder.route } == true
-        ModalBottomSheet(onDismissRequest = { showGlobalScanSheet = false }) {
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                Text("Add Card", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick = {
-                        showGlobalScanSheet = false
-                        navController.navigate(Screen.Scanner.createRoute(isSecondary = isOnSecondary))
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("Scan Card") }
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = {
-                        showGlobalScanSheet = false
-                        if (isOnSecondary) navController.navigate(Screen.AddToSecondary.route)
-                        else navController.navigate(Screen.QuickScan.createRoute())
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("Search Manually") }
-                Spacer(Modifier.height(24.dp))
-            }
-        }
-    }
-
-    // Scan / Search choice bottom sheet — shown when an empty main binder slot is tapped
-    scanChoiceSlot?.let { slot ->
-        ModalBottomSheet(onDismissRequest = { scanChoiceSlot = null }) {
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                Text("Add Card for ${slot.name}", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick = {
-                        scanChoiceSlot = null
-                        navController.navigate(
-                            Screen.Scanner.createRoute(slotId = slot.id, pokemonName = slot.name)
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("Scan Card") }
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = {
-                        scanChoiceSlot = null
-                        navController.navigate(
-                            Screen.QuickScan.createRoute(pokemonName = slot.name, slotId = slot.id)
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("Search Manually") }
-                Spacer(Modifier.height(24.dp))
-            }
-        }
-    }
 }
