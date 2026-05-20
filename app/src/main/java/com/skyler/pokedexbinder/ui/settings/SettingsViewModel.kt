@@ -23,5 +23,6 @@ class SettingsViewModel @Inject constructor(
     fun setShowMega(v: Boolean) = viewModelScope.launch { settingsRepository.setShowMega(v) }
     fun setShowGmax(v: Boolean) = viewModelScope.launch { settingsRepository.setShowGmax(v) }
     fun setShowSecondaryBinder(v: Boolean) = viewModelScope.launch { settingsRepository.setShowSecondaryBinder(v) }
+    fun setUseCameraScanner(v: Boolean) = viewModelScope.launch { settingsRepository.setUseCameraScanner(v) }
     fun setGeminiApiKey(key: String) = viewModelScope.launch { settingsRepository.setGeminiApiKey(key) }
 }

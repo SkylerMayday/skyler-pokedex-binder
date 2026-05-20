@@ -83,7 +83,12 @@ fun AppNavigation() {
                     onClick = {
                         val isOnSecondary = currentDest?.hierarchy
                             ?.any { it.route == Screen.SecondaryBinder.route } == true
-                        navController.navigate(Screen.Scanner.createRoute(isSecondary = isOnSecondary))
+                        if (settings.useCameraScanner) {
+                            navController.navigate(Screen.Scanner.createRoute(isSecondary = isOnSecondary))
+                        } else {
+                            if (isOnSecondary) navController.navigate(Screen.AddToSecondary.route)
+                            else navController.navigate(Screen.QuickScan.createRoute())
+                        }
                     },
                     icon = { Icon(Icons.Default.CameraAlt, contentDescription = "Scan") },
                     label = { Text("Scan") }

@@ -1,6 +1,8 @@
 package com.skyler.pokedexbinder.ui.settings
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Visibility
@@ -35,18 +37,35 @@ fun SettingsScreen(
             )
         }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding)) {
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+        ) {
 
-            SectionHeader("Gemini AI Scanner")
+            // ---- Camera Scanner ----
+            SectionHeader("Camera Scanner")
+
+            SettingToggleItem(
+                title = "Enable Camera Scanner",
+                description = "Automatically identify cards using the camera. Requires a Gemini API Key.",
+                checked = settings.useCameraScanner,
+                onCheckedChange = { viewModel.setUseCameraScanner(it) }
+            )
+            HorizontalDivider()
 
             OutlinedTextField(
                 value = apiKeyText,
                 onValueChange = { apiKeyText = it; viewModel.setGeminiApiKey(it) },
                 label = { Text("Gemini API Key") },
                 supportingText = { Text("Free key at aistudio.google.com") },
+                enabled = settings.useCameraScanner,
                 visualTransformation = if (apiKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
-                    IconButton(onClick = { apiKeyVisible = !apiKeyVisible }) {
+                    IconButton(
+                        onClick = { apiKeyVisible = !apiKeyVisible },
+                        enabled = settings.useCameraScanner
+                    ) {
                         Icon(
                             if (apiKeyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                             contentDescription = if (apiKeyVisible) "Hide key" else "Show key"
@@ -58,7 +77,8 @@ fun SettingsScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
-            Spacer(Modifier.height(16.dp))
+            // ---- Binder Sections ----
+            Spacer(Modifier.height(8.dp))
             SectionHeader("Binder Sections")
 
             SettingToggleItem(
@@ -82,13 +102,14 @@ fun SettingsScreen(
                 onCheckedChange = { viewModel.setShowGmax(it) }
             )
 
-            Spacer(Modifier.height(16.dp))
+            // ---- Navigation ----
+            Spacer(Modifier.height(8.dp))
             SectionHeader("Navigation")
 
             HorizontalDivider()
             SettingToggleItem(
                 title = "Secondary Binder",
-                description = "Show the Secondary Binder tab in the bottom bar",
+                description = "When enabled, cards replaced in the main binder are moved here instead of being deleted.",
                 checked = settings.showSecondaryBinder,
                 onCheckedChange = { viewModel.setShowSecondaryBinder(it) }
             )

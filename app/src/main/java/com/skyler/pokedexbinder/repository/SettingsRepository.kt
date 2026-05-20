@@ -19,6 +19,7 @@ data class AppSettings(
     val showMega: Boolean = false,
     val showGmax: Boolean = false,
     val showSecondaryBinder: Boolean = false,
+    val useCameraScanner: Boolean = false,
     val geminiApiKey: String = ""
 )
 
@@ -33,6 +34,7 @@ class SettingsRepository @Inject constructor(
         val SHOW_MEGA = booleanPreferencesKey("show_mega")
         val SHOW_GMAX = booleanPreferencesKey("show_gmax")
         val SHOW_SECONDARY_BINDER = booleanPreferencesKey("show_secondary_binder")
+        val USE_CAMERA_SCANNER = booleanPreferencesKey("use_camera_scanner")
         val GEMINI_API_KEY = stringPreferencesKey("gemini_api_key")
     }
 
@@ -42,6 +44,7 @@ class SettingsRepository @Inject constructor(
             showMega = prefs[Keys.SHOW_MEGA] ?: false,
             showGmax = prefs[Keys.SHOW_GMAX] ?: false,
             showSecondaryBinder = prefs[Keys.SHOW_SECONDARY_BINDER] ?: false,
+            useCameraScanner = prefs[Keys.USE_CAMERA_SCANNER] ?: false,
             geminiApiKey = prefs[Keys.GEMINI_API_KEY] ?: ""
         )
     }
@@ -60,6 +63,10 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setShowSecondaryBinder(enabled: Boolean) {
         context.dataStore.edit { it[Keys.SHOW_SECONDARY_BINDER] = enabled }
+    }
+
+    suspend fun setUseCameraScanner(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.USE_CAMERA_SCANNER] = enabled }
     }
 
     suspend fun getGeminiApiKey(): String =
