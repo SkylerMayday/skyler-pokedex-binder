@@ -243,8 +243,9 @@ fun ScannerScreen(
     val context = LocalContext.current
 
     // Auto-capture state
-    var consecutiveDetections by remember { mutableIntStateOf(0) }
+    var detectionStartMs by remember { mutableLongStateOf(0L) }
     var isCapturing by remember { mutableStateOf(false) }
+    val holdDurationMs = 1500L
 
     LaunchedEffect(Unit) {
         if (!cameraPermission.status.isGranted) cameraPermission.launchPermissionRequest()
@@ -254,7 +255,7 @@ fun ScannerScreen(
         if (state is ScannerState.Success) onDone()
         // Reset auto-capture state whenever we leave Idle
         if (state !is ScannerState.Idle) {
-            consecutiveDetections = 0
+            detectionStartMs = 0L
             isCapturing = false
         }
     }
@@ -288,8 +289,9 @@ fun ScannerScreen(
                                 onCardPresenceChanged = { detected ->
                                     cardDetected = detected
                                     if (detected) {
-                                        consecutiveDetections++
-                                        if (consecutiveDetections >= 3 && !isCapturing) {
+                                        val now = System.currentTimeMillis()
+                                        if (detectionStartMs == 0L) detectionStartMs = now
+                                        if (!isCapturing && now - detectionStartMs >= holdDurationMs) {
                                             isCapturing = true
                                             imageCapture?.takePicture(
                                                 ContextCompat.getMainExecutor(context),
@@ -299,14 +301,14 @@ fun ScannerScreen(
                                                     }
                                                     override fun onError(exc: ImageCaptureException) {
                                                         isCapturing = false
-                                                        consecutiveDetections = 0
+                                                        detectionStartMs = 0L
                                                         viewModel.onCaptureError(exc.message ?: "Capture failed")
                                                     }
                                                 }
                                             )
                                         }
                                     } else {
-                                        consecutiveDetections = 0
+                                        detectionStartMs = 0L
                                     }
                                 }
                             )
@@ -329,7 +331,7 @@ fun ScannerScreen(
                                             }
                                             override fun onError(exc: ImageCaptureException) {
                                                 isCapturing = false
-                                                consecutiveDetections = 0
+                                                detectionStartMs = 0L
                                                 viewModel.onCaptureError(exc.message ?: "Capture failed")
                                             }
                                         }
