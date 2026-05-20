@@ -35,7 +35,8 @@ data class GeminiCardResult(
     val number: String? = null,
     val setTotal: String? = null,
     val hp: String? = null,
-    val artist: String? = null
+    val artist: String? = null,
+    val dexNumber: Int? = null
 )
 
 private const val GEMINI_BASE_URL =
@@ -53,9 +54,14 @@ class GeminiCardScanner @Inject constructor(
 
     suspend fun scan(bitmap: Bitmap, apiKey: String): ParsedCardInfo = withContext(Dispatchers.IO) {
         val base64 = bitmapToBase64(bitmap)
-        val prompt = "Analyze this Pokémon TCG card. Return ONLY a JSON object with no markdown:\n" +
-                "{\"name\":\"pokemon name or null\",\"number\":\"card number without leading zeros or null\"," +
-                "\"setTotal\":\"total cards in set or null\",\"hp\":\"HP value or null\",\"artist\":\"artist name or null\"}"
+        val prompt = "Analyze this Pokémon TCG card. The card may be in any language. " +
+                "Return ONLY a JSON object with no markdown:\n" +
+                "{\"name\":\"Pokémon name in English regardless of card language, or null\"," +
+                "\"number\":\"card number without leading zeros or null\"," +
+                "\"setTotal\":\"total cards in set or null\"," +
+                "\"hp\":\"HP value as digits only or null\"," +
+                "\"artist\":\"illustrator name or null\"," +
+                "\"dexNumber\":\"National Pokédex number as integer or null\"}"
         val body = buildRequestJson(prompt, base64)
         val request = Request.Builder()
             .url("$baseUrl?key=$apiKey")
@@ -78,7 +84,8 @@ class GeminiCardScanner @Inject constructor(
             cardNumber = result.number,
             setTotal = result.setTotal,
             hp = result.hp,
-            artist = result.artist
+            artist = result.artist,
+            dexNumber = result.dexNumber
         )
     }
 

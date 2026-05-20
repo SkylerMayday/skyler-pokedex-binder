@@ -13,10 +13,13 @@ class CardSearchRepository @Inject constructor(
     private val api: PokemonTcgApi
 ) {
     suspend fun searchByParsedInfo(info: ParsedCardInfo): List<TcgCard> {
-        val name = info.cardName
+        val name   = info.cardName
         val number = info.cardNumber
-        val total = info.setTotal
+        val total  = info.setTotal
+        val dex    = info.dexNumber
+
         val queries = buildList {
+            // Name-based queries (work for English cards, and non-English if Gemini translated correctly)
             if (name != null && number != null && total != null)
                 add("${nameQuery(name)} number:\"$number\" set.total:$total")
             if (name != null && number != null)
@@ -25,6 +28,15 @@ class CardSearchRepository @Inject constructor(
                 add("number:\"$number\" set.total:$total")
             if (name != null)
                 add(nameQuery(name))
+
+            // Pokédex-number queries — language-independent, reliable for non-English cards
+            if (dex != null && number != null && total != null)
+                add("nationalPokedexNumbers:$dex number:\"$number\" set.total:$total")
+            if (dex != null && number != null)
+                add("nationalPokedexNumbers:$dex number:\"$number\"")
+            if (dex != null)
+                add("nationalPokedexNumbers:$dex")
+
             if (number != null)
                 add("number:\"$number\"")
         }
