@@ -13,6 +13,7 @@ import com.skyler.pokedexbinder.domain.GeminiCardScanner
 import com.skyler.pokedexbinder.domain.PerceptualHasher
 import com.skyler.pokedexbinder.domain.RateLimitException
 import com.skyler.pokedexbinder.domain.SmartThresholdUseCase
+import com.skyler.pokedexbinder.repository.BinderRepository
 import com.skyler.pokedexbinder.repository.CardSearchRepository
 import com.skyler.pokedexbinder.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -40,6 +41,7 @@ class ScannerViewModel @Inject constructor(
     private val perceptualHasher: PerceptualHasher,
     private val smartThresholdUseCase: SmartThresholdUseCase,
     private val assignCardUseCase: AssignCardUseCase,
+    private val binderRepository: BinderRepository,
     private val secondaryBinderDao: SecondaryBinderDao,
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
@@ -92,23 +94,40 @@ class ScannerViewModel @Inject constructor(
 
     fun confirmCard(card: TcgCard) {
         viewModelScope.launch {
-            if (isSecondary || slotId.isBlank()) {
-                // Secondary binder, or global scan with no specific slot → add to secondary
-                secondaryBinderDao.insertAtEnd(
-                    SecondaryBinderEntry(
-                        pokemonId = card.pokemonNames.firstOrNull() ?: "",
-                        pokemonName = card.name,
-                        cardId = card.id,
-                        cardImageUrl = card.imageUrl
-                    )
-                )
-                _state.value = ScannerState.Success(card, "Secondary Binder")
-            } else {
-                assignCardUseCase.assign(slotId, card)
-                _state.value = ScannerState.Success(card, slotName)
+            when {
+                isSecondary -> {
+                    // Explicitly launched for secondary binder
+                    secondaryBinderDao.insertAtEnd(card.toSecondaryEntry())
+                    _state.value = ScannerState.Success(card, "Secondary Binder")
+                }
+                slotId.isNotBlank() -> {
+                    // Launched from a specific slot
+                    assignCardUseCase.assign(slotId, card)
+                    _state.value = ScannerState.Success(card, slotName)
+                }
+                else -> {
+                    // Global scan — match card's Pokémon name to a main binder slot
+                    val matchedSlot = binderRepository.getAllSlots().firstOrNull { slot ->
+                        card.pokemonNames.any { it.equals(slot.name, ignoreCase = true) }
+                    }
+                    if (matchedSlot != null) {
+                        assignCardUseCase.assign(matchedSlot.id, card)
+                        _state.value = ScannerState.Success(card, matchedSlot.name)
+                    } else {
+                        secondaryBinderDao.insertAtEnd(card.toSecondaryEntry())
+                        _state.value = ScannerState.Success(card, "Secondary Binder")
+                    }
+                }
             }
         }
     }
+
+    private fun TcgCard.toSecondaryEntry() = SecondaryBinderEntry(
+        pokemonId = pokemonNames.firstOrNull() ?: "",
+        pokemonName = name,
+        cardId = id,
+        cardImageUrl = imageUrl
+    )
 
     fun reset() { _state.value = ScannerState.Idle }
 
