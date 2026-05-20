@@ -78,21 +78,18 @@ fun AppNavigation() {
                     icon = { Icon(painterResource(R.drawable.ic_pokeball), contentDescription = "Binder") },
                     label = { Text("Pokédex") }
                 )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = {
-                        val isOnSecondary = currentDest?.hierarchy
-                            ?.any { it.route == Screen.SecondaryBinder.route } == true
-                        if (settings.useCameraScanner) {
+                if (settings.useCameraScanner) {
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = {
+                            val isOnSecondary = currentDest?.hierarchy
+                                ?.any { it.route == Screen.SecondaryBinder.route } == true
                             navController.navigate(Screen.Scanner.createRoute(isSecondary = isOnSecondary))
-                        } else {
-                            if (isOnSecondary) navController.navigate(Screen.AddToSecondary.route)
-                            else navController.navigate(Screen.QuickScan.createRoute())
-                        }
-                    },
-                    icon = { Icon(Icons.Default.CameraAlt, contentDescription = "Scan") },
-                    label = { Text("Scan") }
-                )
+                        },
+                        icon = { Icon(Icons.Default.CameraAlt, contentDescription = "Scan") },
+                        label = { Text("Scan") }
+                    )
+                }
                 if (settings.showSecondaryBinder) {
                     NavigationBarItem(
                         selected = currentDest?.hierarchy?.any { it.route == Screen.SecondaryBinder.route } == true,
