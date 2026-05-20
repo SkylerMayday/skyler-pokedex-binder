@@ -254,8 +254,8 @@ fun ScannerScreen(
 
     LaunchedEffect(state) {
         if (state is ScannerState.Success) onDone()
-        // Reset auto-capture state whenever we leave Idle
-        if (state !is ScannerState.Idle) {
+        // Reset auto-capture counters whenever we're not in an active idle state
+        if (state !is ScannerState.Idle && state !is ScannerState.IdleWithGrace) {
             detectionStartMs = 0L
             isCapturing = false
         }
@@ -364,9 +364,44 @@ fun ScannerScreen(
                         onSecondary = onSearchManually
                     )
                 }
+                is ScannerState.IdleWithGrace -> {
+                    // Post-rate-limit grace: show camera but block auto-capture for 5s
+                    val graceEndsAt = s.graceEndsAt
+                    LaunchedEffect(graceEndsAt) {
+                        val remaining = graceEndsAt - System.currentTimeMillis()
+                        if (remaining > 0) delay(remaining)
+                        viewModel.clearGrace()
+                    }
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                        CameraPreview(
+                            modifier = Modifier.fillMaxSize(),
+                            onImageCaptureReady = { imageCapture = it },
+                            onCardPresenceChanged = { /* blocked during grace */ }
+                        )
+                        CardFrameOverlay(cardDetected = false, modifier = Modifier.fillMaxSize())
+                        Box(
+                            Modifier.fillMaxSize().padding(bottom = 56.dp),
+                            contentAlignment = Alignment.BottomCenter
+                        ) {
+                            Text(
+                                "Getting ready…",
+                                color = Color.White,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                    Button(
+                        onClick = { /* no-op during grace */ },
+                        enabled = false,
+                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp)
+                    ) { Text("Capture") }
+                }
+
                 is ScannerState.RateLimited -> {
+                    val isRepeated = s.consecutiveHits > 1
                     var secondsLeft by remember { mutableIntStateOf(60) }
-                    LaunchedEffect(Unit) {
+                    LaunchedEffect(s.consecutiveHits) {
+                        secondsLeft = 60
                         while (secondsLeft > 0) {
                             delay(1000)
                             secondsLeft--
@@ -378,20 +413,27 @@ fun ScannerScreen(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = if (secondsLeft > 0)
-                                "Too many scans at once — Gemini needs a moment to recover.\n\nRetry in $secondsLeft seconds."
-                            else
-                                "Ready to scan again!",
+                            text = when {
+                                isRepeated ->
+                                    "Still rate-limited after waiting — you may have hit your daily Gemini quota.\n\n" +
+                                    "Check your usage at aistudio.google.com or search manually for now."
+                                secondsLeft > 0 ->
+                                    "Too many scans at once — Gemini needs a moment.\n\nRetry in $secondsLeft seconds."
+                                else ->
+                                    "Ready to scan again!"
+                            },
                             style = MaterialTheme.typography.bodyLarge,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            textAlign = TextAlign.Center
                         )
                         Spacer(Modifier.height(24.dp))
-                        Button(
-                            onClick = { viewModel.reset() },
-                            enabled = secondsLeft == 0,
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Try Again") }
-                        Spacer(Modifier.height(8.dp))
+                        if (!isRepeated) {
+                            Button(
+                                onClick = { viewModel.reset() },
+                                enabled = secondsLeft == 0,
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("Try Again") }
+                            Spacer(Modifier.height(8.dp))
+                        }
                         OutlinedButton(
                             onClick = onSearchManually,
                             modifier = Modifier.fillMaxWidth()

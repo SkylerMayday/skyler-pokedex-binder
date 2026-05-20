@@ -24,9 +24,10 @@ import javax.inject.Inject
 
 sealed class ScannerState {
     object Idle : ScannerState()
+    data class IdleWithGrace(val graceEndsAt: Long) : ScannerState() // post-rate-limit cooldown
     object Scanning : ScannerState()
     object NoApiKey : ScannerState()
-    object RateLimited : ScannerState()
+    data class RateLimited(val consecutiveHits: Int) : ScannerState()
     data class HighConfidence(val card: TcgCard) : ScannerState()
     data class LowConfidence(val cards: List<TcgCard>) : ScannerState()
     data class Error(val message: String) : ScannerState()
@@ -54,6 +55,7 @@ class ScannerViewModel @Inject constructor(
     val state: StateFlow<ScannerState> = _state
 
     private var capturedBitmap: Bitmap? = null
+    private var consecutiveRateLimits = 0
 
     fun processImage(imageProxy: ImageProxy) {
         _state.value = ScannerState.Scanning
@@ -83,7 +85,8 @@ class ScannerViewModel @Inject constructor(
                     ScannerState.LowConfidence(candidates)
                 }
             } catch (e: RateLimitException) {
-                _state.value = ScannerState.RateLimited
+                consecutiveRateLimits++
+                _state.value = ScannerState.RateLimited(consecutiveRateLimits)
             } catch (e: Exception) {
                 _state.value = ScannerState.Error(e.message ?: "Scan failed")
             } finally {
@@ -129,7 +132,18 @@ class ScannerViewModel @Inject constructor(
         cardImageUrl = imageUrl
     )
 
-    fun reset() { _state.value = ScannerState.Idle }
+    fun reset() {
+        val wasRateLimited = _state.value is ScannerState.RateLimited
+        if (wasRateLimited) {
+            // Enter a brief grace period so auto-capture can't fire the moment the camera comes back
+            _state.value = ScannerState.IdleWithGrace(System.currentTimeMillis() + 5_000L)
+        } else {
+            consecutiveRateLimits = 0
+            _state.value = ScannerState.Idle
+        }
+    }
+
+    fun clearGrace() { _state.value = ScannerState.Idle }
 
     fun onCaptureError(message: String) {
         _state.value = ScannerState.Error(message)
