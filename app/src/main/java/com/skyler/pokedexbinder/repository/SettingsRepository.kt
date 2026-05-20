@@ -20,6 +20,7 @@ data class AppSettings(
     val showGmax: Boolean = false,
     val showSecondaryBinder: Boolean = false,
     val useCameraScanner: Boolean = false,
+    val darkMode: Boolean = false,
     val geminiApiKey: String = ""
 )
 
@@ -35,6 +36,7 @@ class SettingsRepository @Inject constructor(
         val SHOW_GMAX = booleanPreferencesKey("show_gmax")
         val SHOW_SECONDARY_BINDER = booleanPreferencesKey("show_secondary_binder")
         val USE_CAMERA_SCANNER = booleanPreferencesKey("use_camera_scanner")
+        val DARK_MODE = booleanPreferencesKey("dark_mode")
         val GEMINI_API_KEY = stringPreferencesKey("gemini_api_key")
     }
 
@@ -45,6 +47,7 @@ class SettingsRepository @Inject constructor(
             showGmax = prefs[Keys.SHOW_GMAX] ?: false,
             showSecondaryBinder = prefs[Keys.SHOW_SECONDARY_BINDER] ?: false,
             useCameraScanner = prefs[Keys.USE_CAMERA_SCANNER] ?: false,
+            darkMode = prefs[Keys.DARK_MODE] ?: false,
             geminiApiKey = prefs[Keys.GEMINI_API_KEY] ?: ""
         )
     }
@@ -67,6 +70,10 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setUseCameraScanner(enabled: Boolean) {
         context.dataStore.edit { it[Keys.USE_CAMERA_SCANNER] = enabled }
+    }
+
+    suspend fun setDarkMode(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.DARK_MODE] = enabled }
     }
 
     suspend fun getGeminiApiKey(): String =

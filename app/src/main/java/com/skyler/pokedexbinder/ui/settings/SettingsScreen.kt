@@ -43,7 +43,19 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
         ) {
 
+            // ---- Appearance ----
+            SectionHeader("Appearance")
+
+            SettingToggleItem(
+                title = "Dark Mode",
+                description = "Use a dark colour scheme",
+                checked = settings.darkMode,
+                onCheckedChange = { viewModel.setDarkMode(it) }
+            )
+            HorizontalDivider()
+
             // ---- Camera Scanner ----
+            Spacer(Modifier.height(8.dp))
             SectionHeader("Camera Scanner")
 
             SettingToggleItem(
