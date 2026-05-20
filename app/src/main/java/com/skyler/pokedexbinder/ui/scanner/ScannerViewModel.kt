@@ -92,7 +92,8 @@ class ScannerViewModel @Inject constructor(
 
     fun confirmCard(card: TcgCard) {
         viewModelScope.launch {
-            if (isSecondary) {
+            if (isSecondary || slotId.isBlank()) {
+                // Secondary binder, or global scan with no specific slot → add to secondary
                 secondaryBinderDao.insertAtEnd(
                     SecondaryBinderEntry(
                         pokemonId = card.pokemonNames.firstOrNull() ?: "",

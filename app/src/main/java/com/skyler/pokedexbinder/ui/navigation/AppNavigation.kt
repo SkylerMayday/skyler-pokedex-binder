@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -67,6 +68,7 @@ fun AppNavigation() {
     val settings by settingsVm.settings.collectAsState()
 
     var scanChoiceSlot by remember { mutableStateOf<PokemonSlot?>(null) }
+    var showGlobalScanSheet by remember { mutableStateOf(false) }
 
     fun navigateTo(route: String) {
         navController.navigate(route) {
@@ -84,6 +86,12 @@ fun AppNavigation() {
                     onClick = { navigateTo(Screen.MainBinder.route) },
                     icon = { Icon(painterResource(R.drawable.ic_pokeball), contentDescription = "Binder") },
                     label = { Text("Pokédex") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = { showGlobalScanSheet = true },
+                    icon = { Icon(Icons.Default.CameraAlt, contentDescription = "Scan") },
+                    label = { Text("Scan") }
                 )
                 if (settings.showSecondaryBinder) {
                     NavigationBarItem(
@@ -182,6 +190,34 @@ fun AppNavigation() {
                     },
                     onBack = { navController.popBackStack() }
                 )
+            }
+        }
+    }
+
+    // Global scan bottom sheet — shown when the Scan tab in the bottom nav is tapped
+    if (showGlobalScanSheet) {
+        val isOnSecondary = currentDest?.hierarchy?.any { it.route == Screen.SecondaryBinder.route } == true
+        ModalBottomSheet(onDismissRequest = { showGlobalScanSheet = false }) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                Text("Add Card", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = {
+                        showGlobalScanSheet = false
+                        navController.navigate(Screen.Scanner.createRoute(isSecondary = isOnSecondary))
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Scan Card") }
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = {
+                        showGlobalScanSheet = false
+                        if (isOnSecondary) navController.navigate(Screen.AddToSecondary.route)
+                        else navController.navigate(Screen.QuickScan.createRoute())
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Search Manually") }
+                Spacer(Modifier.height(24.dp))
             }
         }
     }
