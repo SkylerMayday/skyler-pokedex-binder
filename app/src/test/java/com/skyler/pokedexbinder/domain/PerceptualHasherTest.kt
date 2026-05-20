@@ -27,7 +27,7 @@ class PerceptualHasherTest {
     fun setUp() {
         server = MockWebServer()
         server.start()
-        hasher = PerceptualHasher(OkHttpClient(), server.url("/").toString())
+        hasher = PerceptualHasher(OkHttpClient()).also { it.baseUrl = server.url("/").toString() }
     }
 
     @After

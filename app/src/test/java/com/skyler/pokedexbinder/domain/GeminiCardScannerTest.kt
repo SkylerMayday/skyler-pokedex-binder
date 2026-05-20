@@ -32,7 +32,7 @@ class GeminiCardScannerTest {
         server = MockWebServer()
         server.start()
         val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
-        scanner = GeminiCardScanner(OkHttpClient(), moshi, server.url("/").toString())
+        scanner = GeminiCardScanner(OkHttpClient(), moshi).also { it.baseUrl = server.url("/").toString() }
     }
 
     @After

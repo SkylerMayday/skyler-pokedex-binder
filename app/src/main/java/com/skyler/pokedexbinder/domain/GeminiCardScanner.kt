@@ -43,9 +43,11 @@ private const val GEMINI_BASE_URL =
 
 class GeminiCardScanner @Inject constructor(
     private val okHttpClient: OkHttpClient,
-    private val moshi: Moshi,
-    private val baseUrl: String = GEMINI_BASE_URL
+    private val moshi: Moshi
 ) {
+    /** Overridden in tests to redirect requests to MockWebServer. */
+    internal var baseUrl: String = GEMINI_BASE_URL
+
     private val responseAdapter by lazy { moshi.adapter(GeminiResponse::class.java) }
     private val cardResultAdapter by lazy { moshi.adapter(GeminiCardResult::class.java) }
 

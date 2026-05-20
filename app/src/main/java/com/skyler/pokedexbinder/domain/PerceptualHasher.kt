@@ -10,9 +10,11 @@ import okhttp3.Request
 import javax.inject.Inject
 
 class PerceptualHasher @Inject constructor(
-    private val okHttpClient: OkHttpClient,
-    private val baseUrl: String = ""
+    private val okHttpClient: OkHttpClient
 ) {
+    /** Overridden in tests to redirect image downloads to MockWebServer. */
+    internal var baseUrl: String = ""
+
     fun computeHash(bitmap: Bitmap): Long {
         val small = Bitmap.createScaledBitmap(bitmap, 16, 16, false)
         val pixels = IntArray(256)
