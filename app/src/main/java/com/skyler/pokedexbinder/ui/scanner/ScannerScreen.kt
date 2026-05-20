@@ -42,61 +42,72 @@ import java.util.concurrent.Executors
 // ------- Card detection -------------------------------------------------------
 
 private fun detectCardInFrame(imageProxy: ImageProxy): Boolean {
-    val width = imageProxy.width
-    val height = imageProxy.height
-    val guideW = (width * 0.75f).toInt()
+    val iw = imageProxy.width
+    val ih = imageProxy.height
+    val rotation = imageProxy.imageInfo.rotationDegrees
+
+    // Camera delivers landscape frames even in portrait mode.
+    // rotationDegrees tells us how much to rotate the image to match the display.
+    // We work in "display space" (portrait) and map back to image coords for sampling.
+    val isRotated = rotation == 90 || rotation == 270
+    val dispW = if (isRotated) ih else iw   // display-space width
+    val dispH = if (isRotated) iw else ih   // display-space height
+
+    // Guide frame in display space (portrait card ratio 63:88)
+    val guideW = (dispW * 0.75f).toInt()
     val guideH = (guideW * 88f / 63f).toInt()
-    if (guideH >= height) return false
+    if (guideH >= dispH) return false
 
-    val left = (width - guideW) / 2
-    val top = (height - guideH) / 2
-    val right = left + guideW
-    val bottom = top + guideH
+    val dLeft  = (dispW - guideW) / 2
+    val dTop   = (dispH - guideH) / 2
+    val dRight = dLeft + guideW
+    val dBot   = dTop  + guideH
 
-    val plane = imageProxy.planes[0]
-    val buffer = plane.buffer
+    val plane     = imageProxy.planes[0]
+    val buffer    = plane.buffer
     val rowStride = plane.rowStride
-    val pixelStride = plane.pixelStride
+    val pixStride = plane.pixelStride
 
-    fun luma(x: Int, y: Int): Int {
-        val idx = y * rowStride + x * pixelStride
+    // Map display (dx, dy) → image (ix, iy) based on rotation
+    fun toImage(dx: Int, dy: Int): Pair<Int, Int> = when (rotation) {
+        90  -> Pair(dy,          ih - 1 - dx)
+        270 -> Pair(iw - 1 - dy, dx)
+        180 -> Pair(iw - 1 - dx, ih - 1 - dy)
+        else -> Pair(dx, dy)
+    }
+
+    fun luma(dx: Int, dy: Int): Int {
+        val cx = dx.coerceIn(0, dispW - 1)
+        val cy = dy.coerceIn(0, dispH - 1)
+        val (ix, iy) = toImage(cx, cy)
+        val idx = iy.coerceIn(0, ih - 1) * rowStride + ix.coerceIn(0, iw - 1) * pixStride
         return if (idx in 0 until buffer.limit()) buffer[idx].toInt() and 0xFF else 0
     }
 
     val sampleCount = 16
-    val borderPx = 12
+    val borderPx   = 20   // wider sampling window for real-world conditions
     var totalContrast = 0f
     var count = 0
 
     repeat(sampleCount) { i ->
         val t = i.toFloat() / sampleCount
 
-        val tx = (left + guideW * t).toInt().coerceIn(borderPx, width - 1 - borderPx)
-        totalContrast += Math.abs(
-            luma(tx, (top - borderPx).coerceAtLeast(0)) -
-            luma(tx, (top + borderPx).coerceAtMost(height - 1))
-        )
+        // Top edge
+        val tx = (dLeft + guideW * t).toInt()
+        totalContrast += Math.abs(luma(tx, dTop - borderPx) - luma(tx, dTop + borderPx))
         count++
-        totalContrast += Math.abs(
-            luma(tx, (bottom + borderPx).coerceAtMost(height - 1)) -
-            luma(tx, (bottom - borderPx).coerceAtLeast(0))
-        )
+        // Bottom edge
+        totalContrast += Math.abs(luma(tx, dBot + borderPx) - luma(tx, dBot - borderPx))
         count++
-
-        val ly = (top + guideH * t).toInt().coerceIn(borderPx, height - 1 - borderPx)
-        totalContrast += Math.abs(
-            luma((left - borderPx).coerceAtLeast(0), ly) -
-            luma((left + borderPx).coerceAtMost(width - 1), ly)
-        )
+        // Left / right edges
+        val ly = (dTop + guideH * t).toInt()
+        totalContrast += Math.abs(luma(dLeft - borderPx, ly) - luma(dLeft + borderPx, ly))
         count++
-        totalContrast += Math.abs(
-            luma((right + borderPx).coerceAtMost(width - 1), ly) -
-            luma((right - borderPx).coerceAtLeast(0), ly)
-        )
+        totalContrast += Math.abs(luma(dRight + borderPx, ly) - luma(dRight - borderPx, ly))
         count++
     }
 
-    return count > 0 && (totalContrast / count) > 35f
+    return count > 0 && (totalContrast / count) > 20f
 }
 
 // ------- Card frame overlay ---------------------------------------------------
