@@ -37,6 +37,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.skyler.pokedexbinder.data.model.TcgCard
+import kotlinx.coroutines.delay
 import java.util.concurrent.Executors
 
 // ------- Card detection -------------------------------------------------------
@@ -364,11 +365,38 @@ fun ScannerScreen(
                     )
                 }
                 is ScannerState.RateLimited -> {
-                    ScannerMessage(
-                        message = "You've hit today's scan limit. Try again tomorrow.",
-                        primaryLabel = "Search Manually",
-                        onPrimary = onSearchManually
-                    )
+                    var secondsLeft by remember { mutableIntStateOf(60) }
+                    LaunchedEffect(Unit) {
+                        while (secondsLeft > 0) {
+                            delay(1000)
+                            secondsLeft--
+                        }
+                    }
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = if (secondsLeft > 0)
+                                "Too many scans at once — Gemini needs a moment to recover.\n\nRetry in $secondsLeft seconds."
+                            else
+                                "Ready to scan again!",
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Spacer(Modifier.height(24.dp))
+                        Button(
+                            onClick = { viewModel.reset() },
+                            enabled = secondsLeft == 0,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Try Again") }
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = onSearchManually,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Search Manually") }
+                    }
                 }
                 is ScannerState.HighConfidence -> {
                     CardConfirmation(
