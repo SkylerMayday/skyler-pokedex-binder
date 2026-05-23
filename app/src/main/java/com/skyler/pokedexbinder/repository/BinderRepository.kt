@@ -206,6 +206,7 @@ class BinderRepository @Inject constructor(
             entry("af_indeedee_female",     "Indeedee (Female)",         876, 10048),
             entry("af_morpeko_full_belly",  "Morpeko (Full Belly)",      877, 9024),
             entry("af_morpeko_hangry",      "Morpeko Hangry Mode",       877, 10036),
+            entry("af_ursaluna_base",       "Ursaluna",                  901, 9038),
             entry("af_ursaluna_bloodmoon",  "Bloodmoon Ursaluna",        901, 10058),
             entry("af_eternatus_base",      "Eternatus",                 890, 9037),
             entry("af_eternatus_eternamax", "Eternatus Eternamax",       890, 10117),
