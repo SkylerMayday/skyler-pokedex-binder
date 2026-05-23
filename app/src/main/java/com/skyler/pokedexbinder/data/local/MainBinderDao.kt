@@ -123,6 +123,7 @@ interface MainBinderDao {
         DELETE FROM main_binder WHERE pokemonId IN (
             'raticate-totem-alola',
             'af_shellos_east', 'af_shellos_west',
+            'af_gastrodon_east', 'af_gastrodon_west',
             'af_zacian_crowned', 'af_zacian_hero',
             'af_zamazenta_crowned', 'af_zamazenta_hero',
             'af_basculegion_male', 'af_basculegion_female'
