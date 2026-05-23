@@ -8241,14 +8241,14 @@
   {
     "id": "kyogre-primal",
     "name": "Primal Kyogre",
-    "dex_number": 382,
+    "dex_number": 9997,
     "dex_order": 2097,
     "slot_type": "mega"
   },
   {
     "id": "groudon-primal",
     "name": "Primal Groudon",
-    "dex_number": 383,
+    "dex_number": 9998,
     "dex_order": 2098,
     "slot_type": "mega"
   },
