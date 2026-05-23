@@ -198,7 +198,10 @@ class BinderRepository @Inject constructor(
             entry("af_necrozma_dusk_mane",  "Necrozma Dusk Mane",        800, 10034),
             entry("af_necrozma_dawn_wings", "Necrozma Dawn Wings",       800, 10035),
             // ── Gen VIII ─────────────────────────────────────────────────────────────────
+            entry("af_toxtricity_amped",    "Toxtricity Amped",          849, 9035),
             entry("af_toxtricity_low_key",  "Light Toxtricity",          849, 10057),
+            entry("af_eiscue_ice",          "Eiscue Ice Face",           875, 9036),
+            entry("af_eiscue_noice",        "Eiscue Noice Face",         875, 10116),
             entry("af_indeedee_male",       "Indeedee (Male)",           876, 10047),
             entry("af_indeedee_female",     "Indeedee (Female)",         876, 10048),
             entry("af_morpeko_full_belly",  "Morpeko (Full Belly)",      877, 9024),
@@ -324,7 +327,10 @@ class BinderRepository @Inject constructor(
             "af_necrozma_dusk_mane"  to "Necrozma",
             "af_necrozma_dawn_wings" to "Necrozma",
             // Gen VIII
+            "af_toxtricity_amped"    to "Toxtricity",
             "af_toxtricity_low_key"  to "Toxtricity",
+            "af_eiscue_ice"          to "Eiscue",
+            "af_eiscue_noice"        to "Eiscue",
             "af_indeedee_male"       to "Indeedee",
             "af_indeedee_female"     to "Indeedee",
             "af_morpeko_hangry"      to "Morpeko",
