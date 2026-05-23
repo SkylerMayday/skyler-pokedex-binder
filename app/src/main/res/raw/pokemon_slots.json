@@ -7189,13 +7189,6 @@
     "slot_type": "regional"
   },
   {
-    "id": "raticate-totem-alola",
-    "name": "Alolan Raticate",
-    "dex_number": 20,
-    "dex_order": 1028,
-    "slot_type": "regional"
-  },
-  {
     "id": "raichu-alola",
     "name": "Alolan Raichu",
     "dex_number": 26,
@@ -7529,6 +7522,62 @@
     "name": "Hisuian Avalugg",
     "dex_number": 713,
     "dex_order": 1076,
+    "slot_type": "regional"
+  },
+  {
+    "id": "farfetchd-galar",
+    "name": "Galarian Farfetch'd",
+    "dex_number": 83,
+    "dex_order": 1077,
+    "slot_type": "regional"
+  },
+  {
+    "id": "mr-mime-galar",
+    "name": "Galarian Mr. Mime",
+    "dex_number": 122,
+    "dex_order": 1078,
+    "slot_type": "regional"
+  },
+  {
+    "id": "darmanitan-galar-standard",
+    "name": "Galarian Darmanitan",
+    "dex_number": 555,
+    "dex_order": 1079,
+    "slot_type": "regional"
+  },
+  {
+    "id": "darmanitan-galar-zen",
+    "name": "Galarian Darmanitan",
+    "dex_number": 555,
+    "dex_order": 1080,
+    "slot_type": "regional"
+  },
+  {
+    "id": "yamask-galar",
+    "name": "Galarian Yamask",
+    "dex_number": 562,
+    "dex_order": 1081,
+    "slot_type": "regional"
+  },
+  {
+    "id": "zorua-hisui",
+    "name": "Hisuian Zorua",
+    "dex_number": 570,
+    "dex_order": 1082,
+    "slot_type": "regional"
+  },
+  {
+    "id": "goodra-hisui",
+    "name": "Hisuian Goodra",
+    "dex_number": 706,
+    "dex_order": 1083,
+    "slot_type": "regional"
+  },
+  {
+    "id": "decidueye-hisui",
+    "name": "Hisuian Decidueye",
+    "dex_number": 724,
+    "dex_order": 1084,
     "slot_type": "regional"
   },
   {
