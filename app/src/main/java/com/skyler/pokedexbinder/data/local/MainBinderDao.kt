@@ -110,7 +110,7 @@ interface MainBinderDao {
     @Query("""
         UPDATE main_binder
         SET pokemonName = 'Mega ' || SUBSTR(pokemonName, 1, INSTR(pokemonName, ' Mega') - 1) || SUBSTR(pokemonName, INSTR(pokemonName, ' Mega') + 5)
-        WHERE slotType = 'MEGA' AND pokemonName NOT LIKE 'Mega %' AND pokemonName LIKE '% Mega%'
+        WHERE UPPER(slotType) = 'MEGA' AND pokemonName NOT LIKE 'Mega %' AND pokemonName LIKE '% Mega%'
     """)
     suspend fun migrateMegaNamesToPrefixFormat()
 
