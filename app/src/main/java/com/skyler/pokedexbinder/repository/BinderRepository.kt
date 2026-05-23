@@ -474,6 +474,9 @@ class BinderRepository @Inject constructor(
             mega("glimmora-mega",         "Mega Glimmora",                  970, 2092),
             mega("tatsugiri-mega",         "Mega Tatsugiri",                  978, 2093),
             mega("baxcalibur-mega",       "Mega Baxcalibur",                998, 2096),
+            // ── Primal Reversions ──────────────────────────────────────────────────────────
+            mega("kyogre-primal",         "Primal Kyogre",                  382, 2097),
+            mega("groudon-primal",        "Primal Groudon",                 383, 2098),
         )
 
         private fun mega(id: String, name: String, dex: Int, order: Int) = MainBinderEntry(
