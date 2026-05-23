@@ -8225,24 +8225,10 @@
     "slot_type": "mega"
   },
   {
-    "id": "tatsugiri-mega-curly",
-    "name": "Mega Tatsugiri Curly Form",
+    "id": "tatsugiri-mega",
+    "name": "Mega Tatsugiri",
     "dex_number": 978,
     "dex_order": 2093,
-    "slot_type": "mega"
-  },
-  {
-    "id": "tatsugiri-mega-droopy",
-    "name": "Mega Tatsugiri Droopy Form",
-    "dex_number": 978,
-    "dex_order": 2094,
-    "slot_type": "mega"
-  },
-  {
-    "id": "tatsugiri-mega-stretchy",
-    "name": "Mega Tatsugiri Stretchy Form",
-    "dex_number": 978,
-    "dex_order": 2095,
     "slot_type": "mega"
   },
   {

@@ -472,9 +472,7 @@ class BinderRepository @Inject constructor(
             // ── Gen IX ─────────────────────────────────────────────────────────────────────
             mega("scovillain-mega",       "Mega Scovillain",                952, 2091),
             mega("glimmora-mega",         "Mega Glimmora",                  970, 2092),
-            mega("tatsugiri-mega-curly",  "Mega Tatsugiri Curly Form",      978, 2093),
-            mega("tatsugiri-mega-droopy", "Mega Tatsugiri Droopy Form",     978, 2094),
-            mega("tatsugiri-mega-stretchy","Mega Tatsugiri Stretchy Form",  978, 2095),
+            mega("tatsugiri-mega",         "Mega Tatsugiri",                  978, 2093),
             mega("baxcalibur-mega",       "Mega Baxcalibur",                998, 2096),
         )
 
