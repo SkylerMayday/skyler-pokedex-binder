@@ -71,6 +71,7 @@ class BinderRepository @Inject constructor(
         mainBinderDao.migrateBaseSlotNamesWave2()
         mainBinderDao.migrateGiratinaName()
         mainBinderDao.migrateMegaNamesToPrefixFormat()
+        mainBinderDao.migratePrimalNames()
         mainBinderDao.migrateGmaxNamesToVMax()
         mainBinderDao.deleteRemovedSlots()
         mainBinderDao.migrateAltFormOrdering()

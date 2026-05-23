@@ -110,9 +110,20 @@ interface MainBinderDao {
     @Query("""
         UPDATE main_binder
         SET pokemonName = 'Mega ' || SUBSTR(pokemonName, 1, INSTR(pokemonName, ' Mega') - 1) || SUBSTR(pokemonName, INSTR(pokemonName, ' Mega') + 5)
-        WHERE slotType = 'MEGA' AND pokemonName NOT LIKE 'Mega %'
+        WHERE slotType = 'MEGA' AND pokemonName NOT LIKE 'Mega %' AND pokemonName LIKE '% Mega%'
     """)
     suspend fun migrateMegaNamesToPrefixFormat()
+
+    /** Fixes Primal names corrupted by migrateMegaNamesToPrefixFormat (e.g. "Mega al Kyogre"). */
+    @Query("""
+        UPDATE main_binder SET pokemonName = CASE pokemonId
+            WHEN 'kyogre-primal' THEN 'Primal Kyogre'
+            WHEN 'groudon-primal' THEN 'Primal Groudon'
+            ELSE pokemonName
+        END
+        WHERE pokemonId IN ('kyogre-primal', 'groudon-primal')
+    """)
+    suspend fun migratePrimalNames()
 
     /** Renames old "[Pokemon] (Gigantamax)" format to "[Pokemon] V-Max" for existing DB rows. */
     @Query("UPDATE main_binder SET pokemonName = SUBSTR(pokemonName, 1, INSTR(pokemonName, ' (Gigantamax)') - 1) || ' V-Max' WHERE slotType = 'GMAX' AND pokemonName LIKE '%(Gigantamax)%'")
