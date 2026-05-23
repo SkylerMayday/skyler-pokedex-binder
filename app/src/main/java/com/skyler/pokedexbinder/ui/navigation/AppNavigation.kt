@@ -34,11 +34,11 @@ sealed class Screen(val route: String) {
     object SlotDetail : Screen("slot_detail/{slotId}") {
         fun createRoute(slotId: String) = "slot_detail/$slotId"
     }
-    object QuickScan : Screen("quick_scan?pokemonName={pokemonName}&slotId={slotId}&replacing={replacing}") {
-        fun createRoute(pokemonName: String = "", slotId: String = "", replacing: Boolean = false): String {
+    object QuickScan : Screen("quick_scan?slotId={slotId}&replacing={replacing}") {
+        fun createRoute(slotId: String = "", replacing: Boolean = false): String {
             val enc = StandardCharsets.UTF_8.toString()
             fun encode(s: String) = URLEncoder.encode(s, enc).replace("+", "%20")
-            return "quick_scan?pokemonName=${encode(pokemonName)}&slotId=${encode(slotId)}&replacing=$replacing"
+            return "quick_scan?slotId=${encode(slotId)}&replacing=$replacing"
         }
     }
     object Scanner : Screen("scanner?slotId={slotId}&pokemonName={pokemonName}&isSecondary={isSecondary}") {
@@ -112,9 +112,7 @@ fun AppNavigation() {
                         if (slot.isOccupied) {
                             navController.navigate(Screen.SlotDetail.createRoute(slot.id))
                         } else {
-                            navController.navigate(
-                                Screen.QuickScan.createRoute(pokemonName = slot.name, slotId = slot.id)
-                            )
+                            navController.navigate(Screen.QuickScan.createRoute(slotId = slot.id))
                         }
                     },
                     onSettingsClick = { navController.navigate(Screen.Settings.route) }
@@ -139,15 +137,14 @@ fun AppNavigation() {
                 SlotDetailScreen(
                     pokemonId = slotId,
                     onBack = { navController.popBackStack() },
-                    onSearch = { pokemonName, sid, replacing ->
-                        navController.navigate(Screen.QuickScan.createRoute(pokemonName, sid, replacing))
+                    onSearch = { _, sid, replacing ->
+                        navController.navigate(Screen.QuickScan.createRoute(sid, replacing))
                     }
                 )
             }
             composable(
                 route = Screen.QuickScan.route,
                 arguments = listOf(
-                    navArgument("pokemonName") { type = NavType.StringType; defaultValue = "" },
                     navArgument("slotId") { type = NavType.StringType; defaultValue = "" },
                     navArgument("replacing") { type = NavType.BoolType; defaultValue = false }
                 )
