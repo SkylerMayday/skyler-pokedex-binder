@@ -75,6 +75,7 @@ class BinderRepository @Inject constructor(
         mainBinderDao.deleteRemovedSlots()
         mainBinderDao.migrateAltFormOrdering()
         mainBinderDao.migrateMegaSlots()
+        mainBinderDao.migratePrimalDexNumbers()
         mainBinderDao.insertRegionalsIfAbsent(NEW_REGIONAL_SLOTS)
     }
 

@@ -314,4 +314,15 @@ interface MainBinderDao {
     /** Inserts new mega slots for existing installs (INSERT OR IGNORE). */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertMegasIfAbsent(entries: List<MainBinderEntry>)
+
+    /** Fixes Primal Kyogre/Groudon dexNumber to sort them at the end of the Mega section. */
+    @Query("""
+        UPDATE main_binder SET dexNumber = CASE pokemonId
+            WHEN 'kyogre-primal' THEN 9997
+            WHEN 'groudon-primal' THEN 9998
+            ELSE dexNumber
+        END
+        WHERE pokemonId IN ('kyogre-primal', 'groudon-primal')
+    """)
+    suspend fun migratePrimalDexNumbers()
 }
