@@ -74,7 +74,12 @@ class BinderRepository @Inject constructor(
         mainBinderDao.migrateGmaxNamesToVMax()
         mainBinderDao.deleteRemovedSlots()
         mainBinderDao.migrateAltFormOrdering()
+        mainBinderDao.migrateMegaSlots()
         mainBinderDao.insertRegionalsIfAbsent(NEW_REGIONAL_SLOTS)
+    }
+
+    suspend fun seedMegasIfMissing() {
+        mainBinderDao.insertMegasIfAbsent(MEGA_SLOTS)
     }
 
     suspend fun seedAlternateFormsIfMissing() {
@@ -362,6 +367,123 @@ class BinderRepository @Inject constructor(
             "af_ogerpon_hearthflame" to "Hearthflame Mask Ogerpon",
             "af_ogerpon_wellspring"  to "Wellspring Mask Ogerpon",
             "af_ogerpon_cornerstone" to "Cornerstone Mask Ogerpon",
+        )
+
+        /** All 96 mega evolution slots, seeded on existing installs via insertMegasIfAbsent. */
+        val MEGA_SLOTS = listOf(
+            // ── Gen I ──────────────────────────────────────────────────────────────────────
+            mega("venusaur-mega",         "Mega Venusaur",                  3,   2001),
+            mega("charizard-mega-x",      "Mega Charizard X",               6,   2002),
+            mega("charizard-mega-y",      "Mega Charizard Y",               6,   2003),
+            mega("blastoise-mega",        "Mega Blastoise",                 9,   2004),
+            mega("beedrill-mega",         "Mega Beedrill",                  15,  2005),
+            mega("pidgeot-mega",          "Mega Pidgeot",                   18,  2006),
+            mega("raichu-mega-x",         "Mega Raichu X",                  26,  2007),
+            mega("raichu-mega-y",         "Mega Raichu Y",                  26,  2008),
+            mega("clefable-mega",         "Mega Clefable",                  36,  2009),
+            mega("alakazam-mega",         "Mega Alakazam",                  65,  2010),
+            mega("victreebel-mega",       "Mega Victreebel",                71,  2011),
+            mega("slowbro-mega",          "Mega Slowbro",                   80,  2012),
+            mega("gengar-mega",           "Mega Gengar",                    94,  2013),
+            mega("kangaskhan-mega",       "Mega Kangaskhan",                115, 2014),
+            mega("starmie-mega",          "Mega Starmie",                   121, 2015),
+            mega("pinsir-mega",           "Mega Pinsir",                    127, 2016),
+            mega("gyarados-mega",         "Mega Gyarados",                  130, 2017),
+            mega("aerodactyl-mega",       "Mega Aerodactyl",                142, 2018),
+            mega("dragonite-mega",        "Mega Dragonite",                 149, 2019),
+            mega("mewtwo-mega-x",         "Mega Mewtwo X",                  150, 2020),
+            mega("mewtwo-mega-y",         "Mega Mewtwo Y",                  150, 2021),
+            // ── Gen II ─────────────────────────────────────────────────────────────────────
+            mega("meganium-mega",         "Mega Meganium",                  154, 2022),
+            mega("feraligatr-mega",       "Mega Feraligatr",                160, 2023),
+            mega("ampharos-mega",         "Mega Ampharos",                  181, 2024),
+            mega("steelix-mega",          "Mega Steelix",                   208, 2025),
+            mega("scizor-mega",           "Mega Scizor",                    212, 2026),
+            mega("heracross-mega",        "Mega Heracross",                 214, 2027),
+            mega("skarmory-mega",         "Mega Skarmory",                  227, 2028),
+            mega("houndoom-mega",         "Mega Houndoom",                  229, 2029),
+            mega("tyranitar-mega",        "Mega Tyranitar",                 248, 2030),
+            // ── Gen III ────────────────────────────────────────────────────────────────────
+            mega("sceptile-mega",         "Mega Sceptile",                  254, 2031),
+            mega("blaziken-mega",         "Mega Blaziken",                  257, 2032),
+            mega("swampert-mega",         "Mega Swampert",                  260, 2033),
+            mega("gardevoir-mega",        "Mega Gardevoir",                 282, 2034),
+            mega("sableye-mega",          "Mega Sableye",                   302, 2035),
+            mega("mawile-mega",           "Mega Mawile",                    303, 2036),
+            mega("aggron-mega",           "Mega Aggron",                    306, 2037),
+            mega("medicham-mega",         "Mega Medicham",                  308, 2038),
+            mega("manectric-mega",        "Mega Manectric",                 310, 2039),
+            mega("sharpedo-mega",         "Mega Sharpedo",                  319, 2040),
+            mega("camerupt-mega",         "Mega Camerupt",                  323, 2041),
+            mega("altaria-mega",          "Mega Altaria",                   334, 2042),
+            mega("banette-mega",          "Mega Banette",                   354, 2043),
+            mega("chimecho-mega",         "Mega Chimecho",                  358, 2044),
+            mega("absol-mega",            "Mega Absol",                     359, 2045),
+            mega("absol-mega-z",          "Mega Absol Z",                   359, 2046),
+            mega("glalie-mega",           "Mega Glalie",                    362, 2047),
+            mega("salamence-mega",        "Mega Salamence",                 373, 2048),
+            mega("metagross-mega",        "Mega Metagross",                 376, 2049),
+            mega("latias-mega",           "Mega Latias",                    380, 2050),
+            mega("latios-mega",           "Mega Latios",                    381, 2051),
+            mega("rayquaza-mega",         "Mega Rayquaza",                  384, 2052),
+            // ── Gen IV ─────────────────────────────────────────────────────────────────────
+            mega("staraptor-mega",        "Mega Staraptor",                 398, 2053),
+            mega("lopunny-mega",          "Mega Lopunny",                   428, 2054),
+            mega("garchomp-mega",         "Mega Garchomp",                  445, 2055),
+            mega("garchomp-mega-z",       "Mega Garchomp Z",                445, 2056),
+            mega("lucario-mega",          "Mega Lucario",                   448, 2057),
+            mega("lucario-mega-z",        "Mega Lucario Z",                 448, 2058),
+            mega("abomasnow-mega",        "Mega Abomasnow",                 460, 2059),
+            mega("gallade-mega",          "Mega Gallade",                   475, 2060),
+            mega("froslass-mega",         "Mega Froslass",                  478, 2061),
+            mega("heatran-mega",          "Mega Heatran",                   485, 2062),
+            mega("darkrai-mega",          "Mega Darkrai",                   491, 2063),
+            // ── Gen V ──────────────────────────────────────────────────────────────────────
+            mega("emboar-mega",           "Mega Emboar",                    500, 2064),
+            mega("excadrill-mega",        "Mega Excadrill",                 530, 2065),
+            mega("audino-mega",           "Mega Audino",                    531, 2066),
+            mega("scolipede-mega",        "Mega Scolipede",                 545, 2067),
+            mega("scrafty-mega",          "Mega Scrafty",                   560, 2068),
+            mega("eelektross-mega",       "Mega Eelektross",                604, 2069),
+            mega("chandelure-mega",       "Mega Chandelure",                609, 2070),
+            mega("golurk-mega",           "Mega Golurk",                    623, 2071),
+            // ── Gen VI ─────────────────────────────────────────────────────────────────────
+            mega("chesnaught-mega",       "Mega Chesnaught",                652, 2072),
+            mega("delphox-mega",          "Mega Delphox",                   655, 2073),
+            mega("greninja-mega",         "Mega Greninja",                  658, 2074),
+            mega("pyroar-mega",           "Mega Pyroar",                    668, 2075),
+            mega("floette-mega-eternal",  "Mega Floette Eternal Flower",    670, 2076),
+            mega("meowstic-mega",         "Mega Meowstic",                  678, 2077),
+            mega("malamar-mega",          "Mega Malamar",                   687, 2078),
+            mega("barbaracle-mega",       "Mega Barbaracle",                689, 2079),
+            mega("dragalge-mega",         "Mega Dragalge",                  691, 2080),
+            mega("hawlucha-mega",         "Mega Hawlucha",                  701, 2081),
+            mega("zygarde-mega",          "Mega Zygarde",                   718, 2082),
+            mega("diancie-mega",          "Mega Diancie",                   719, 2083),
+            // ── Gen VII ────────────────────────────────────────────────────────────────────
+            mega("crabominable-mega",     "Mega Crabominable",              740, 2084),
+            mega("golisopod-mega",        "Mega Golisopod",                 768, 2085),
+            mega("drampa-mega",           "Mega Drampa",                    780, 2086),
+            mega("magearna-mega",         "Mega Magearna",                  801, 2087),
+            mega("magearna-mega-original","Mega Magearna Original Color",   801, 2088),
+            mega("zeraora-mega",          "Mega Zeraora",                   807, 2089),
+            // ── Gen VIII ───────────────────────────────────────────────────────────────────
+            mega("falinks-mega",          "Mega Falinks",                   870, 2090),
+            // ── Gen IX ─────────────────────────────────────────────────────────────────────
+            mega("scovillain-mega",       "Mega Scovillain",                952, 2091),
+            mega("glimmora-mega",         "Mega Glimmora",                  970, 2092),
+            mega("tatsugiri-mega-curly",  "Mega Tatsugiri Curly Form",      978, 2093),
+            mega("tatsugiri-mega-droopy", "Mega Tatsugiri Droopy Form",     978, 2094),
+            mega("tatsugiri-mega-stretchy","Mega Tatsugiri Stretchy Form",  978, 2095),
+            mega("baxcalibur-mega",       "Mega Baxcalibur",                998, 2096),
+        )
+
+        private fun mega(id: String, name: String, dex: Int, order: Int) = MainBinderEntry(
+            pokemonId = id,
+            pokemonName = name,
+            dexNumber = dex,
+            dexOrder = order,
+            slotType = "MEGA"
         )
 
         /** New regional variants seeded on existing installs via insertIfAbsent. */

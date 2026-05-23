@@ -183,4 +183,134 @@ interface MainBinderDao {
     /** Inserts new regional variants for existing installs (INSERT OR IGNORE). */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertRegionalsIfAbsent(entries: List<MainBinderEntry>)
+
+    /**
+     * Fixes the 48 existing mega entries: updates dexNumber from PokeAPI form IDs to the
+     * base Pokémon's national dex number, and dexOrder to the new 2001-2096 range.
+     * Safe to re-run — existing rows already at the correct dexNumber will no-op via WHERE.
+     */
+    @Query("""
+        UPDATE main_binder SET
+            dexNumber = CASE pokemonId
+                WHEN 'venusaur-mega'    THEN 3
+                WHEN 'charizard-mega-x' THEN 6
+                WHEN 'charizard-mega-y' THEN 6
+                WHEN 'blastoise-mega'   THEN 9
+                WHEN 'beedrill-mega'    THEN 15
+                WHEN 'pidgeot-mega'     THEN 18
+                WHEN 'alakazam-mega'    THEN 65
+                WHEN 'slowbro-mega'     THEN 80
+                WHEN 'gengar-mega'      THEN 94
+                WHEN 'kangaskhan-mega'  THEN 115
+                WHEN 'pinsir-mega'      THEN 127
+                WHEN 'gyarados-mega'    THEN 130
+                WHEN 'aerodactyl-mega'  THEN 142
+                WHEN 'mewtwo-mega-x'    THEN 150
+                WHEN 'mewtwo-mega-y'    THEN 150
+                WHEN 'ampharos-mega'    THEN 181
+                WHEN 'steelix-mega'     THEN 208
+                WHEN 'scizor-mega'      THEN 212
+                WHEN 'heracross-mega'   THEN 214
+                WHEN 'houndoom-mega'    THEN 229
+                WHEN 'tyranitar-mega'   THEN 248
+                WHEN 'sceptile-mega'    THEN 254
+                WHEN 'blaziken-mega'    THEN 257
+                WHEN 'swampert-mega'    THEN 260
+                WHEN 'gardevoir-mega'   THEN 282
+                WHEN 'sableye-mega'     THEN 302
+                WHEN 'mawile-mega'      THEN 303
+                WHEN 'aggron-mega'      THEN 306
+                WHEN 'medicham-mega'    THEN 308
+                WHEN 'manectric-mega'   THEN 310
+                WHEN 'sharpedo-mega'    THEN 319
+                WHEN 'camerupt-mega'    THEN 323
+                WHEN 'altaria-mega'     THEN 334
+                WHEN 'banette-mega'     THEN 354
+                WHEN 'absol-mega'       THEN 359
+                WHEN 'glalie-mega'      THEN 362
+                WHEN 'salamence-mega'   THEN 373
+                WHEN 'metagross-mega'   THEN 376
+                WHEN 'latias-mega'      THEN 380
+                WHEN 'latios-mega'      THEN 381
+                WHEN 'rayquaza-mega'    THEN 384
+                WHEN 'lopunny-mega'     THEN 428
+                WHEN 'garchomp-mega'    THEN 445
+                WHEN 'lucario-mega'     THEN 448
+                WHEN 'abomasnow-mega'   THEN 460
+                WHEN 'gallade-mega'     THEN 475
+                WHEN 'audino-mega'      THEN 531
+                WHEN 'diancie-mega'     THEN 719
+                ELSE dexNumber
+            END,
+            dexOrder = CASE pokemonId
+                WHEN 'venusaur-mega'    THEN 2001
+                WHEN 'charizard-mega-x' THEN 2002
+                WHEN 'charizard-mega-y' THEN 2003
+                WHEN 'blastoise-mega'   THEN 2004
+                WHEN 'beedrill-mega'    THEN 2005
+                WHEN 'pidgeot-mega'     THEN 2006
+                WHEN 'alakazam-mega'    THEN 2010
+                WHEN 'slowbro-mega'     THEN 2012
+                WHEN 'gengar-mega'      THEN 2013
+                WHEN 'kangaskhan-mega'  THEN 2014
+                WHEN 'pinsir-mega'      THEN 2016
+                WHEN 'gyarados-mega'    THEN 2017
+                WHEN 'aerodactyl-mega'  THEN 2018
+                WHEN 'mewtwo-mega-x'    THEN 2020
+                WHEN 'mewtwo-mega-y'    THEN 2021
+                WHEN 'ampharos-mega'    THEN 2024
+                WHEN 'steelix-mega'     THEN 2025
+                WHEN 'scizor-mega'      THEN 2026
+                WHEN 'heracross-mega'   THEN 2027
+                WHEN 'houndoom-mega'    THEN 2029
+                WHEN 'tyranitar-mega'   THEN 2030
+                WHEN 'sceptile-mega'    THEN 2031
+                WHEN 'blaziken-mega'    THEN 2032
+                WHEN 'swampert-mega'    THEN 2033
+                WHEN 'gardevoir-mega'   THEN 2034
+                WHEN 'sableye-mega'     THEN 2035
+                WHEN 'mawile-mega'      THEN 2036
+                WHEN 'aggron-mega'      THEN 2037
+                WHEN 'medicham-mega'    THEN 2038
+                WHEN 'manectric-mega'   THEN 2039
+                WHEN 'sharpedo-mega'    THEN 2040
+                WHEN 'camerupt-mega'    THEN 2041
+                WHEN 'altaria-mega'     THEN 2042
+                WHEN 'banette-mega'     THEN 2043
+                WHEN 'absol-mega'       THEN 2045
+                WHEN 'glalie-mega'      THEN 2047
+                WHEN 'salamence-mega'   THEN 2048
+                WHEN 'metagross-mega'   THEN 2049
+                WHEN 'latias-mega'      THEN 2050
+                WHEN 'latios-mega'      THEN 2051
+                WHEN 'rayquaza-mega'    THEN 2052
+                WHEN 'lopunny-mega'     THEN 2054
+                WHEN 'garchomp-mega'    THEN 2055
+                WHEN 'lucario-mega'     THEN 2057
+                WHEN 'abomasnow-mega'   THEN 2059
+                WHEN 'gallade-mega'     THEN 2060
+                WHEN 'audino-mega'      THEN 2066
+                WHEN 'diancie-mega'     THEN 2083
+                ELSE dexOrder
+            END
+        WHERE pokemonId IN (
+            'venusaur-mega', 'charizard-mega-x', 'charizard-mega-y', 'blastoise-mega',
+            'beedrill-mega', 'pidgeot-mega', 'alakazam-mega', 'slowbro-mega',
+            'gengar-mega', 'kangaskhan-mega', 'pinsir-mega', 'gyarados-mega',
+            'aerodactyl-mega', 'mewtwo-mega-x', 'mewtwo-mega-y', 'ampharos-mega',
+            'steelix-mega', 'scizor-mega', 'heracross-mega', 'houndoom-mega',
+            'tyranitar-mega', 'sceptile-mega', 'blaziken-mega', 'swampert-mega',
+            'gardevoir-mega', 'sableye-mega', 'mawile-mega', 'aggron-mega',
+            'medicham-mega', 'manectric-mega', 'sharpedo-mega', 'camerupt-mega',
+            'altaria-mega', 'banette-mega', 'absol-mega', 'glalie-mega',
+            'salamence-mega', 'metagross-mega', 'latias-mega', 'latios-mega',
+            'rayquaza-mega', 'lopunny-mega', 'garchomp-mega', 'lucario-mega',
+            'abomasnow-mega', 'gallade-mega', 'audino-mega', 'diancie-mega'
+        )
+    """)
+    suspend fun migrateMegaSlots()
+
+    /** Inserts new mega slots for existing installs (INSERT OR IGNORE). */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertMegasIfAbsent(entries: List<MainBinderEntry>)
 }

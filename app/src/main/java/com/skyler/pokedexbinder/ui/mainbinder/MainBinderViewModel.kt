@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.skyler.pokedexbinder.data.model.PokemonSlot
 import com.skyler.pokedexbinder.data.model.SlotType
 import com.skyler.pokedexbinder.repository.BinderRepository
+import com.skyler.pokedexbinder.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,7 @@ import javax.inject.Inject
 @HiltViewModel
 class MainBinderViewModel @Inject constructor(
     private val binderRepository: BinderRepository,
+    private val settingsRepository: SettingsRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -26,13 +28,28 @@ class MainBinderViewModel @Inject constructor(
 
     val displayItems: StateFlow<List<BinderDisplayItem>> = combine(
         binderRepository.observeSlots(),
-        _searchQuery
-    ) { slots, query ->
-        if (query.isBlank()) buildGrouped(slots) else buildFiltered(slots, query)
+        _searchQuery,
+        settingsRepository.settings
+    ) { slots, query, settings ->
+        val visible = slots.filter { slot ->
+            when (slot.slotType) {
+                SlotType.BASE -> true
+                SlotType.REGIONAL -> settings.showRegional
+                SlotType.ALTERNATE_FORM -> settings.showAlternateForms
+                SlotType.MEGA -> settings.showMega
+                SlotType.GMAX -> settings.showGmax
+            }
+        }
+        if (query.isBlank()) buildGrouped(visible) else buildFiltered(visible, query)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
-        viewModelScope.launch { binderRepository.seedIfEmpty(context) }
+        viewModelScope.launch {
+            binderRepository.seedIfEmpty(context)
+            binderRepository.seedAlternateFormsIfMissing()
+            binderRepository.seedMegasIfMissing()
+            binderRepository.migrateSlotNamesIfNeeded()
+        }
     }
 
     fun setSearch(query: String) {
@@ -42,14 +59,28 @@ class MainBinderViewModel @Inject constructor(
     private fun buildFiltered(slots: List<PokemonSlot>, query: String): List<BinderDisplayItem> {
         val q = query.trim().lowercase()
         return slots.filter { slot ->
-            slot.name.lowercase().contains(q) ||
-                slot.dexNumber.toString() == q
+            val name = slot.name.lowercase()
+            slot.dexNumber.toString() == q ||
+                name.contains(q) ||
+                name.split(" ").any { word -> levenshtein(q, word) <= (q.length / 4).coerceIn(1, 2) }
         }.map { BinderDisplayItem.Slot(it) }
+    }
+
+    private fun levenshtein(a: String, b: String): Int {
+        val dp = Array(a.length + 1) { IntArray(b.length + 1) }
+        for (i in 0..a.length) dp[i][0] = i
+        for (j in 0..b.length) dp[0][j] = j
+        for (i in 1..a.length) for (j in 1..b.length) {
+            dp[i][j] = if (a[i - 1] == b[j - 1]) dp[i - 1][j - 1]
+                       else 1 + minOf(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1])
+        }
+        return dp[a.length][b.length]
     }
 
     private fun buildGrouped(slots: List<PokemonSlot>): List<BinderDisplayItem> {
         val base = slots.filter { it.slotType == SlotType.BASE }
         val regional = slots.filter { it.slotType == SlotType.REGIONAL }
+        val alternateForms = slots.filter { it.slotType == SlotType.ALTERNATE_FORM }
         val mega = slots.filter { it.slotType == SlotType.MEGA }
         val gmax = slots.filter { it.slotType == SlotType.GMAX }
 
@@ -65,17 +96,26 @@ class MainBinderViewModel @Inject constructor(
 
         if (regional.isNotEmpty()) {
             items += BinderDisplayItem.Header("Regional Variants")
-            items += regional.map { BinderDisplayItem.Slot(it) }
+            items += regional.sortedWith(compareBy({ it.dexNumber }, { it.dexOrder }))
+                .map { BinderDisplayItem.Slot(it) }
+        }
+
+        if (alternateForms.isNotEmpty()) {
+            items += BinderDisplayItem.Header("Alternate Forms")
+            items += alternateForms.sortedWith(compareBy({ it.dexNumber }, { it.dexOrder }))
+                .map { BinderDisplayItem.Slot(it) }
         }
 
         if (mega.isNotEmpty()) {
             items += BinderDisplayItem.Header("Mega Evolutions")
-            items += mega.map { BinderDisplayItem.Slot(it) }
+            items += mega.sortedWith(compareBy({ it.dexNumber }, { it.dexOrder }))
+                .map { BinderDisplayItem.Slot(it) }
         }
 
         if (gmax.isNotEmpty()) {
             items += BinderDisplayItem.Header("V-Max")
-            items += gmax.map { BinderDisplayItem.Slot(it) }
+            items += gmax.sortedWith(compareBy({ it.dexNumber }, { it.dexOrder }))
+                .map { BinderDisplayItem.Slot(it) }
         }
 
         return items
