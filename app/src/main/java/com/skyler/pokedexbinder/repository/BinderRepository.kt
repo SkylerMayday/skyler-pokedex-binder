@@ -73,6 +73,7 @@ class BinderRepository @Inject constructor(
         mainBinderDao.migrateMegaNamesToPrefixFormat()
         mainBinderDao.migratePrimalNames()
         mainBinderDao.migrateGmaxNamesToVMax()
+        mainBinderDao.migrateGmaxVMaxHyphen()
         mainBinderDao.deleteRemovedSlots()
         mainBinderDao.migrateAltFormOrdering()
         mainBinderDao.migrateMegaSlots()

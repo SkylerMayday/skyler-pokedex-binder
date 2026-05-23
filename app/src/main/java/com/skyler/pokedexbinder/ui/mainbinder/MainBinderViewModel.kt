@@ -113,7 +113,7 @@ class MainBinderViewModel @Inject constructor(
         }
 
         if (gmax.isNotEmpty()) {
-            items += BinderDisplayItem.Header("V-Max")
+            items += BinderDisplayItem.Header("VMax")
             items += gmax.sortedWith(compareBy({ it.dexNumber }, { it.dexOrder }))
                 .map { BinderDisplayItem.Slot(it) }
         }

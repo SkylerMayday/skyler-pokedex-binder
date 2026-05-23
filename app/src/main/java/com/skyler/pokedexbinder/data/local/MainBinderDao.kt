@@ -125,9 +125,13 @@ interface MainBinderDao {
     """)
     suspend fun migratePrimalNames()
 
-    /** Renames old "[Pokemon] (Gigantamax)" format to "[Pokemon] V-Max" for existing DB rows. */
-    @Query("UPDATE main_binder SET pokemonName = SUBSTR(pokemonName, 1, INSTR(pokemonName, ' (Gigantamax)') - 1) || ' V-Max' WHERE slotType = 'GMAX' AND pokemonName LIKE '%(Gigantamax)%'")
+    /** Renames old "[Pokemon] (Gigantamax)" format to "[Pokemon] VMax" for existing DB rows. */
+    @Query("UPDATE main_binder SET pokemonName = SUBSTR(pokemonName, 1, INSTR(pokemonName, ' (Gigantamax)') - 1) || ' VMax' WHERE slotType = 'GMAX' AND pokemonName LIKE '%(Gigantamax)%'")
     suspend fun migrateGmaxNamesToVMax()
+
+    /** Strips the hyphen from "[Pokemon] V-Max" → "[Pokemon] VMax" for installs that already ran the old migration. */
+    @Query("UPDATE main_binder SET pokemonName = REPLACE(pokemonName, ' V-Max', ' VMax') WHERE slotType = 'GMAX' AND pokemonName LIKE '% V-Max'")
+    suspend fun migrateGmaxVMaxHyphen()
 
     /** Removes entries that were pruned from the binder (duplicates, incorrect inclusions). */
     @Query("""

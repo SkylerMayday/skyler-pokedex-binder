@@ -101,6 +101,13 @@ fun SettingsScreen(
             )
             HorizontalDivider()
             SettingToggleItem(
+                title = "Alternate Forms",
+                description = "Show form differences like Giratina Origin, Rotom forms, Kyurem fusions, etc.",
+                checked = settings.showAlternateForms,
+                onCheckedChange = { viewModel.setShowAlternateForms(it) }
+            )
+            HorizontalDivider()
+            SettingToggleItem(
                 title = "Mega Evolutions",
                 description = "Show Mega Evolution slots",
                 checked = settings.showMega,
@@ -108,8 +115,8 @@ fun SettingsScreen(
             )
             HorizontalDivider()
             SettingToggleItem(
-                title = "V-Max",
-                description = "Show Gigantamax / V-Max slots",
+                title = "VMax",
+                description = "Show Gigantamax / VMax slots",
                 checked = settings.showGmax,
                 onCheckedChange = { viewModel.setShowGmax(it) }
             )

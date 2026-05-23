@@ -8254,231 +8254,231 @@
   },
   {
     "id": "alcremie-gmax",
-    "name": "Alcremie V-Max",
+    "name": "Alcremie VMax",
     "dex_number": 10223,
     "dex_order": 1125,
     "slot_type": "gmax"
   },
   {
     "id": "appletun-gmax",
-    "name": "Appletun V-Max",
+    "name": "Appletun VMax",
     "dex_number": 10217,
     "dex_order": 1126,
     "slot_type": "gmax"
   },
   {
     "id": "blastoise-gmax",
-    "name": "Blastoise V-Max",
+    "name": "Blastoise VMax",
     "dex_number": 10197,
     "dex_order": 1127,
     "slot_type": "gmax"
   },
   {
     "id": "butterfree-gmax",
-    "name": "Butterfree V-Max",
+    "name": "Butterfree VMax",
     "dex_number": 10198,
     "dex_order": 1128,
     "slot_type": "gmax"
   },
   {
     "id": "centiskorch-gmax",
-    "name": "Centiskorch V-Max",
+    "name": "Centiskorch VMax",
     "dex_number": 10220,
     "dex_order": 1129,
     "slot_type": "gmax"
   },
   {
     "id": "charizard-gmax",
-    "name": "Charizard V-Max",
+    "name": "Charizard VMax",
     "dex_number": 10196,
     "dex_order": 1130,
     "slot_type": "gmax"
   },
   {
     "id": "cinderace-gmax",
-    "name": "Cinderace V-Max",
+    "name": "Cinderace VMax",
     "dex_number": 10210,
     "dex_order": 1131,
     "slot_type": "gmax"
   },
   {
     "id": "coalossal-gmax",
-    "name": "Coalossal V-Max",
+    "name": "Coalossal VMax",
     "dex_number": 10215,
     "dex_order": 1132,
     "slot_type": "gmax"
   },
   {
     "id": "copperajah-gmax",
-    "name": "Copperajah V-Max",
+    "name": "Copperajah VMax",
     "dex_number": 10224,
     "dex_order": 1133,
     "slot_type": "gmax"
   },
   {
     "id": "corviknight-gmax",
-    "name": "Corviknight V-Max",
+    "name": "Corviknight VMax",
     "dex_number": 10212,
     "dex_order": 1134,
     "slot_type": "gmax"
   },
   {
     "id": "drednaw-gmax",
-    "name": "Drednaw V-Max",
+    "name": "Drednaw VMax",
     "dex_number": 10214,
     "dex_order": 1135,
     "slot_type": "gmax"
   },
   {
     "id": "duraludon-gmax",
-    "name": "Duraludon V-Max",
+    "name": "Duraludon VMax",
     "dex_number": 10225,
     "dex_order": 1136,
     "slot_type": "gmax"
   },
   {
     "id": "eevee-gmax",
-    "name": "Eevee V-Max",
+    "name": "Eevee VMax",
     "dex_number": 10205,
     "dex_order": 1137,
     "slot_type": "gmax"
   },
   {
     "id": "flapple-gmax",
-    "name": "Flapple V-Max",
+    "name": "Flapple VMax",
     "dex_number": 10216,
     "dex_order": 1138,
     "slot_type": "gmax"
   },
   {
     "id": "garbodor-gmax",
-    "name": "Garbodor V-Max",
+    "name": "Garbodor VMax",
     "dex_number": 10207,
     "dex_order": 1139,
     "slot_type": "gmax"
   },
   {
     "id": "gengar-gmax",
-    "name": "Gengar V-Max",
+    "name": "Gengar VMax",
     "dex_number": 10202,
     "dex_order": 1140,
     "slot_type": "gmax"
   },
   {
     "id": "grimmsnarl-gmax",
-    "name": "Grimmsnarl V-Max",
+    "name": "Grimmsnarl VMax",
     "dex_number": 10222,
     "dex_order": 1141,
     "slot_type": "gmax"
   },
   {
     "id": "hatterene-gmax",
-    "name": "Hatterene V-Max",
+    "name": "Hatterene VMax",
     "dex_number": 10221,
     "dex_order": 1142,
     "slot_type": "gmax"
   },
   {
     "id": "inteleon-gmax",
-    "name": "Inteleon V-Max",
+    "name": "Inteleon VMax",
     "dex_number": 10211,
     "dex_order": 1143,
     "slot_type": "gmax"
   },
   {
     "id": "kingler-gmax",
-    "name": "Kingler V-Max",
+    "name": "Kingler VMax",
     "dex_number": 10203,
     "dex_order": 1144,
     "slot_type": "gmax"
   },
   {
     "id": "lapras-gmax",
-    "name": "Lapras V-Max",
+    "name": "Lapras VMax",
     "dex_number": 10204,
     "dex_order": 1145,
     "slot_type": "gmax"
   },
   {
     "id": "machamp-gmax",
-    "name": "Machamp V-Max",
+    "name": "Machamp VMax",
     "dex_number": 10201,
     "dex_order": 1146,
     "slot_type": "gmax"
   },
   {
     "id": "melmetal-gmax",
-    "name": "Melmetal V-Max",
+    "name": "Melmetal VMax",
     "dex_number": 10208,
     "dex_order": 1147,
     "slot_type": "gmax"
   },
   {
     "id": "meowth-gmax",
-    "name": "Meowth V-Max",
+    "name": "Meowth VMax",
     "dex_number": 10200,
     "dex_order": 1148,
     "slot_type": "gmax"
   },
   {
     "id": "orbeetle-gmax",
-    "name": "Orbeetle V-Max",
+    "name": "Orbeetle VMax",
     "dex_number": 10213,
     "dex_order": 1149,
     "slot_type": "gmax"
   },
   {
     "id": "pikachu-gmax",
-    "name": "Pikachu V-Max",
+    "name": "Pikachu VMax",
     "dex_number": 10199,
     "dex_order": 1150,
     "slot_type": "gmax"
   },
   {
     "id": "rillaboom-gmax",
-    "name": "Rillaboom V-Max",
+    "name": "Rillaboom VMax",
     "dex_number": 10209,
     "dex_order": 1151,
     "slot_type": "gmax"
   },
   {
     "id": "sandaconda-gmax",
-    "name": "Sandaconda V-Max",
+    "name": "Sandaconda VMax",
     "dex_number": 10218,
     "dex_order": 1152,
     "slot_type": "gmax"
   },
   {
     "id": "snorlax-gmax",
-    "name": "Snorlax V-Max",
+    "name": "Snorlax VMax",
     "dex_number": 10206,
     "dex_order": 1153,
     "slot_type": "gmax"
   },
   {
     "id": "toxtricity-gmax",
-    "name": "Toxtricity V-Max",
+    "name": "Toxtricity VMax",
     "dex_number": 10219,
     "dex_order": 1154,
     "slot_type": "gmax"
   },
   {
     "id": "urshifu-rapid-strike-gmax",
-    "name": "Urshifu Rapid Strike (Gigantamax)",
+    "name": "Urshifu Rapid Strike VMax",
     "dex_number": 10227,
     "dex_order": 1155,
     "slot_type": "gmax"
   },
   {
     "id": "urshifu-single-strike-gmax",
-    "name": "Urshifu Single Strike (Gigantamax)",
+    "name": "Urshifu Single Strike VMax",
     "dex_number": 10226,
     "dex_order": 1156,
     "slot_type": "gmax"
   },
   {
     "id": "venusaur-gmax",
-    "name": "Venusaur V-Max",
+    "name": "Venusaur VMax",
     "dex_number": 10195,
     "dex_order": 1157,
     "slot_type": "gmax"
