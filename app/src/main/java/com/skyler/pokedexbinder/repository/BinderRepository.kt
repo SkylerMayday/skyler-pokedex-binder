@@ -56,7 +56,7 @@ class BinderRepository @Inject constructor(
                     pokemonName = obj.getString("name"),
                     dexNumber = obj.getInt("dex_number"),
                     dexOrder = obj.getInt("dex_order"),
-                    slotType = obj.getString("slot_type")
+                    slotType = obj.getString("slot_type").uppercase()
                 )
             }
             mainBinderDao.insertAll(entries)
