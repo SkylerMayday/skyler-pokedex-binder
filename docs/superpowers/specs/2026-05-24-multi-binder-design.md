@@ -6,7 +6,7 @@
 
 ## Overview
 
-Expand the app from a single Pokédex binder + one hidden secondary binder into a four-binder system accessible via a navigation drawer. Two new binders are added — Connecting Art and Personal Collection — each with pre-populated, API-backed card slots that are greyed out until the user confirms ownership.
+Expand the app from a single Pokédex binder + one hidden secondary binder into a four-binder system accessible via a navigation drawer. Two new binders are added — Connecting Art and Personal Collection. Connecting Art is fully user-managed: the user creates groups, assigns card slots via search, then confirms ownership. Personal Collection is API-driven: slots are pre-populated from pokemontcg.io by Pokémon name, greyed out until the user confirms ownership.
 
 ---
 
@@ -15,7 +15,7 @@ Expand the app from a single Pokédex binder + one hidden secondary binder into 
 | # | Name | Type |
 |---|---|---|
 | 1 | Pokédex | Existing — unchanged |
-| 2 | Connecting Art | New — curated catalogue + API |
+| 2 | Connecting Art | New — user-managed groups, card search per slot |
 | 3 | Personal Collection | New — API-driven by Pokémon name |
 | 4 | Card History | Existing secondary binder — unchanged |
 
@@ -48,52 +48,52 @@ Pokédex remains the default start destination.
 
 ## Connecting Art Binder
 
-### Catalogue
-A Kotlin object `ConnectingArtCatalogue` defines all known connecting art groups. Each group:
+The connecting art landscape spans hundreds of groups across the entire TCG history with no reliable API tag to identify them. This binder is therefore fully user-managed: the user defines each group themselves after browsing collector resources, then assigns cards to slots via the existing card search.
 
-```kotlin
-data class ConnectingArtGroup(
-    val name: String,        // e.g. "SV: 151 — Legendary Birds Trio"
-    val rows: Int,           // e.g. 1 for a horizontal strip, 3 for a 3×3
-    val cols: Int,           // e.g. 3 for a trio, 3 for a 3×3
-    val cardIds: List<String> // pokemontcg.io card IDs, row-major order
-)
-```
+### Creating a Group
+A FAB ("+" button) opens a bottom sheet where the user:
+1. Enters a group name (e.g. "2024 Teeziro Panoramic")
+2. Selects grid dimensions from a set of presets: 1×2, 1×3, 1×4, 2×2, 3×3
 
-Groups are ordered top-to-bottom on screen. New sets are added to this file and shipped via app update.
+This creates the group with empty slots and appends it to the bottom of the binder.
 
 ### Screen Layout
 Vertically scrollable list of sections. Each section has:
-- A header label (the group name)
-- A grid of card slots sized exactly `rows × cols`
-- Cards rendered in row-major order matching `cardIds`
+- A header label (the group name) with a delete button
+- A grid of card slots sized exactly `rows × cols`, rendered in row-major order
+- Groups can be reordered via long-press drag (same mechanism as Card History)
 
-### Slot Behaviour
-- **Unowned:** Card image displayed with a dimming overlay (greyed out)
-- **Owned:** Card image at full colour, no overlay
-- **Tap (unowned):** Bottom sheet with "Add Card" and "Back"
-  - "Add Card" → marks owned, sheet dismisses
-  - "Back" → sheet dismisses, no change
-- **Tap (owned):** Bottom sheet with "Remove Card" and "Back"
+### Slot States & Behaviour
+- **Empty:** Placeholder tile with a "+" icon. Tap → opens card search screen → selecting a card assigns it to the slot (greyed, unowned)
+- **Assigned / Unowned:** Card image with dimming overlay. Tap → bottom sheet: "Mark as Owned", "Remove Card", "Back"
+  - "Mark as Owned" → slot lights up full colour
+  - "Remove Card" → slot returns to empty
+- **Owned:** Card image at full colour. Tap → bottom sheet: "Mark as Unowned", "Remove Card", "Back"
 
 ### Data
 Room tables:
 
-`connecting_art_card_cache`:
+`connecting_art_group`:
 ```
-cardId:      String (PK)
-name:        String
-imageUrl:    String
-setName:     String
-```
-
-`connecting_art_entry`:
-```
-cardId: String (PK)
-owned:  Boolean
+id:       Int (PK, autoGenerate)
+name:     String
+rows:     Int
+cols:     Int
+position: Int
 ```
 
-Card metadata is fetched from pokemontcg.io by ID on first open and persisted in `connecting_art_card_cache`. The catalogue can span 200–400+ card IDs across all groups; caching avoids cold-fetching on every launch and makes the binder usable offline after first load. No pull-to-refresh — the catalogue is static and the cache is considered permanent until an app update changes the catalogue.
+`connecting_art_slot`:
+```
+id:           Int (PK, autoGenerate)
+groupId:      Int (FK → connecting_art_group.id)
+slotIndex:    Int  -- row-major, 0-based
+cardId:       String?
+cardName:     String?
+cardImageUrl: String?
+owned:        Boolean (default false)
+```
+
+No API fetching required — card metadata (name, image URL) is stored directly in the slot row when the user assigns a card via search. Deleting a group cascades to delete all its slots.
 
 ---
 
@@ -143,17 +143,17 @@ owned:  Boolean
 
 ### Database Migration
 Version 5 → 6. Adds four new tables:
-- `connecting_art_card_cache`
-- `connecting_art_entry`
+- `connecting_art_group`
+- `connecting_art_slot`
 - `personal_collection_cache`
 - `personal_collection_entry`
 
 ### New DAOs
-- `ConnectingArtDao` — insert/query/update owned state for connecting art entries
+- `ConnectingArtDao` — CRUD for groups and slots, cascade delete, reorder positions
 - `PersonalCollectionDao` — cache management + insert/query/update owned state
 
-### New Repository
-- `ConnectingArtRepository` — fetches card details from pokemontcg.io by ID, merges with local owned state
+### New Repositories
+- `ConnectingArtRepository` — manages group/slot CRUD, delegates card search to existing `CardSearchRepository`
 - `PersonalCollectionRepository` — fetches cards by Pokémon name (with Pocket filter), manages cache and owned state
 
 ---
@@ -162,7 +162,7 @@ Version 5 → 6. Adds four new tables:
 
 | Screen | ViewModel | Notes |
 |---|---|---|
-| `ConnectingArtScreen` | `ConnectingArtViewModel` | Renders sections from catalogue + DB owned state |
+| `ConnectingArtScreen` | `ConnectingArtViewModel` | User-managed groups; create/reorder/delete groups, assign cards to slots, mark owned |
 | `PersonalCollectionScreen` | `PersonalCollectionViewModel` | Renders sections per Pokémon, triggers cache refresh |
 
 ---
@@ -178,7 +178,7 @@ object PersonalCollection : Screen("personal_collection")
 
 ## Out of Scope
 
-- User-created custom binders (not in this version)
+- Additional custom binder types beyond the four defined here
 - Sorting or filtering within Personal Collection sections
 - Offline fallback for initial Personal Collection population (requires network on first open)
 - Any changes to the Pokédex binder or Card History binder behaviour
