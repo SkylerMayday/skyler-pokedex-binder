@@ -72,8 +72,14 @@ workaround, point 1 above).
 
 - **On-device verification of multi-binder/restore/backfill** — oldest open gap; only Skyler
   can do it. DB backup or publish first (untested v6→v7 migration + destructive fallback).
-- **~2 months of app-repo work uncommitted** (master's last commit 2026-05-24). Flagged to
-  Skyler 2026-07-08, no decision yet — ask before committing.
+- ~~2 months of app-repo work uncommitted~~ **COMMITTED 2026-07-08** on Skyler's instruction,
+  4 commits on master (local only — repo has NO remote): db2b43d gitignore (nested site repo
+  ignored — it has its own git history; local.properties/.idea/.pipeline/.claude ignored),
+  4c181ed app feature batch (87 files), c0dc297 notes/handoff/tooling, 5e5d247 docs/specs +
+  pipeline archives. Secrets audited first: none hardcoded (all runtime-entered). fsck clean.
+  **Environment quirk:** `git add`/`commit` intermittently fails with "unable to write file
+  .git/objects/... Permission denied" (likely AV scanning) — an immediate retry always
+  succeeds; don't misdiagnose as repo corruption, verify with `git fsck`.
 - Custom domain (CNAME + DNS) and og:image — low urgency, og:image now tracked in site README.
 - Unown letters deferred; "Braincheck" (Skyler's term, undefined trigger) — asked once, no
   answer; re-ask if it recurs.

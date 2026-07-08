@@ -11,7 +11,7 @@ Android Pokémon TCG binder app (Kotlin/Compose/Hilt/Room) that lets users track
 - [x] Spec for next feature APPROVED: card details panel + per-card language (see Next Steps).
 - [ ] **Deferred to Skyler:** install current build on his device, try multi-binder/restore/backfill for real (no emulator in dev sandbox). Back up `pokedex_binder.db` or publish first (untested v6→v7 migration + `fallbackToDestructiveMigration()`).
 - [ ] `Migration5to6Test`/`Migration6to7Test` never run on a real device — statically/DDL-verified only.
-- [ ] ~2 months of app-repo work UNCOMMITTED (master's last commit 2026-05-24; everything since — publish, multi-binder, web/ — is modified/untracked). Possibly deliberate pending on-device verification; needs a decision.
+- [x] App-repo backlog COMMITTED 2026-07-08 (Skyler's call): 4 commits on master (db2b43d/4c181ed/c0dc297/5e5d247), working tree clean, fsck clean. Repo has NO remote — history is local-only; adding a GitHub remote is an open option. web/pokedex-binder-site now gitignored here (own repo/history).
 - [ ] Custom domain (SkylerMayday.com → Pages): CNAME + DNS A records, zero urgency.
 - [ ] og:image for the web viewer — tracked in the site's README TODO (added 2026-07-08); when an asset exists, wire it into index.html's placeholder comment and flip twitter:card to summary_large_image.
 
