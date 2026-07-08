@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -32,5 +33,9 @@ class SlotDetailViewModel @Inject constructor(
 
     fun loadSlot(pokemonId: String) {
         _pokemonId.value = pokemonId
+    }
+
+    fun clearCard() {
+        viewModelScope.launch { binderRepository.clearCard(_pokemonId.value) }
     }
 }

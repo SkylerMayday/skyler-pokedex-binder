@@ -25,16 +25,41 @@ class ManualSearchViewModel @Inject constructor(
     private val _state = MutableStateFlow<SearchState>(SearchState.Idle)
     val state: StateFlow<SearchState> = _state
 
+    private val _promoOnly = MutableStateFlow(false)
+    val promoOnly: StateFlow<Boolean> = _promoOnly
+
+    private var lastQuery: String = ""
+
     fun search(query: String) {
         if (query.isBlank()) return
+        lastQuery = query
         _state.value = SearchState.Loading
         viewModelScope.launch {
             try {
-                val cards = cardSearchRepository.searchByName(query)
+                val trimmed = query.trim()
+                val cards = when {
+                    isPromoNumber(trimmed) -> cardSearchRepository.searchByNumber(trimmed)
+                        .ifEmpty { cardSearchRepository.searchByName(trimmed) }
+                    _promoOnly.value -> cardSearchRepository.searchPromosByName(trimmed)
+                    else -> cardSearchRepository.searchByName(trimmed)
+                }
                 _state.value = SearchState.Results(cards)
             } catch (e: Exception) {
                 _state.value = SearchState.Error(e.message ?: "Search failed")
             }
         }
     }
+
+    fun togglePromoFilter() {
+        _promoOnly.value = !_promoOnly.value
+        if (lastQuery.isNotBlank()) search(lastQuery)
+    }
+
+    fun retry() {
+        if (lastQuery.isNotBlank()) search(lastQuery)
+    }
+
+    // Matches promo number formats: SWSH001, SM01, SVP001, XY01, BW01, etc.
+    private fun isPromoNumber(query: String): Boolean =
+        Regex("^[A-Za-z]{2,5}\\d{1,4}$").matches(query)
 }

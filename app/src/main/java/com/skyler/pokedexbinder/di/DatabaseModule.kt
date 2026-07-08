@@ -18,6 +18,11 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): PokedexDatabase =
         Room.databaseBuilder(context, PokedexDatabase::class.java, "pokedex_binder.db")
+            .addMigrations(
+                PokedexDatabase.MIGRATION_4_5,
+                PokedexDatabase.MIGRATION_5_6,
+                PokedexDatabase.MIGRATION_6_7
+            )
             .fallbackToDestructiveMigration()
             .build()
 
@@ -26,4 +31,10 @@ object DatabaseModule {
 
     @Provides
     fun provideSecondaryBinderDao(db: PokedexDatabase): SecondaryBinderDao = db.secondaryBinderDao()
+
+    @Provides
+    fun provideConnectingArtDao(db: PokedexDatabase): ConnectingArtDao = db.connectingArtDao()
+
+    @Provides
+    fun providePersonalCollectionDao(db: PokedexDatabase): PersonalCollectionDao = db.personalCollectionDao()
 }

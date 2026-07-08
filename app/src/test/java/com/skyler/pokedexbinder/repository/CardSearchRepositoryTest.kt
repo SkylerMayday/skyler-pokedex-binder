@@ -10,6 +10,7 @@ import org.junit.Test
 class CardSearchRepositoryTest {
 
     private val api = mockk<PokemonTcgApi>()
+    private val tcgdexApi = mockk<TcgdexApi>()
 
     @Test
     fun `searchByNameAndNumber builds correct query and maps results`() = runTest {
@@ -18,10 +19,10 @@ class CardSearchRepositoryTest {
             set = TcgSetDto("XY"),
             images = TcgImagesDto("https://small.url", "https://large.url")
         )
-        coEvery { api.searchCards("name:\"Venusaur\" number:\"1\"") } returns
+        coEvery { api.searchCards("name:*Venusaur* number:\"1\" -set.series:Pocket") } returns
             TcgCardsResponse(data = listOf(dto), totalCount = 1)
 
-        val repo = CardSearchRepository(api)
+        val repo = CardSearchRepository(api, tcgdexApi)
         val results = repo.searchByNameAndNumber("Venusaur", "1")
 
         assertEquals(1, results.size)
@@ -31,11 +32,19 @@ class CardSearchRepositoryTest {
 
     @Test
     fun `searchByName builds name-only query`() = runTest {
-        coEvery { api.searchCards("name:\"Pikachu\"") } returns
-            TcgCardsResponse(data = emptyList(), totalCount = 0)
+        val dto = TcgCardDto(
+            id = "base1-58", name = "Pikachu", number = "58",
+            set = TcgSetDto("Base"),
+            images = TcgImagesDto("https://small.url", "https://large.url")
+        )
+        coEvery { api.searchCards("name:*Pikachu* -set.series:Pocket") } returns
+            TcgCardsResponse(data = listOf(dto), totalCount = 1)
+        coEvery { tcgdexApi.searchCards("Pikachu") } returns emptyList()
 
-        val repo = CardSearchRepository(api)
+        val repo = CardSearchRepository(api, tcgdexApi)
         val results = repo.searchByName("Pikachu")
-        assertTrue(results.isEmpty())
+
+        assertEquals(1, results.size)
+        assertEquals("base1-58", results[0].id)
     }
 }

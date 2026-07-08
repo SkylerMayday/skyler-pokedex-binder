@@ -35,7 +35,7 @@ class AssignCardUseCaseTest {
         useCase.assign("bulbasaur", card("xy1-1", "Bulbasaur"))
 
         coVerify(exactly = 0) { secondaryDao.insert(any()) }
-        coVerify { binderRepo.assignCard("bulbasaur", "xy1-1", "https://img.url/xy1-1") }
+        coVerify { binderRepo.assignCard("bulbasaur", "xy1-1", "https://img.url/xy1-1", "Bulbasaur", "XY") }
     }
 
     @Test
@@ -46,7 +46,7 @@ class AssignCardUseCaseTest {
         useCase.assign("charizard", card("xy1-11", "Charizard"))
 
         coVerify {
-            secondaryDao.insert(
+            secondaryDao.insertAtEnd(
                 SecondaryBinderEntry(
                     pokemonId = "charizard",
                     pokemonName = "Charizard",
@@ -55,7 +55,7 @@ class AssignCardUseCaseTest {
                 )
             )
         }
-        coVerify { binderRepo.assignCard("charizard", "xy1-11", "https://img.url/xy1-11") }
+        coVerify { binderRepo.assignCard("charizard", "xy1-11", "https://img.url/xy1-11", "Charizard", "XY") }
     }
 
     @Test
@@ -65,6 +65,6 @@ class AssignCardUseCaseTest {
         useCase.assign("missingno", card("xy1-1", "MissingNo"))
 
         coVerify(exactly = 0) { secondaryDao.insert(any()) }
-        coVerify(exactly = 0) { binderRepo.assignCard(any(), any(), any()) }
+        coVerify(exactly = 0) { binderRepo.assignCard(any(), any(), any(), any(), any()) }
     }
 }

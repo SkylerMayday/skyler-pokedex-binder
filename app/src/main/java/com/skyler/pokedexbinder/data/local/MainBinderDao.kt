@@ -340,4 +340,19 @@ interface MainBinderDao {
         WHERE pokemonId IN ('kyogre-primal', 'groudon-primal')
     """)
     suspend fun migratePrimalDexNumbers()
+
+    /** Rows that have a card assigned but are missing the card's name (pre-v6 assignments). */
+    @Query("SELECT * FROM main_binder WHERE assignedCardId IS NOT NULL AND assignedCardName IS NULL")
+    suspend fun getRowsNeedingCardBackfill(): List<MainBinderEntry>
+
+    /**
+     * Writes the resolved name/set onto a single row, leaving id/image untouched.
+     * Guarded by [expectedCardId] and `assignedCardName IS NULL` so a concurrent
+     * reassignment mid-backfill pass cannot desync the name from the id (no-op if stale).
+     */
+    @Query("""
+        UPDATE main_binder SET assignedCardName = :cardName, assignedCardSetName = :cardSetName
+        WHERE pokemonId = :pokemonId AND assignedCardId = :expectedCardId AND assignedCardName IS NULL
+    """)
+    suspend fun backfillCardNameSet(pokemonId: String, expectedCardId: String, cardName: String, cardSetName: String)
 }

@@ -15,7 +15,10 @@ data class TcgCardDto(
 )
 
 @JsonClass(generateAdapter = true)
-data class TcgSetDto(val name: String)
+data class TcgSetDto(
+    val name: String,
+    val releaseDate: String? = null
+)
 
 @JsonClass(generateAdapter = true)
 data class TcgImagesDto(
@@ -27,4 +30,9 @@ data class TcgImagesDto(
 data class TcgCardsResponse(
     val data: List<TcgCardDto>,
     val totalCount: Int
+)
+
+@JsonClass(generateAdapter = true)
+data class TcgCardResponse(
+    val data: TcgCardDto
 )

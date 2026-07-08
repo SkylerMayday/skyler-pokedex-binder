@@ -54,7 +54,10 @@ android {
     }
 
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 }
 
 // Android Studio Narwhal (AI-253 / Kotlin plugin 2.2.x) requests this task during project sync
@@ -108,6 +111,9 @@ dependencies {
 
     // DataStore (settings persistence)
     implementation(libs.datastore.preferences)
+
+    // EncryptedSharedPreferences (publish secrets: GitHub PAT, Discord webhook URL)
+    implementation(libs.androidx.security.crypto)
 
     // Accompanist
     implementation(libs.accompanist.permissions)

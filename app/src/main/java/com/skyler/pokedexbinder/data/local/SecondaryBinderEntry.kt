@@ -9,5 +9,6 @@ data class SecondaryBinderEntry(
     val pokemonId: String,
     val pokemonName: String,
     val cardId: String,
-    val cardImageUrl: String
+    val cardImageUrl: String,
+    val position: Int = 0
 )

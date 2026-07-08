@@ -8,7 +8,8 @@ data class TcgCard(
     val imageUrl: String,
     val pokemonNames: List<String>,
     val hp: String? = null,
-    val artist: String? = null
+    val artist: String? = null,
+    val setReleaseDate: String? = null
 ) {
     val primaryPokemonName: String get() = pokemonNames.firstOrNull() ?: name
 }

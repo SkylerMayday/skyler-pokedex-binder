@@ -7,7 +7,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,18 +23,39 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.skyler.pokedexbinder.data.model.PokemonSlot
+import com.skyler.pokedexbinder.ui.publish.PublishDialog
+import com.skyler.pokedexbinder.ui.publish.PublishViewModel
+import com.skyler.pokedexbinder.ui.settings.SettingsViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainBinderScreen(
-    onSlotClick: (String) -> Unit,
+    onSlotClick: (PokemonSlot) -> Unit,
+    onSettingsClick: () -> Unit = {},
+    onOpenDrawer: () -> Unit = {},
     viewModel: MainBinderViewModel = hiltViewModel()
 ) {
     val displayItems by viewModel.displayItems.collectAsState()
     var query by remember { mutableStateOf("") }
     val gridState = rememberLazyGridState()
     val coroutineScope = rememberCoroutineScope()
+
+    var showPublish by remember { mutableStateOf(false) }
+    val publishVm: PublishViewModel = hiltViewModel()
+    val publishState by publishVm.state.collectAsState()
+    val settingsVm: SettingsViewModel = hiltViewModel()
+    val publishConfig by settingsVm.publishConfig.collectAsState()
+    val pageUrl = "https://${publishConfig.githubOwner}.github.io/${publishConfig.githubRepo}/"
+
+    if (showPublish) {
+        LaunchedEffect(Unit) { publishVm.startPublish() }
+        PublishDialog(
+            state = publishState,
+            pageUrl = pageUrl,
+            onDismiss = { showPublish = false; publishVm.dismiss() }
+        )
+    }
 
     // Map of section title → item index in displayItems (only when not searching)
     val sectionIndices: List<Pair<String, Int>> = remember(displayItems) {
@@ -43,7 +67,24 @@ fun MainBinderScreen(
     var dropdownExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Pokédex Binder") }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Pokédex Binder") },
+                navigationIcon = {
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showPublish = true }) {
+                        Icon(Icons.Default.CloudUpload, contentDescription = "Publish")
+                    }
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
+                }
+            )
+        }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
 
@@ -120,7 +161,12 @@ fun MainBinderScreen(
                             item(key = item.pokemonSlot.id) {
                                 SlotCard(
                                     slot = item.pokemonSlot,
-                                    onClick = { onSlotClick(item.pokemonSlot.id) }
+                                    onClick = {
+                                        // Clear search so the binder isn't still filtered when we return.
+                                        query = ""
+                                        viewModel.setSearch("")
+                                        onSlotClick(item.pokemonSlot)
+                                    }
                                 )
                             }
                         }

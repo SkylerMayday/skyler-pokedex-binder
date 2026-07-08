@@ -49,16 +49,19 @@ class BinderRepositoryTest {
         coEvery { mainDao.getByPokemonId("charizard") } returns existing
         val repo = BinderRepository(mainDao)
 
-        repo.assignCard("charizard", "base4-4", "https://img.pokemontcg.io/base4/4.png")
+        repo.assignCard("charizard", "base4-4", "https://img.pokemontcg.io/base4/4.png", "Charizard", "Base Set")
 
         coVerify {
             mainDao.upsert(
                 MainBinderEntry(
                     pokemonId = "charizard",
                     pokemonName = "Charizard",
+                    dexNumber = 6,
                     dexOrder = 6,
                     assignedCardId = "base4-4",
-                    assignedCardImageUrl = "https://img.pokemontcg.io/base4/4.png"
+                    assignedCardImageUrl = "https://img.pokemontcg.io/base4/4.png",
+                    assignedCardName = "Charizard",
+                    assignedCardSetName = "Base Set"
                 )
             )
         }

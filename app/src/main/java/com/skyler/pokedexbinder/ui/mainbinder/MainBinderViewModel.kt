@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.skyler.pokedexbinder.data.model.PokemonSlot
 import com.skyler.pokedexbinder.data.model.SlotType
+import com.skyler.pokedexbinder.domain.BackfillCardNamesUseCase
 import com.skyler.pokedexbinder.repository.BinderRepository
 import com.skyler.pokedexbinder.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,6 +22,7 @@ import javax.inject.Inject
 class MainBinderViewModel @Inject constructor(
     private val binderRepository: BinderRepository,
     private val settingsRepository: SettingsRepository,
+    private val backfillCardNamesUseCase: BackfillCardNamesUseCase,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -49,6 +51,7 @@ class MainBinderViewModel @Inject constructor(
             binderRepository.seedAlternateFormsIfMissing()
             binderRepository.seedMegasIfMissing()
             binderRepository.migrateSlotNamesIfNeeded()
+            backfillCardNamesUseCase.backfill()
         }
     }
 

@@ -24,19 +24,46 @@ class BinderRepository @Inject constructor(
     suspend fun getAllSlots(): List<PokemonSlot> =
         mainBinderDao.getAll().map { it.toDomain() }
 
+    /** Raw entities (with card name/set) for use cases that need fields not exposed on [PokemonSlot]. */
+    suspend fun getAllEntries(): List<MainBinderEntry> = mainBinderDao.getAll()
+
+    /** Rows with an assigned card but missing name/set (pre-v6 assignments) — backfill candidates. */
+    suspend fun getRowsNeedingBackfill(): List<MainBinderEntry> = mainBinderDao.getRowsNeedingCardBackfill()
+
+    suspend fun backfillCardNameSet(pokemonId: String, expectedCardId: String, cardName: String, cardSetName: String) =
+        mainBinderDao.backfillCardNameSet(pokemonId, expectedCardId, cardName, cardSetName)
+
     fun observeSlot(pokemonId: String): Flow<PokemonSlot?> =
         mainBinderDao.observeByPokemonId(pokemonId).map { it?.toDomain() }
 
-    suspend fun assignCard(pokemonId: String, cardId: String, cardImageUrl: String) {
+    suspend fun assignCard(
+        pokemonId: String,
+        cardId: String,
+        cardImageUrl: String,
+        cardName: String?,
+        cardSetName: String?
+    ) {
         val existing = mainBinderDao.getByPokemonId(pokemonId) ?: return
         mainBinderDao.upsert(
-            existing.copy(assignedCardId = cardId, assignedCardImageUrl = cardImageUrl)
+            existing.copy(
+                assignedCardId = cardId,
+                assignedCardImageUrl = cardImageUrl,
+                assignedCardName = cardName,
+                assignedCardSetName = cardSetName
+            )
         )
     }
 
     suspend fun clearCard(pokemonId: String) {
         val existing = mainBinderDao.getByPokemonId(pokemonId) ?: return
-        mainBinderDao.upsert(existing.copy(assignedCardId = null, assignedCardImageUrl = null))
+        mainBinderDao.upsert(
+            existing.copy(
+                assignedCardId = null,
+                assignedCardImageUrl = null,
+                assignedCardName = null,
+                assignedCardSetName = null
+            )
+        )
     }
 
     suspend fun seedFromJson(slots: List<MainBinderEntry>) {

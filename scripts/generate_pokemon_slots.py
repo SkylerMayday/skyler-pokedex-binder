@@ -14,13 +14,15 @@ POKEAPI = "https://pokeapi.co/api/v2"
 TCG_API = "https://api.pokemontcg.io/v2"
 OUT_PATH = "app/src/main/res/raw/pokemon_slots.json"
 
-# G-Max forms with visually distinct designs (not just oversized base forms)
+# G-Max forms per Serebii's Gigantamax list (33 forms)
 GMAX_DISTINCT = {
-    "charizard", "butterfree", "pikachu", "meowth", "machamp", "gengar",
-    "kingler", "lapras", "eevee", "snorlax", "garbodor", "melmetal",
-    "corviknight", "orbeetle", "drednaw", "coalossal", "flapple", "appletun",
-    "sandaconda", "toxtricity", "centiskorch", "hatterene", "grimmsnarl",
-    "alcremie", "copperajah", "duraludon", "urshifu"
+    "venusaur", "charizard", "blastoise", "butterfree", "pikachu", "meowth",
+    "machamp", "gengar", "kingler", "lapras", "eevee", "snorlax", "garbodor",
+    "melmetal", "corviknight", "orbeetle", "drednaw", "coalossal", "flapple",
+    "appletun", "sandaconda", "toxtricity", "centiskorch", "hatterene",
+    "grimmsnarl", "alcremie", "copperajah", "duraludon",
+    "rillaboom", "cinderace", "inteleon",
+    "urshifu-single-strike", "urshifu-rapid-strike"
 }
 
 # All Mega Evolutions (variety names as they appear in PokéAPI)
@@ -147,7 +149,7 @@ def build_gmax_slots(start_order: int) -> list:
             dex_number = 0
         slots.append({
             "id": gmax_id,
-            "name": f"{base_name.title()} (Gigantamax)",
+            "name": f"{base_name.replace('-', ' ').title()} (Gigantamax)",
             "dex_number": dex_number,
             "dex_order": order,
             "slot_type": "gmax"

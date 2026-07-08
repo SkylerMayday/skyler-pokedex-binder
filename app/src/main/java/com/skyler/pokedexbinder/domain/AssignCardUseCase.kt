@@ -14,7 +14,7 @@ class AssignCardUseCase @Inject constructor(
         val slot = binderRepository.getSlotByPokemonId(pokemonId) ?: return
 
         if (slot.isOccupied) {
-            secondaryBinderDao.insert(
+            secondaryBinderDao.insertAtEnd(
                 SecondaryBinderEntry(
                     pokemonId = slot.id,
                     pokemonName = slot.name,
@@ -24,6 +24,6 @@ class AssignCardUseCase @Inject constructor(
             )
         }
 
-        binderRepository.assignCard(pokemonId, card.id, card.imageUrl)
+        binderRepository.assignCard(pokemonId, card.id, card.imageUrl, card.name, card.setName)
     }
 }

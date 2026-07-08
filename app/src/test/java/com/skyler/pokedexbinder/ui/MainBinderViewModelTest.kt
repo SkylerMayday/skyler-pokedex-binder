@@ -4,7 +4,10 @@ import android.content.Context
 import app.cash.turbine.test
 import com.skyler.pokedexbinder.data.model.PokemonSlot
 import com.skyler.pokedexbinder.data.model.SlotType
+import com.skyler.pokedexbinder.domain.BackfillCardNamesUseCase
+import com.skyler.pokedexbinder.repository.AppSettings
 import com.skyler.pokedexbinder.repository.BinderRepository
+import com.skyler.pokedexbinder.repository.SettingsRepository
 import com.skyler.pokedexbinder.ui.mainbinder.BinderDisplayItem
 import com.skyler.pokedexbinder.ui.mainbinder.MainBinderViewModel
 import io.mockk.coJustRun
@@ -22,7 +25,13 @@ class MainBinderViewModelTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
     private val binderRepo = mockk<BinderRepository>(relaxed = true)
+    private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
+    private val backfillCardNamesUseCase = mockk<BackfillCardNamesUseCase>(relaxed = true)
     private val context = mockk<Context>()
+
+    @Before fun setUpSettings() {
+        every { settingsRepo.settings } returns flowOf(AppSettings())
+    }
 
     @Before fun setUp() { Dispatchers.setMain(testDispatcher) }
     @After fun tearDown() { Dispatchers.resetMain() }
@@ -33,7 +42,7 @@ class MainBinderViewModelTest {
         every { binderRepo.observeSlots() } returns flowOf(listOf(slot))
         coJustRun { binderRepo.seedIfEmpty(context) }
 
-        val vm = MainBinderViewModel(binderRepo, context)
+        val vm = MainBinderViewModel(binderRepo, settingsRepo, backfillCardNamesUseCase, context)
         vm.displayItems.test {
             val items = awaitItem()
             assertTrue(items.any { it is BinderDisplayItem.Header && (it as BinderDisplayItem.Header).title == "Generation I" })
@@ -49,7 +58,7 @@ class MainBinderViewModelTest {
         every { binderRepo.observeSlots() } returns flowOf(listOf(bulbasaur, charmander))
         coJustRun { binderRepo.seedIfEmpty(context) }
 
-        val vm = MainBinderViewModel(binderRepo, context)
+        val vm = MainBinderViewModel(binderRepo, settingsRepo, backfillCardNamesUseCase, context)
         vm.setSearch("char")
         vm.displayItems.test {
             val items = awaitItem()
@@ -67,7 +76,7 @@ class MainBinderViewModelTest {
         every { binderRepo.observeSlots() } returns flowOf(listOf(bulbasaur, charmander))
         coJustRun { binderRepo.seedIfEmpty(context) }
 
-        val vm = MainBinderViewModel(binderRepo, context)
+        val vm = MainBinderViewModel(binderRepo, settingsRepo, backfillCardNamesUseCase, context)
         vm.setSearch("4")
         vm.displayItems.test {
             val items = awaitItem()

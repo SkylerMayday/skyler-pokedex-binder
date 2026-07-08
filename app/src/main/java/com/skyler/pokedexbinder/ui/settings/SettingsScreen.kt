@@ -14,6 +14,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.skyler.pokedexbinder.ui.publish.PublishDialog
+import com.skyler.pokedexbinder.ui.publish.PublishViewModel
+import com.skyler.pokedexbinder.ui.restore.RestoreDialog
+import com.skyler.pokedexbinder.ui.restore.RestoreViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,8 +26,59 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsState()
+    val publishConfig by viewModel.publishConfig.collectAsState()
     var apiKeyText by remember(settings.geminiApiKey) { mutableStateOf(settings.geminiApiKey) }
     var apiKeyVisible by remember { mutableStateOf(false) }
+
+    var githubOwnerText by remember(publishConfig.githubOwner) { mutableStateOf(publishConfig.githubOwner) }
+    var githubRepoText by remember(publishConfig.githubRepo) { mutableStateOf(publishConfig.githubRepo) }
+    var githubPatText by remember(publishConfig.githubPat) { mutableStateOf(publishConfig.githubPat) }
+    var discordWebhookText by remember(publishConfig.discordWebhookUrl) { mutableStateOf(publishConfig.discordWebhookUrl) }
+    var githubPatVisible by remember { mutableStateOf(false) }
+    var discordWebhookVisible by remember { mutableStateOf(false) }
+
+    var showPublish by remember { mutableStateOf(false) }
+    val publishVm: PublishViewModel = hiltViewModel()
+    val publishState by publishVm.state.collectAsState()
+    val pageUrl = "https://${publishConfig.githubOwner}.github.io/${publishConfig.githubRepo}/"
+
+    var showRestoreConfirm by remember { mutableStateOf(false) }
+    var showRestore by remember { mutableStateOf(false) }
+    val restoreVm: RestoreViewModel = hiltViewModel()
+    val restoreState by restoreVm.state.collectAsState()
+
+    if (showPublish) {
+        LaunchedEffect(Unit) { publishVm.startPublish() }
+        PublishDialog(
+            state = publishState,
+            pageUrl = pageUrl,
+            onDismiss = { showPublish = false; publishVm.dismiss() }
+        )
+    }
+
+    if (showRestoreConfirm) {
+        AlertDialog(
+            onDismissRequest = { showRestoreConfirm = false },
+            title = { Text("Restore from snapshot?") },
+            text = { Text("This overwrites your local card assignments with the ones from the " +
+                "published snapshot on GitHub. Slots you've filled in since the last publish will be " +
+                "lost. This cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = { showRestoreConfirm = false; showRestore = true }) { Text("Restore") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRestoreConfirm = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showRestore) {
+        LaunchedEffect(Unit) { restoreVm.startRestore() }
+        RestoreDialog(
+            state = restoreState,
+            onDismiss = { showRestore = false; restoreVm.dismiss() }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -121,18 +176,104 @@ fun SettingsScreen(
                 onCheckedChange = { viewModel.setShowGmax(it) }
             )
 
-            // ---- Navigation ----
+            // ---- Public Binder / Sharing ----
             Spacer(Modifier.height(8.dp))
-            SectionHeader("Navigation")
+            SectionHeader("Public Binder / Sharing")
 
-            HorizontalDivider()
+            OutlinedTextField(
+                value = githubOwnerText,
+                onValueChange = { githubOwnerText = it; viewModel.setGithubOwner(it) },
+                label = { Text("GitHub Owner") },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            OutlinedTextField(
+                value = githubRepoText,
+                onValueChange = { githubRepoText = it; viewModel.setGithubRepo(it) },
+                label = { Text("GitHub Repo") },
+                placeholder = { Text("binders-pokedex-binder") },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            OutlinedTextField(
+                value = githubPatText,
+                onValueChange = { githubPatText = it; viewModel.setGithubPat(it) },
+                label = { Text("GitHub PAT") },
+                supportingText = { Text("Fine-grained token, Contents read/write on the repo only") },
+                singleLine = true,
+                visualTransformation = if (githubPatVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton(onClick = { githubPatVisible = !githubPatVisible }) {
+                        Icon(
+                            if (githubPatVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = if (githubPatVisible) "Hide PAT" else "Show PAT"
+                        )
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            OutlinedTextField(
+                value = discordWebhookText,
+                onValueChange = { discordWebhookText = it; viewModel.setDiscordWebhookUrl(it) },
+                label = { Text("Discord Webhook URL") },
+                supportingText = { Text("Server Settings → Integrations → Webhooks") },
+                singleLine = true,
+                visualTransformation = if (discordWebhookVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton(onClick = { discordWebhookVisible = !discordWebhookVisible }) {
+                        Icon(
+                            if (discordWebhookVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = if (discordWebhookVisible) "Hide webhook URL" else "Show webhook URL"
+                        )
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
             SettingToggleItem(
-                title = "Secondary Binder",
-                description = "When enabled, cards replaced in the main binder are moved here instead of being deleted.",
-                checked = settings.showSecondaryBinder,
-                onCheckedChange = { viewModel.setShowSecondaryBinder(it) }
+                title = "Publish Pokédex",
+                description = "Include the main Pokédex binder in the public page",
+                checked = publishConfig.publishPokedex,
+                onCheckedChange = { viewModel.setPublishPokedex(it) }
             )
             HorizontalDivider()
+            SettingToggleItem(
+                title = "Publish Card History",
+                description = "Include the secondary (card history) binder in the public page",
+                checked = publishConfig.publishCardHistory,
+                onCheckedChange = { viewModel.setPublishCardHistory(it) }
+            )
+            HorizontalDivider()
+
+            Button(
+                onClick = { showPublish = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text("Publish now")
+            }
+
+            OutlinedButton(
+                onClick = { showRestoreConfirm = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text("Restore from published snapshot")
+            }
+
         }
     }
 }

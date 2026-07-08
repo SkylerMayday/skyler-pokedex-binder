@@ -11,5 +11,7 @@ data class MainBinderEntry(
     val dexOrder: Int,
     val slotType: String = "BASE",
     val assignedCardId: String? = null,
-    val assignedCardImageUrl: String? = null
+    val assignedCardImageUrl: String? = null,
+    val assignedCardName: String? = null,
+    val assignedCardSetName: String? = null
 )
