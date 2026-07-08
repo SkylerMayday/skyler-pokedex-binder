@@ -8,5 +8,16 @@
 .externalNativeBuild
 .cxx
 *.keystore
+*.jks
 !debug.keystore
 app/build/
+keystore.properties
+keystore/
+# unanchored: also covers app/local.properties and app/.idea
+local.properties
+.idea/
+# nested git repo — versioned separately at SkylerMayday/binders-pokedex-binder
+web/pokedex-binder-site/
+# active pipeline scratch (archives ARE committed) + personal harness config
+.pipeline/
+.claude/
