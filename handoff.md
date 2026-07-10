@@ -31,15 +31,26 @@ deliberately the NEXT session's job (approval arrived bundled with wrapcon).
 5. **Project notes updated + synced to Digital Brain; session archived** to
    `raw-sources/conversations/2026-07-08-277f342e.{jsonl,md}`.
 
-## TWO approved specs — NEXT SESSION STARTS HERE
+## ONE approved spec remains — NEXT SESSION STARTS HERE
 
-**Post-wrapcon addition:** after the initial wrap, Skyler approved a second spec —
-`docs/superpowers/specs/2026-07-08-binder-page-flip-viewer.md` (web-only: clicking a spine
-opens the binder below the shelf as a 3×3 two-page spread with arrow/swipe/key page
-flipping, REPLACING the scrolling grid; lightbox + NEW badges unchanged). Its "Sequencing"
-section defines the build order for both specs: app side of the details spec first, then ONE
-web run implementing lightbox details panel + page-flip together (same files, avoids double
-rework).
+**2026-07-09 update: the binder page-flip viewer spec is SUPERSEDED, not being built here.**
+The website team (separate project, `D:\Claude Projects\skylermayday-site`) is building the
+same bookshelf + 3×3 page-flip interaction natively on the new SkylerMayday.com site's
+`/ptcg-binders` page instead — see `D:\Claude Projects\SkylerMaydaySite\docs\ptcg-binders-redesign-spec.md`.
+`docs/superpowers/specs/2026-07-08-binder-page-flip-viewer.md` is marked superseded in place
+(not deleted, kept for history). **Design/UI ownership for how the binder collection is
+displayed publicly is now entirely the website project's — this project (PokedexBinderV2)
+only owns the Android app and the publish pipeline (binder.json/changelog.json), not how that
+data is presented.**
+
+**GitHub Pages viewer retirement:** `web/pokedex-binder-site/` (deployed to
+`SkylerMayday/binders-pokedex-binder` Pages) stays live as-is for now — do NOT take it down
+yet. It retires once the new site's `/ptcg-binders` redesign ships and is verified working
+(matches the original site spec's phasing). No further design/feature work should go into
+this GitHub Pages viewer in the meantime — it's in maintenance-only mode pending retirement.
+
+The card-details-and-language spec below is unaffected by this and remains the next real
+work item for this project.
 
 `docs/superpowers/specs/2026-07-08-card-details-and-language.md` — **APPROVED v3, do not
 re-litigate.** Card details panel on the website's lightbox (name, artist, set·number,
@@ -64,9 +75,12 @@ Key facts the implementer needs (all verified live this session, reasoning in th
 - Planner must verify whether Connecting Art / Personal Collection entries appear in
   binder.json — parity scope follows the data.
 
-Sequence per global rules: dev-team-pipeline for the app side, then a small second run for
-the web lightbox panel, then full unit suite + preview verification (mind the stale-cache
-workaround, point 1 above).
+Sequence per global rules: dev-team-pipeline for the app side (Room v8 + rarity + language
+tagging etc.). The web lightbox details panel portion of this spec still applies to
+`web/pokedex-binder-site/` since it's a distinct, non-superseded feature — but given that
+viewer's pending retirement, confirm with Skyler whether it's still worth shipping there vs.
+deferring until/unless the equivalent lightbox exists on the new site. Full unit suite +
+preview verification after (mind the stale-cache workaround, point 1 above).
 
 ## Still open (unchanged from 2026-07-06 unless noted)
 

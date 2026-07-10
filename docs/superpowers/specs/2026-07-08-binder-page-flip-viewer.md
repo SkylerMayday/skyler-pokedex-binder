@@ -1,6 +1,15 @@
 # Spec — Binder Page-Flip Viewer (web) (2026-07-08)
 
-**Status:** APPROVED v1 (Skyler, 2026-07-08) — ready for pipeline
+**Status:** SUPERSEDED (Skyler, 2026-07-09) — do not implement. The equivalent feature
+(bookshelf of binders + 3×3 page-flip viewer) is being built instead on the new
+SkylerMayday.com site (`D:\Claude Projects\skylermayday-site`, native `/ptcg-binders` page),
+per `D:\Claude Projects\SkylerMaydaySite\docs\ptcg-binders-redesign-spec.md`. This
+GitHub-Pages viewer (`web/pokedex-binder-site/`) is being retired once that new-site feature
+ships and is verified working — see PokedexBinderV2's `handoff.md` and
+`pokedexbinder-project-notes.md` for current status. Left in place for historical reference,
+not as an active work item.
+
+~~**Status:** APPROVED v1 (Skyler, 2026-07-08) — ready for pipeline~~
 **Owner:** Skyler
 **Scope:** Web viewer only (`web/pokedex-binder-site/` — `index.html`, `styles.css`, `app.js`)
 **Companion:** `2026-07-08-card-details-and-language.md` (approved) — the two compose; see
