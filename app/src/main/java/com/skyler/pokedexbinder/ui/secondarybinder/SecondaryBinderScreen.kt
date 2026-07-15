@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -26,6 +27,7 @@ import sh.calvin.reorderable.rememberReorderableLazyGridState
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SecondaryBinderScreen(
+    onOpenDrawer: () -> Unit = {},
     onScanCard: () -> Unit = {},
     onSearchCard: () -> Unit = {},
     viewModel: SecondaryBinderViewModel = hiltViewModel()
@@ -38,7 +40,16 @@ fun SecondaryBinderScreen(
     var showAddSheet by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Card History") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Card History") },
+                navigationIcon = {
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                    }
+                }
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddSheet = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Add card")

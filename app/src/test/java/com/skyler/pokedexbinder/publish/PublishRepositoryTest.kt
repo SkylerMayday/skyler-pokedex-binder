@@ -2,9 +2,14 @@ package com.skyler.pokedexbinder.publish
 
 import android.util.Base64
 import android.util.Log
+import com.skyler.pokedexbinder.data.local.ConnectingArtGroup
+import com.skyler.pokedexbinder.data.local.ConnectingArtSlot
 import com.skyler.pokedexbinder.data.local.MainBinderEntry
+import com.skyler.pokedexbinder.data.local.PersonalCollectionCache
+import com.skyler.pokedexbinder.data.local.PersonalCollectionEntry
 import com.skyler.pokedexbinder.data.local.SecondaryBinderDao
 import com.skyler.pokedexbinder.data.local.SecondaryBinderEntry
+import com.skyler.pokedexbinder.data.local.UnownBinderEntry
 import com.skyler.pokedexbinder.data.remote.DiscordApi
 import com.skyler.pokedexbinder.data.remote.GitHubApi
 import com.skyler.pokedexbinder.data.remote.GitHubContentDto
@@ -21,8 +26,11 @@ import com.skyler.pokedexbinder.publish.model.SnapshotBinder
 import com.skyler.pokedexbinder.publish.model.SnapshotSection
 import com.skyler.pokedexbinder.publish.model.SnapshotSlot
 import com.skyler.pokedexbinder.repository.BinderRepository
+import com.skyler.pokedexbinder.repository.ConnectingArtRepository
+import com.skyler.pokedexbinder.repository.PersonalCollectionRepository
 import com.skyler.pokedexbinder.repository.PublishConfig
 import com.skyler.pokedexbinder.repository.PublishSettingsRepository
+import com.skyler.pokedexbinder.repository.UnownBinderRepository
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.mockk.coEvery
@@ -46,6 +54,9 @@ class PublishRepositoryTest {
     private val publishSettingsRepository = mockk<PublishSettingsRepository>()
     private val binderRepository = mockk<BinderRepository>()
     private val secondaryBinderDao = mockk<SecondaryBinderDao>(relaxed = true)
+    private val connectingArtRepository = mockk<ConnectingArtRepository>(relaxed = true)
+    private val personalCollectionRepository = mockk<PersonalCollectionRepository>(relaxed = true)
+    private val unownBinderRepository = mockk<UnownBinderRepository>(relaxed = true)
 
     private lateinit var repository: PublishRepository
 
@@ -71,9 +82,29 @@ class PublishRepositoryTest {
         every { Log.w(any(), any<String>()) } returns 0
 
         repository = PublishRepository(
-            gitHubApi, discordApi, moshi, publishSettingsRepository, binderRepository, secondaryBinderDao
+            gitHubApi, discordApi, moshi, publishSettingsRepository, binderRepository,
+            secondaryBinderDao,
+            connectingArtRepository, personalCollectionRepository, unownBinderRepository
         )
     }
+
+    private fun caGroup(id: Int, name: String, position: Int = id) =
+        ConnectingArtGroup(id = id, name = name, rows = 1, cols = 2, position = position)
+
+    private fun caSlot(groupId: Int, slotIndex: Int, cardId: String? = null, owned: Boolean = false) =
+        ConnectingArtSlot(
+            id = groupId * 100 + slotIndex, groupId = groupId, slotIndex = slotIndex,
+            cardId = cardId, cardName = cardId?.let { "Card $it" },
+            cardImageUrl = cardId?.let { "https://img/$it" }, owned = owned
+        )
+
+    private fun pcCache(cardId: String, key: String, name: String = "Card $cardId", release: String = "2020-01-01") =
+        PersonalCollectionCache(
+            cardId = cardId, pokemonKey = key, name = name,
+            imageUrl = "https://img/$cardId", setName = "Set", releaseDate = release
+        )
+
+    private fun pcEntry(cardId: String, owned: Boolean) = PersonalCollectionEntry(cardId, owned)
 
     private fun entry(id: String, name: String, dex: Int, cardId: String? = null) = MainBinderEntry(
         pokemonId = id,
@@ -203,9 +234,9 @@ class PublishRepositoryTest {
 
     // --- computeDiff matrix tests ---
 
-    private fun slot(id: String, cardId: String?, name: String = "Slot$id", set: String? = "Set") = SnapshotSlot(
+    private fun slot(id: String, cardId: String?, name: String = "Slot$id", set: String? = "Set", owned: Boolean = true) = SnapshotSlot(
         dexNumber = 1, slotName = name, slotType = "BASE", slotId = id,
-        cardId = cardId, cardName = cardId?.let { name }, cardSet = cardId?.let { set }, imageUrl = null
+        cardId = cardId, cardName = cardId?.let { name }, cardSet = cardId?.let { set }, imageUrl = null, owned = owned
     )
 
     private fun binderWith(vararg slots: SnapshotSlot) = BinderSnapshot(
@@ -440,5 +471,176 @@ class PublishRepositoryTest {
         assertTrue(result is PublishResult.Failure)
         assertEquals(PublishStep.Uploading, (result as PublishResult.Failure).step)
         coVerify(exactly = 0) { discordApi.sendWebhook(any(), any()) }
+    }
+
+    // --- Connecting Art / Personal Collection buildSnapshot + computeDiff tests ---
+
+    @Test
+    fun `buildSnapshot includes connectingArt binder when a group has an assigned slot`() {
+        val groups = listOf(caGroup(1, "Group A"))
+        val slots = listOf(
+            caSlot(groupId = 1, slotIndex = 0, cardId = "c1", owned = true),
+            caSlot(groupId = 1, slotIndex = 1, cardId = null)
+        )
+
+        val snapshot = repository.buildSnapshot(
+            emptyList(), emptyList(), defaultConfig,
+            connectingArtGroups = groups, connectingArtSlots = slots
+        )
+
+        val binder = snapshot.binders.single { it.id == "connectingArt" }
+        val section = binder.sections.single()
+        assertEquals("Group A", section.name)
+        assertEquals(2, section.slots.size)
+        assertEquals("ca-1-0", section.slots[0].slotId)
+        assertEquals("c1", section.slots[0].cardId)
+        assertTrue(section.slots[0].owned)
+    }
+
+    @Test
+    fun `buildSnapshot omits connectingArt binder when no slots assigned`() {
+        val groups = listOf(caGroup(1, "Group A"))
+        val slots = listOf(
+            caSlot(groupId = 1, slotIndex = 0, cardId = null),
+            caSlot(groupId = 1, slotIndex = 1, cardId = null)
+        )
+
+        val snapshot = repository.buildSnapshot(
+            emptyList(), emptyList(), defaultConfig,
+            connectingArtGroups = groups, connectingArtSlots = slots
+        )
+
+        assertTrue(snapshot.binders.none { it.id == "connectingArt" })
+    }
+
+    @Test
+    fun `buildSnapshot skips empty connectingArt group but keeps a non-empty one`() {
+        val groups = listOf(caGroup(1, "Group A"), caGroup(2, "Group B"))
+        val slots = listOf(
+            caSlot(groupId = 1, slotIndex = 0, cardId = null),
+            caSlot(groupId = 2, slotIndex = 0, cardId = "c1")
+        )
+
+        val snapshot = repository.buildSnapshot(
+            emptyList(), emptyList(), defaultConfig,
+            connectingArtGroups = groups, connectingArtSlots = slots
+        )
+
+        val binder = snapshot.binders.single { it.id == "connectingArt" }
+        assertEquals(1, binder.sections.size)
+        assertEquals("Group B", binder.sections[0].name)
+    }
+
+    @Test
+    fun `buildSnapshot connectingArt slotId encodes group id and slot index`() {
+        val groups = listOf(caGroup(2, "Group B"))
+        val slots = listOf(
+            caSlot(groupId = 2, slotIndex = 0, cardId = null),
+            caSlot(groupId = 2, slotIndex = 1, cardId = "c1")
+        )
+
+        val snapshot = repository.buildSnapshot(
+            emptyList(), emptyList(), defaultConfig,
+            connectingArtGroups = groups, connectingArtSlots = slots
+        )
+
+        val binder = snapshot.binders.single { it.id == "connectingArt" }
+        assertEquals("ca-2-1", binder.sections[0].slots[1].slotId)
+    }
+
+    @Test
+    fun `buildSnapshot includes personalCollection binder with all cached cards and owned flags`() {
+        val cache = listOf(
+            pcCache("c1", "charizard", release = "2020-01-01"),
+            pcCache("c2", "charizard", release = "2021-01-01")
+        )
+        val entries = listOf(pcEntry("c1", owned = true))
+
+        val snapshot = repository.buildSnapshot(
+            emptyList(), emptyList(), defaultConfig,
+            personalCache = cache, personalEntries = entries
+        )
+
+        val binder = snapshot.binders.single { it.id == "personalCollection" }
+        val section = binder.sections.single { it.name == "Charizard" }
+        assertEquals(2, section.slots.size)
+        assertTrue(section.slots.all { it.cardId != null })
+        assertEquals(1, section.slots.count { it.owned })
+        assertEquals(1, section.slots.count { !it.owned })
+    }
+
+    @Test
+    fun `buildSnapshot omits personalCollection binder when cache empty`() {
+        val snapshot = repository.buildSnapshot(
+            emptyList(), emptyList(), defaultConfig,
+            personalCache = emptyList(), personalEntries = emptyList()
+        )
+
+        assertTrue(snapshot.binders.none { it.id == "personalCollection" })
+    }
+
+    @Test
+    fun `buildSnapshot skips empty personalCollection section`() {
+        val cache = listOf(pcCache("c1", "charizard"))
+
+        val snapshot = repository.buildSnapshot(
+            emptyList(), emptyList(), defaultConfig,
+            personalCache = cache, personalEntries = emptyList()
+        )
+
+        val binder = snapshot.binders.single { it.id == "personalCollection" }
+        assertEquals(1, binder.sections.size)
+        assertEquals("Charizard", binder.sections[0].name)
+    }
+
+    @Test
+    fun `buildSnapshot personalCollection section name uses display title`() {
+        val cache = listOf(pcCache("c1", "minccino_cinccino"))
+
+        val snapshot = repository.buildSnapshot(
+            emptyList(), emptyList(), defaultConfig,
+            personalCache = cache, personalEntries = emptyList()
+        )
+
+        val binder = snapshot.binders.single { it.id == "personalCollection" }
+        assertEquals("Minccino & Cinccino", binder.sections.single().name)
+    }
+
+    @Test
+    fun `computeDiff owned flip on same card is REPLACED`() {
+        val baseline = binderWith(slot("c1", cardId = "c1", owned = false))
+        val next = binderWith(slot("c1", cardId = "c1", owned = true))
+
+        val diff = repository.computeDiff(baseline, next)
+
+        assertEquals(1, diff.deltas.size)
+        assertEquals(ChangeType.REPLACED, diff.deltas[0].type)
+    }
+
+    @Test
+    fun `computeDiff owned unchanged same card is no change`() {
+        val baseline = binderWith(slot("c1", cardId = "c1", owned = true))
+        val next = binderWith(slot("c1", cardId = "c1", owned = true))
+
+        val diff = repository.computeDiff(baseline, next)
+
+        assertTrue(diff.deltas.isEmpty())
+    }
+
+    @Test
+    fun `buildSnapshot connectingArt and personalCollection slots do not inflate pokedexComplete`() {
+        val entries = listOf(entry("bulbasaur", "Bulbasaur", 1, cardId = "xy1-1"))
+        val groups = listOf(caGroup(1, "Group A"))
+        val caSlots = listOf(caSlot(groupId = 1, slotIndex = 0, cardId = "c1", owned = true))
+        val cache = listOf(pcCache("pc1", "charizard"))
+
+        val next = repository.buildSnapshot(
+            entries, emptyList(), defaultConfig,
+            connectingArtGroups = groups, connectingArtSlots = caSlots,
+            personalCache = cache, personalEntries = emptyList()
+        )
+        val diff = repository.computeDiff(null, next)
+
+        assertEquals(1, diff.pokedexComplete)
     }
 }

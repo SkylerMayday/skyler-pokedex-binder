@@ -29,6 +29,8 @@ import com.skyler.pokedexbinder.ui.secondarybinder.SecondaryBinderViewModel
 import com.skyler.pokedexbinder.ui.settings.SettingsScreen
 import com.skyler.pokedexbinder.ui.settings.SettingsViewModel
 import com.skyler.pokedexbinder.ui.slotdetail.SlotDetailScreen
+import com.skyler.pokedexbinder.ui.unown.UnownBinderScreen
+import com.skyler.pokedexbinder.ui.unown.UnownBinderViewModel
 import kotlinx.coroutines.launch
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -39,6 +41,13 @@ sealed class Screen(val route: String) {
     object ConnectingArt : Screen("connecting_art")
     object ConnectingArtSearch : Screen("connecting_art_search/{slotId}") {
         fun createRoute(slotId: Int) = "connecting_art_search/$slotId"
+    }
+    object Unown : Screen("unown")
+    object UnownSearch : Screen("unown_search/{letterId}") {
+        fun createRoute(letterId: String): String {
+            val enc = StandardCharsets.UTF_8.toString()
+            return "unown_search/" + URLEncoder.encode(letterId, enc).replace("+", "%20")
+        }
     }
     object PersonalCollection : Screen("personal_collection")
     object Settings : Screen("settings")
@@ -113,6 +122,12 @@ fun AppNavigation() {
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
                 NavigationDrawerItem(
+                    label = { Text("Unown") },
+                    selected = isSelected(Screen.Unown.route),
+                    onClick = { closeDrawer(); navigateTo(Screen.Unown.route) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+                NavigationDrawerItem(
                     label = { Text("Card History") },
                     selected = isSelected(Screen.SecondaryBinder.route),
                     onClick = { closeDrawer(); navigateTo(Screen.SecondaryBinder.route) },
@@ -165,6 +180,7 @@ fun AppNavigation() {
                 }
                 composable(Screen.SecondaryBinder.route) {
                     SecondaryBinderScreen(
+                        onOpenDrawer = { openDrawer() },
                         onScanCard = {
                             navController.navigate(Screen.Scanner.createRoute(isSecondary = true))
                         },
@@ -198,8 +214,39 @@ fun AppNavigation() {
                         }
                     )
                 }
+                composable(Screen.Unown.route) {
+                    UnownBinderScreen(
+                        onOpenDrawer = { openDrawer() },
+                        onOpenSlotSearch = { letterId ->
+                            navController.navigate(Screen.UnownSearch.createRoute(letterId))
+                        }
+                    )
+                }
+                composable(
+                    route = Screen.UnownSearch.route,
+                    arguments = listOf(navArgument("letterId") { type = NavType.StringType })
+                ) { backStack ->
+                    val letterId = backStack.arguments?.getString("letterId") ?: ""
+                    val parentEntry = remember(backStack) {
+                        navController.getBackStackEntry(Screen.Unown.route)
+                    }
+                    val unownVm: UnownBinderViewModel = hiltViewModel(parentEntry)
+                    ManualSearchScreen(
+                        initialQuery = com.skyler.pokedexbinder.repository.UnownBinderRepository.searchNameFor(letterId),
+                        onCardSelected = { card ->
+                            unownVm.assignPendingCard(card)
+                            navController.popBackStack()
+                        },
+                        onBack = {
+                            unownVm.cancelAssign()
+                            navController.popBackStack()
+                        }
+                    )
+                }
                 composable(Screen.PersonalCollection.route) {
-                    PersonalCollectionScreen(onOpenDrawer = { openDrawer() })
+                    PersonalCollectionScreen(
+                        onOpenDrawer = { openDrawer() }
+                    )
                 }
                 composable(Screen.Settings.route) {
                     SettingsScreen(onBack = { navController.popBackStack() })

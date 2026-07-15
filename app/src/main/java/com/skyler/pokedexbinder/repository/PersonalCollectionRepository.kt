@@ -21,6 +21,10 @@ class PersonalCollectionRepository @Inject constructor(
 
     suspend fun cacheCount(): Int = dao.cacheCount()
 
+    suspend fun getAllCache(): List<PersonalCollectionCache> = dao.getAllCache()
+
+    suspend fun getAllEntries(): List<PersonalCollectionEntry> = dao.getAllEntries()
+
     suspend fun setOwned(cardId: String, owned: Boolean) =
         dao.upsertEntry(PersonalCollectionEntry(cardId = cardId, owned = owned))
 

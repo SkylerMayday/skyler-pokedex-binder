@@ -2,9 +2,14 @@ package com.skyler.pokedexbinder.publish
 
 import android.util.Base64
 import android.util.Log
+import com.skyler.pokedexbinder.data.local.ConnectingArtGroup
+import com.skyler.pokedexbinder.data.local.ConnectingArtSlot
 import com.skyler.pokedexbinder.data.local.MainBinderEntry
+import com.skyler.pokedexbinder.data.local.PersonalCollectionCache
+import com.skyler.pokedexbinder.data.local.PersonalCollectionEntry
 import com.skyler.pokedexbinder.data.local.SecondaryBinderDao
 import com.skyler.pokedexbinder.data.local.SecondaryBinderEntry
+import com.skyler.pokedexbinder.data.local.UnownBinderEntry
 import com.skyler.pokedexbinder.data.remote.DiscordApi
 import com.skyler.pokedexbinder.data.remote.DiscordWebhookPayload
 import com.skyler.pokedexbinder.data.remote.GitHubApi
@@ -23,8 +28,11 @@ import com.skyler.pokedexbinder.publish.model.SnapshotBinder
 import com.skyler.pokedexbinder.publish.model.SnapshotSection
 import com.skyler.pokedexbinder.publish.model.SnapshotSlot
 import com.skyler.pokedexbinder.repository.BinderRepository
+import com.skyler.pokedexbinder.repository.ConnectingArtRepository
+import com.skyler.pokedexbinder.repository.PersonalCollectionRepository
 import com.skyler.pokedexbinder.repository.PublishConfig
 import com.skyler.pokedexbinder.repository.PublishSettingsRepository
+import com.skyler.pokedexbinder.repository.UnownBinderRepository
 import com.squareup.moshi.Moshi
 import retrofit2.Response
 import java.time.OffsetDateTime
@@ -43,6 +51,14 @@ private const val BINDER_ID_CARD_HISTORY = "cardHistory"
 private const val BINDER_NAME_CARD_HISTORY = "Card History"
 private const val SECTION_CARD_HISTORY = "Card History"
 private const val SLOT_TYPE_BASE = "BASE"
+
+private const val BINDER_ID_CONNECTING_ART = "connectingArt"
+private const val BINDER_NAME_CONNECTING_ART = "Connecting Art"
+private const val BINDER_ID_PERSONAL_COLLECTION = "personalCollection"
+private const val BINDER_NAME_PERSONAL_COLLECTION = "Personal Collection"
+private const val BINDER_ID_UNOWN = "unown"
+private const val BINDER_NAME_UNOWN = "Unown"
+private const val SECTION_UNOWN = "Unown"
 
 sealed interface PublishStep {
     data object FetchingCurrent : PublishStep
@@ -67,7 +83,10 @@ class PublishRepository @Inject constructor(
     private val moshi: Moshi,
     private val publishSettingsRepository: PublishSettingsRepository,
     private val binderRepository: BinderRepository,
-    private val secondaryBinderDao: SecondaryBinderDao
+    private val secondaryBinderDao: SecondaryBinderDao,
+    private val connectingArtRepository: ConnectingArtRepository,
+    private val personalCollectionRepository: PersonalCollectionRepository,
+    private val unownBinderRepository: UnownBinderRepository
 ) {
 
     /** Public page URL for the configured owner/repo, e.g. https://skylermayday.github.io/binders-pokedex-binder/ */
@@ -95,7 +114,17 @@ class PublishRepository @Inject constructor(
 
             val entries = binderRepository.getAllEntries()
             val secondaryEntries = if (config.publishCardHistory) secondaryBinderDao.getAll() else emptyList()
-            val nextSnapshot = buildSnapshot(entries, secondaryEntries, config)
+
+            // Content-gated binders — always read (no PublishConfig toggle, per spec non-goal).
+            val connectingArtGroups = connectingArtRepository.getAllGroups()
+            val connectingArtSlots = connectingArtRepository.getAllSlots()
+            val personalCache = personalCollectionRepository.getAllCache()
+            val personalEntries = personalCollectionRepository.getAllEntries()
+            val unownEntries = unownBinderRepository.getAllEntries()
+            val nextSnapshot = buildSnapshot(
+                entries, secondaryEntries, config,
+                connectingArtGroups, connectingArtSlots, personalCache, personalEntries, unownEntries
+            )
 
             val diff = computeDiff(baseline, nextSnapshot)
 
@@ -253,7 +282,12 @@ class PublishRepository @Inject constructor(
     internal fun buildSnapshot(
         entries: List<MainBinderEntry>,
         secondaryEntries: List<SecondaryBinderEntry>,
-        config: PublishConfig
+        config: PublishConfig,
+        connectingArtGroups: List<ConnectingArtGroup> = emptyList(),
+        connectingArtSlots: List<ConnectingArtSlot> = emptyList(),
+        personalCache: List<PersonalCollectionCache> = emptyList(),
+        personalEntries: List<PersonalCollectionEntry> = emptyList(),
+        unownEntries: List<UnownBinderEntry> = emptyList()
     ): BinderSnapshot {
         val binders = mutableListOf<SnapshotBinder>()
 
@@ -289,6 +323,90 @@ class PublishRepository @Inject constructor(
                 id = BINDER_ID_CARD_HISTORY,
                 name = BINDER_NAME_CARD_HISTORY,
                 sections = listOf(SnapshotSection(name = SECTION_CARD_HISTORY, slots = slots))
+            )
+        }
+
+        // Connecting Art — content-gated. Include a group's section only if it has ≥1 assigned slot.
+        // Emit ALL of an included group's slots (empty ones too) to preserve grid layout.
+        val caSlotsByGroup = connectingArtSlots.groupBy { it.groupId }
+        val caSections = connectingArtGroups
+            .sortedWith(compareBy({ it.position }, { it.id }))
+            .mapNotNull { group ->
+                val groupSlots = caSlotsByGroup[group.id].orEmpty()
+                if (groupSlots.none { it.cardId != null }) return@mapNotNull null   // skip empty group
+                SnapshotSection(
+                    name = group.name,
+                    slots = groupSlots
+                        .sortedBy { it.slotIndex }
+                        .map { slot ->
+                            SnapshotSlot(
+                                dexNumber = 0,
+                                slotName = "${group.name} #${slot.slotIndex + 1}",
+                                slotType = SLOT_TYPE_BASE,
+                                slotId = "ca-${group.id}-${slot.slotIndex}",
+                                cardId = slot.cardId,
+                                cardName = slot.cardName,
+                                cardSet = null,                 // CA slots carry no set name
+                                imageUrl = slot.cardImageUrl,
+                                owned = slot.owned              // R3
+                            )
+                        }
+                )
+            }
+        if (caSections.isNotEmpty()) {
+            binders += SnapshotBinder(BINDER_ID_CONNECTING_ART, BINDER_NAME_CONNECTING_ART, caSections)
+        }
+
+        // Personal Collection — content-gated. One section per fixed Pokémon section that has ≥1 cache row.
+        // Publish ALL cached cards (owned + unowned); owned flag from personal_collection_entry.
+        val pcOwnedIds = personalEntries.filter { it.owned }.map { it.cardId }.toSet()
+        val pcCacheByKey = personalCache.groupBy { it.pokemonKey }
+        val pcSections = PERSONAL_COLLECTION_SECTION_ORDER.mapNotNull { (key, title) ->
+            val rows = pcCacheByKey[key].orEmpty()
+            if (rows.isEmpty()) return@mapNotNull null          // skip empty section
+            SnapshotSection(
+                name = title,
+                slots = rows
+                    .sortedByDescending { it.releaseDate }       // same ordering as the app's cache query
+                    .map { row ->
+                        SnapshotSlot(
+                            dexNumber = 0,
+                            slotName = row.name,
+                            slotType = SLOT_TYPE_BASE,
+                            slotId = row.cardId,                 // cardId is the PK — globally unique
+                            cardId = row.cardId,
+                            cardName = row.name,
+                            cardSet = row.setName,
+                            imageUrl = row.imageUrl,
+                            owned = row.cardId in pcOwnedIds     // R6: absent entry => false
+                        )
+                    }
+            )
+        }
+        if (pcSections.isNotEmpty()) {
+            binders += SnapshotBinder(BINDER_ID_PERSONAL_COLLECTION, BINDER_NAME_PERSONAL_COLLECTION, pcSections)
+        }
+
+        // Unown — content-gated, single flat section. Only publish if at least one letter is assigned.
+        if (unownEntries.any { it.assignedCardId != null }) {
+            val unownSlots = unownEntries
+                .sortedBy { it.position }
+                .map { entry ->
+                    SnapshotSlot(
+                        dexNumber = 0,
+                        slotName = "Unown ${entry.letterId}",
+                        slotType = SLOT_TYPE_BASE,
+                        slotId = "unown-${entry.letterId}",
+                        cardId = entry.assignedCardId,
+                        cardName = entry.assignedCardName,
+                        cardSet = entry.assignedCardSetName,
+                        imageUrl = entry.assignedCardImageUrl
+                    )
+                }
+            binders += SnapshotBinder(
+                id = BINDER_ID_UNOWN,
+                name = BINDER_NAME_UNOWN,
+                sections = listOf(SnapshotSection(name = SECTION_UNOWN, slots = unownSlots))
             )
         }
 
@@ -362,6 +480,16 @@ class PublishRepository @Inject constructor(
                         )
                     }
                     baselineCardId != null && nextCardId != null && baselineCardId != nextCardId -> {
+                        deltas += SlotDelta(
+                            type = ChangeType.REPLACED,
+                            slotId = slotId,
+                            displayName = nextSlot.cardName ?: nextSlot.slotName,
+                            cardSet = nextSlot.cardSet
+                        )
+                    }
+                    baselineCardId != null && nextCardId != null &&
+                        baselineCardId == nextCardId &&
+                        baselineSlot!!.owned != nextSlot!!.owned -> {
                         deltas += SlotDelta(
                             type = ChangeType.REPLACED,
                             slotId = slotId,

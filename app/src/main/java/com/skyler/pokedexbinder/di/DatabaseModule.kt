@@ -21,9 +21,11 @@ object DatabaseModule {
             .addMigrations(
                 PokedexDatabase.MIGRATION_4_5,
                 PokedexDatabase.MIGRATION_5_6,
-                PokedexDatabase.MIGRATION_6_7
+                PokedexDatabase.MIGRATION_6_7,
+                PokedexDatabase.MIGRATION_7_8
             )
             .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigrationOnDowngrade()
             .build()
 
     @Provides
@@ -37,4 +39,7 @@ object DatabaseModule {
 
     @Provides
     fun providePersonalCollectionDao(db: PokedexDatabase): PersonalCollectionDao = db.personalCollectionDao()
+
+    @Provides
+    fun provideUnownBinderDao(db: PokedexDatabase): UnownBinderDao = db.unownBinderDao()
 }

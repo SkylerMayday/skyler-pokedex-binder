@@ -12,9 +12,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ConnectingArtGroup::class,
         ConnectingArtSlot::class,
         PersonalCollectionCache::class,
-        PersonalCollectionEntry::class
+        PersonalCollectionEntry::class,
+        UnownBinderEntry::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class PokedexDatabase : RoomDatabase() {
@@ -22,6 +23,7 @@ abstract class PokedexDatabase : RoomDatabase() {
     abstract fun secondaryBinderDao(): SecondaryBinderDao
     abstract fun connectingArtDao(): ConnectingArtDao
     abstract fun personalCollectionDao(): PersonalCollectionDao
+    abstract fun unownBinderDao(): UnownBinderDao
 
     companion object {
         val MIGRATION_4_5 = object : Migration(4, 5) {
@@ -81,6 +83,20 @@ abstract class PokedexDatabase : RoomDatabase() {
                     "CREATE TABLE IF NOT EXISTS `personal_collection_entry` (" +
                         "`cardId` TEXT NOT NULL PRIMARY KEY, " +
                         "`owned` INTEGER NOT NULL DEFAULT 0)"
+                )
+            }
+        }
+
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `unown_binder` (" +
+                        "`letterId` TEXT NOT NULL PRIMARY KEY, " +
+                        "`position` INTEGER NOT NULL, " +
+                        "`assignedCardId` TEXT, " +
+                        "`assignedCardImageUrl` TEXT, " +
+                        "`assignedCardName` TEXT, " +
+                        "`assignedCardSetName` TEXT)"
                 )
             }
         }

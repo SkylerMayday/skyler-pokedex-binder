@@ -10,7 +10,10 @@ import com.skyler.pokedexbinder.data.model.TcgCard
 import com.skyler.pokedexbinder.domain.AssignCardUseCase
 import com.skyler.pokedexbinder.repository.BinderRepository
 import com.skyler.pokedexbinder.repository.CardSearchRepository
+import com.skyler.pokedexbinder.repository.SearchProgress
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -19,7 +22,7 @@ import javax.inject.Inject
 sealed class QuickScanState {
     object Idle : QuickScanState()
     object Searching : QuickScanState()
-    data class CardSelection(val cards: List<TcgCard>) : QuickScanState()
+    data class CardSelection(val cards: List<TcgCard>, val stillSearching: Boolean = false) : QuickScanState()
     data class CardConfirm(val card: TcgCard, val allCards: List<TcgCard>, val isReplace: Boolean) : QuickScanState()
     data class SlotSelection(val card: TcgCard, val slots: List<PokemonSlot>) : QuickScanState()
     data class Success(val card: TcgCard, val slotName: String) : QuickScanState()
@@ -46,6 +49,7 @@ class QuickScanViewModel @Inject constructor(
     val state: StateFlow<QuickScanState> = _state
 
     private var lastQuery: String = ""
+    private var searchJob: Job? = null
 
     /** Display name for the slot, set after DB lookup. Used in success/confirm messages. */
     private var targetSlotName: String = ""
@@ -65,34 +69,49 @@ class QuickScanViewModel @Inject constructor(
     /** Auto-search triggered by tapping a slot. Receives effectiveSearchName from DB lookup. */
     private fun searchForSlot(slotName: String) {
         lastQuery = slotName
-        _state.value = QuickScanState.Searching
-        viewModelScope.launch {
-            try {
-                val cards = cardSearchRepository.searchByName(slotName)
-                _state.value = if (cards.isEmpty()) QuickScanState.NotFound(slotName)
-                else QuickScanState.CardSelection(cards)
-            } catch (e: Exception) {
-                _state.value = QuickScanState.Error(e.message ?: "Search failed")
-            }
-        }
+        runSearch(tcgcsvQuery = slotName) { cardSearchRepository.searchByName(slotName) }
     }
 
     fun search(query: String) {
         if (query.isBlank()) return
         lastQuery = query
+        val trimmed = query.trim()
+        runSearch(tcgcsvQuery = trimmed) {
+            val dexNum = trimmed.toIntOrNull()
+            when {
+                dexNum != null -> cardSearchRepository.searchByDexNumber(dexNum)
+                isPromoNumber(trimmed) -> cardSearchRepository.searchByNumber(trimmed)
+                    .ifEmpty { cardSearchRepository.searchByName(trimmed) }
+                else -> cardSearchRepository.searchByName(trimmed)
+            }
+        }
+    }
+
+    /**
+     * Runs [fastSearch] (pokemontcg.io + TCGdex) and TCGCSV concurrently via
+     * [CardSearchRepository.searchStreaming]. Fast results (if any) render immediately with
+     * [QuickScanState.CardSelection.stillSearching] = true; if the fast source finds nothing,
+     * the plain [QuickScanState.Searching] spinner stays up rather than jumping to
+     * [QuickScanState.NotFound] — TCGCSV might still rescue the search (e.g. CLB Mr. Mime).
+     * [QuickScanState.NotFound] is only reached once TCGCSV has also finished and found nothing.
+     */
+    private fun runSearch(tcgcsvQuery: String, fastSearch: suspend () -> List<TcgCard>) {
+        searchJob?.cancel()
         _state.value = QuickScanState.Searching
-        viewModelScope.launch {
+        searchJob = viewModelScope.launch {
             try {
-                val trimmed = query.trim()
-                val dexNum = trimmed.toIntOrNull()
-                val cards = when {
-                    dexNum != null -> cardSearchRepository.searchByDexNumber(dexNum)
-                    isPromoNumber(trimmed) -> cardSearchRepository.searchByNumber(trimmed)
-                        .ifEmpty { cardSearchRepository.searchByName(trimmed) }
-                    else -> cardSearchRepository.searchByName(trimmed)
+                cardSearchRepository.searchStreaming(tcgcsvQuery, fastSearch).collect { progress ->
+                    _state.value = when (progress) {
+                        is SearchProgress.Fast ->
+                            if (progress.cards.isEmpty()) QuickScanState.Searching
+                            else QuickScanState.CardSelection(progress.cards, stillSearching = true)
+                        is SearchProgress.Complete ->
+                            if (progress.cards.isEmpty()) QuickScanState.NotFound(tcgcsvQuery)
+                            else QuickScanState.CardSelection(progress.cards, stillSearching = false)
+                    }
                 }
-                _state.value = if (cards.isEmpty()) QuickScanState.NotFound(query)
-                else QuickScanState.CardSelection(cards)
+            } catch (e: CancellationException) {
+                throw e // never swallow cancellation, never flip to Error on supersede
             } catch (e: Exception) {
                 _state.value = QuickScanState.Error(e.message ?: "Search failed")
             }

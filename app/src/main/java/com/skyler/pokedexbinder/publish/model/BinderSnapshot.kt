@@ -33,5 +33,6 @@ data class SnapshotSlot(
     val cardId: String?,               // null = empty slot
     val cardName: String?,             // fallback handled by viewer/Discord, not here
     val cardSet: String?,
-    val imageUrl: String?
+    val imageUrl: String?,
+    val owned: Boolean = true          // additive, backward-compatible (old JSON with no field defaults to true)
 )

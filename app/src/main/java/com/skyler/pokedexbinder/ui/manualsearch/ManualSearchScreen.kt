@@ -28,15 +28,20 @@ import com.skyler.pokedexbinder.data.model.TcgCard
 fun ManualSearchScreen(
     onCardSelected: (TcgCard) -> Unit,
     onBack: () -> Unit,
+    initialQuery: String? = null,
     viewModel: ManualSearchViewModel = hiltViewModel()
 ) {
-    var query by remember { mutableStateOf("") }
+    var query by remember { mutableStateOf(initialQuery ?: "") }
     val state by viewModel.state.collectAsState()
     val promoOnly by viewModel.promoOnly.collectAsState()
     var previewCard by remember { mutableStateOf<TcgCard?>(null) }
 
     previewCard?.let { card ->
         CardPreviewDialog(card = card, onDismiss = { previewCard = null })
+    }
+
+    LaunchedEffect(Unit) {
+        if (!initialQuery.isNullOrBlank()) viewModel.search(initialQuery)
     }
 
     Scaffold(
@@ -93,39 +98,52 @@ fun ManualSearchScreen(
                     }
                 }
                 is SearchState.Results -> {
-                    if (s.cards.isEmpty()) {
-                        Column(
-                            modifier = Modifier.weight(1f).fillMaxWidth().padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text("No cards found", style = MaterialTheme.typography.bodyLarge)
+                    Column(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                        if (s.stillSearching) {
+                            // Thin, non-blocking indeterminate bar under the filter row. Does not intercept
+                            // touches on the results below it — user can tap/assign visible cards while it shows.
+                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                         }
-                    } else {
-                        Text(
-                            "Tap to select · Long-press to preview",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
-                        )
-                        LazyColumn(modifier = Modifier.weight(1f)) {
-                            items(s.cards, key = { it.id }) { card ->
-                                ListItem(
-                                    headlineContent = { Text(card.name) },
-                                    supportingContent = { Text("${card.setName} · #${card.number}") },
-                                    leadingContent = {
-                                        AsyncImage(
-                                            model = card.imageUrl,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(56.dp)
-                                        )
+                        if (s.cards.isEmpty()) {
+                            Box(
+                                modifier = Modifier.weight(1f).fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (s.stillSearching) {
+                                        "No cards found yet — checking more sources…"
+                                    } else {
+                                        "No cards found"
                                     },
-                                    modifier = Modifier.combinedClickable(
-                                        onClick = { onCardSelected(card) },
-                                        onLongClick = { previewCard = card }
-                                    )
+                                    style = MaterialTheme.typography.bodyLarge
                                 )
-                                HorizontalDivider()
+                            }
+                        } else {
+                            Text(
+                                "Tap to select · Long-press to preview",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
+                            )
+                            LazyColumn(modifier = Modifier.weight(1f)) {
+                                items(s.cards, key = { it.id }) { card ->
+                                    ListItem(
+                                        headlineContent = { Text(card.name) },
+                                        supportingContent = { Text("${card.setName} · #${card.number}") },
+                                        leadingContent = {
+                                            AsyncImage(
+                                                model = card.imageUrl,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(56.dp)
+                                            )
+                                        },
+                                        modifier = Modifier.combinedClickable(
+                                            onClick = { onCardSelected(card) },
+                                            onLongClick = { previewCard = card }
+                                        )
+                                    )
+                                    HorizontalDivider()
+                                }
                             }
                         }
                     }

@@ -15,6 +15,10 @@ class ConnectingArtRepository @Inject constructor(
     fun observeAllSlots(): Flow<List<ConnectingArtSlot>> = dao.observeAllSlots()
     fun observeSlots(groupId: Int): Flow<List<ConnectingArtSlot>> = dao.observeSlots(groupId)
 
+    suspend fun getAllGroups(): List<ConnectingArtGroup> = dao.getGroups()
+    suspend fun getAllSlots(): List<ConnectingArtSlot> = dao.getAllSlots()
+    suspend fun updateSlots(slots: List<ConnectingArtSlot>) = dao.updateSlots(slots)
+
     suspend fun createGroup(name: String, rows: Int, cols: Int) =
         dao.createGroupWithSlots(name, rows, cols)
 

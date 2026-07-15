@@ -13,6 +13,9 @@ interface PersonalCollectionDao {
     @Query("SELECT * FROM personal_collection_cache ORDER BY releaseDate DESC")
     fun observeAllCache(): Flow<List<PersonalCollectionCache>>
 
+    @Query("SELECT * FROM personal_collection_cache ORDER BY releaseDate DESC")
+    suspend fun getAllCache(): List<PersonalCollectionCache>
+
     @Query("SELECT COUNT(*) FROM personal_collection_cache")
     suspend fun cacheCount(): Int
 
@@ -35,6 +38,9 @@ interface PersonalCollectionDao {
     // ---- Owned entries ----
     @Query("SELECT * FROM personal_collection_entry")
     fun observeEntries(): Flow<List<PersonalCollectionEntry>>
+
+    @Query("SELECT * FROM personal_collection_entry")
+    suspend fun getAllEntries(): List<PersonalCollectionEntry>
 
     @Query("SELECT * FROM personal_collection_entry WHERE cardId = :cardId")
     suspend fun getEntry(cardId: String): PersonalCollectionEntry?

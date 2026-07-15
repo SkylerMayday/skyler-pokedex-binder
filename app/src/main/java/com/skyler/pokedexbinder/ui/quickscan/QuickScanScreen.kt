@@ -75,6 +75,7 @@ fun QuickScanScreen(
                 is QuickScanState.CardSelection -> {
                     CardPickerList(
                         cards = s.cards,
+                        stillSearching = s.stillSearching,
                         onSelect = { viewModel.selectCard(it) },
                         onSearch = { viewModel.search(it) }
                     )
@@ -202,6 +203,7 @@ private fun SearchPanel(
 @Composable
 private fun CardPickerList(
     cards: List<TcgCard>,
+    stillSearching: Boolean = false,
     onSelect: (TcgCard) -> Unit,
     onSearch: (String) -> Unit
 ) {
@@ -229,6 +231,11 @@ private fun CardPickerList(
             keyboardActions = KeyboardActions(onSearch = { onSearch(query) }),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
         )
+        if (stillSearching) {
+            // Non-blocking — TCGCSV scan still running in the background, may add/backfill
+            // results shortly. Does not intercept touches on the list below it.
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
         Text(
             "Tap to select · Long-press to preview",
             style = MaterialTheme.typography.labelSmall,

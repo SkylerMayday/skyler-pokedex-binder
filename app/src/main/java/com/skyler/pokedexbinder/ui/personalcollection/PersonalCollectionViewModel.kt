@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.skyler.pokedexbinder.repository.PersonalCollectionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +18,9 @@ import javax.inject.Inject
 /** Fixed section definitions — the 5 Pokémon in spec order. */
 data class PokemonSection(val key: String, val title: String, val queryNames: List<String>)
 
-val PERSONAL_COLLECTION_SECTIONS = listOf(
+// Unown lives in its own standalone binder (hamburger menu, ui/unown/) — fixed 28-slot,
+// one-card-per-slot assignment. Not part of Personal Collection's search-and-toggle model.
+val PERSONAL_COLLECTION_SECTIONS: List<PokemonSection> = listOf(
     PokemonSection("charizard", "Charizard", listOf("Charizard")),
     PokemonSection("celebi", "Celebi", listOf("Celebi")),
     PokemonSection("leafeon", "Leafeon", listOf("Leafeon")),
@@ -67,9 +72,22 @@ class PersonalCollectionViewModel @Inject constructor(
         viewModelScope.launch {
             _isRefreshing.value = true
             _errorMessage.value = null
+            // Refreshed with bounded concurrency, each section isolated via runCatching so one
+            // section throwing can't cancel its siblings or abort chunks that haven't run yet.
+            val failedSections = mutableListOf<String>()
             try {
-                PERSONAL_COLLECTION_SECTIONS.forEach { section ->
-                    repository.refreshPokemon(section.key, section.queryNames)
+                coroutineScope {
+                    PERSONAL_COLLECTION_SECTIONS.chunked(REFRESH_CONCURRENCY).forEach { chunk ->
+                        chunk.map { section ->
+                            async {
+                                runCatching { repository.refreshPokemon(section.key, section.queryNames) }
+                                    .onFailure { failedSections += section.title }
+                            }
+                        }.awaitAll()
+                    }
+                }
+                if (failedSections.isNotEmpty()) {
+                    _errorMessage.value = "Couldn't refresh: ${failedSections.joinToString()}"
                 }
             } catch (e: Exception) {
                 _errorMessage.value = e.message ?: "Failed to refresh collection"
@@ -77,6 +95,10 @@ class PersonalCollectionViewModel @Inject constructor(
                 _isRefreshing.value = false
             }
         }
+    }
+
+    private companion object {
+        const val REFRESH_CONCURRENCY = 8
     }
 
     fun toggleOwned(cardId: String, currentlyOwned: Boolean) {

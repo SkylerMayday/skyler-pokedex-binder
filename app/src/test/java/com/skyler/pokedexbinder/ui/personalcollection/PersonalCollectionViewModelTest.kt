@@ -169,8 +169,54 @@ class PersonalCollectionViewModelTest {
         vm.uiState.test {
             val settled = awaitItem()
             assertFalse(settled.isRefreshing)
-            assertEquals("network down", settled.errorMessage)
+            assertNotNull(settled.errorMessage)
+            assertTrue(settled.errorMessage!!.contains("Couldn't refresh"))
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    @Test
+    fun `a single section failing does not prevent the others from being attempted`() = runTest {
+        // A prior version wrapped all sections in one coroutineScope, so one throw cancelled
+        // every sibling AND aborted every chunk that hadn't started yet. Only "charizard" fails
+        // here; every other section must still be attempted regardless.
+        // repository is a relaxed mock — every unstubbed section already "succeeds" (no-op) by
+        // default, so only charizard needs an explicit stub to fail.
+        coEvery { repository.refreshPokemon(eq("charizard"), any()) } throws RuntimeException("boom")
+
+        val vm = PersonalCollectionViewModel(repository)
+        vm.refreshAll()
+
+        vm.uiState.test {
+            val settled = awaitItem()
+            assertFalse(settled.isRefreshing)
+            assertTrue(settled.errorMessage!!.contains("Charizard"))
+            // All sections attempted despite the failure, not just the ones before it in the list.
+            coVerify(exactly = PERSONAL_COLLECTION_SECTIONS.size) { repository.refreshPokemon(any(), any()) }
+            PERSONAL_COLLECTION_SECTIONS.forEach { section ->
+                coVerify { repository.refreshPokemon(eq(section.key), eq(section.queryNames)) }
+            }
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `section list contains only the 5 original sections`() {
+        // Unown lives in its own standalone binder (ui/unown/) — not part of this screen.
+        assertEquals(5, PERSONAL_COLLECTION_SECTIONS.size)
+        assertEquals(
+            listOf("charizard", "celebi", "leafeon", "tangela", "minccino_cinccino"),
+            PERSONAL_COLLECTION_SECTIONS.map { it.key }
+        )
+    }
+
+    @Test
+    fun `refreshAll refreshes every one of the 5 sections`() = runTest {
+        coEvery { repository.cacheCount() } returns 1
+        val vm = PersonalCollectionViewModel(repository)
+
+        vm.refreshAll()
+
+        coVerify(exactly = 5) { repository.refreshPokemon(any(), any()) }
     }
 }

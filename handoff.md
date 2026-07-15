@@ -1,105 +1,138 @@
-# Handoff — 2026-07-08
+# Handoff — 2026-07-15
 
-## What happened this session (continues from 2026-07-06's four-workstream batch)
+## Goals (this session)
 
-Short session: status check, one test fix, live API research, and a spec that went through
-three revisions before approval. No pipeline runs — implementation of the approved spec is
-deliberately the NEXT session's job (approval arrived bundled with wrapcon).
+Started from "check handoff, do what's needed" and expanded into a long, iterative on-device
+debugging session covering: a new Unown binder feature, TCGCSV search integration, Connecting
+Art/Personal Collection publish support, and multiple rounds of real bug fixes discovered only
+through actual on-device testing (which this session had none of directly — all "on-device"
+findings came from Skyler's live reports).
 
-## Done this session
+## Current State
 
-1. **Confirmed the NEW-badges design pipeline shipped.** It re-ran ~02:00–02:30 SGT on
-   2026-07-08 (files in `.pipeline/`), verdict SHIP, and the web repo commit (OG tags +
-   badges) is pushed and in sync with `origin/main` on the Pages repo. Web side has nothing
-   pending. Process note from that run: the preview harness's stale-script cache survives
-   `preview_stop`/`preview_start` — future re-verification needs the fetch-`no-store` +
-   indirect-eval workaround documented in `.pipeline/design-review-verdict.md`.
-2. **Fixed `CardSearchRepositoryTest` — the unit suite is now fully green.** Root cause: both
-   mocks stubbed pre-wildcard, pre-Pocket-filter query strings (`name:"Venusaur"` instead of
-   `name:*Venusaur* number:"1" -set.series:Pocket`); the MockK miss threw inside
-   `safeSearch`'s try/catch → silent empty list. Also made the second test non-vacuous (it
-   was passing only because its stale stub never matched and it asserted emptiness).
-3. **Promo-card re-check (stale beliefs corrected):** TCGdex now has `svp-213` Feraligatr and
-   `mep-010` Riolu, and both come back from the exact `/cards?name=` endpoint the app already
-   merges — assignable via name search today, but both lack scans (blank art until TCGdex
-   adds images). Needs on-device confirmation. pokemontcg.io SVP still stops at #207.
-   CLB Mr. Mime (TCG Classic) remains on neither API; TCGCSV (tcgcsv.com, free TCGplayer
-   dumps, Pokémon category 3, group 23323) has it with product images if a source is ever
-   wanted — but that'd be a local-cache integration (static daily dumps, no search API).
-4. **og:image TODO added** to `web/pokedex-binder-site/README.md` (working copy only — README
-   isn't deployed). `index.html` already has a placeholder comment where the tags go.
-5. **Project notes updated + synced to Digital Brain; session archived** to
-   `raw-sources/conversations/2026-07-08-277f342e.{jsonl,md}`.
+**Nothing has been committed since `e42eeb5` (2026-07-10).** The entire session's work — several
+complete features plus multiple real bug fixes — is sitting uncommitted in the working tree.
+Skyler has NOT explicitly said "commit this" yet this session; do not commit without asking.
 
-## ONE approved spec remains — NEXT SESSION STARTS HERE
+All code compiles clean and the full unit suite is green (`./gradlew.bat testDebugUnitTest`,
+verified fresh multiple times this session with `JAVA_HOME=D:\jdk17\jdk-17.0.14+7` and
+`TEMP=TMP=C:\Windows\Temp` set). The debug APK (`app/build/outputs/apk/debug/app-debug.apk`) was
+last rebuilt at 2026-07-15 12:22 SGT with everything below included.
 
-**2026-07-09 update: the binder page-flip viewer spec is SUPERSEDED, not being built here.**
-The website team (separate project, `D:\Claude Projects\skylermayday-site`) is building the
-same bookshelf + 3×3 page-flip interaction natively on the new SkylerMayday.com site's
-`/ptcg-binders` page instead — see `D:\Claude Projects\SkylerMaydaySite\docs\ptcg-binders-redesign-spec.md`.
-`docs/superpowers/specs/2026-07-08-binder-page-flip-viewer.md` is marked superseded in place
-(not deleted, kept for history). **Design/UI ownership for how the binder collection is
-displayed publicly is now entirely the website project's — this project (PokedexBinderV2)
-only owns the Android app and the publish pipeline (binder.json/changelog.json), not how that
-data is presented.**
+**Database is at schema v8 on Skyler's device**, reached via a real `MIGRATION_7_8` (not a
+destructive wipe) — do not revert the Room version below 8 without reading the Gotchas section
+in `project-overview.md` first; a prior revert this session wiped his entire local database.
 
-**GitHub Pages viewer retirement:** `web/pokedex-binder-site/` (deployed to
-`SkylerMayday/binders-pokedex-binder` Pages) stays live as-is for now — do NOT take it down
-yet. It retires once the new site's `/ptcg-binders` redesign ships and is verified working
-(matches the original site spec's phasing). No further design/feature work should go into
-this GitHub Pages viewer in the meantime — it's in maintenance-only mode pending retirement.
+## Active Files (most-touched this session)
 
-The card-details-and-language spec below is unaffected by this and remains the next real
-work item for this project.
+- `app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt` — TCGCSV
+  integration, `searchStreaming`, token-based matching.
+- `app/src/main/java/com/skyler/pokedexbinder/ui/quickscan/QuickScanViewModel.kt` +
+  `QuickScanScreen.kt` — wired onto `searchStreaming` (was previously bypassing TCGCSV entirely).
+- `app/src/main/java/com/skyler/pokedexbinder/ui/unown/` +
+  `data/local/UnownBinderEntry.kt`/`UnownBinderDao.kt` +
+  `repository/UnownBinderRepository.kt` — standalone Unown binder (current, final design).
+- `app/src/main/java/com/skyler/pokedexbinder/ui/personalcollection/PersonalCollectionViewModel.kt` —
+  per-section `runCatching` isolation in `refreshAll()` (real fix, keep it).
+- `app/src/main/java/com/skyler/pokedexbinder/ui/navigation/AppNavigation.kt` — drawer order,
+  Unown routes, Card History `onOpenDrawer` wiring.
+- `app/src/main/java/com/skyler/pokedexbinder/publish/PublishRepository.kt` +
+  `RestoreRepository.kt` — Connecting Art + Personal Collection + Unown publish/restore, all
+  content-gated (no Settings toggle for any of the three).
+- `app/src/main/java/com/skyler/pokedexbinder/di/NetworkModule.kt` — TCGCSV `User-Agent`
+  interceptor (tcgcsv.com bot-blocks OkHttp's default UA).
 
-`docs/superpowers/specs/2026-07-08-card-details-and-language.md` — **APPROVED v3, do not
-re-litigate.** Card details panel on the website's lightbox (name, artist, set·number,
-rarity, language pill, optional version name) + per-card language tagging in the app.
+## Changes Made (chronological, condensed — full detail in the session transcript)
 
-Key facts the implementer needs (all verified live this session, reasoning in the spec):
-- All display text is ENGLISH. No localization calls. The "version name" (JP "Lost Abyss" vs
-  EN "Lost Origin") comes from a bundled static JSON suggestion table (SwSh+SV era, compile
-  from Bulbapedia during the build) pre-filling an editable field. No API can provide this —
-  TCGdex does NOT expose JP/TH/ID/ZH sets under `/v2/en/` (tested: `en/S11`, `en/S12a`,
-  `en/SV2a` all 404).
-- `rarity` is already in every pokemontcg.io response (no `select` param in use) — the DTO
-  just doesn't declare it. Add field, persist, extend existing backfill. `tcgdex_`-prefixed
-  rows can't backfill via pokemontcg.io → "—" in v1 (P1: TCGdex full-card fetch).
-- Room v7→v8: 5 columns on `main_binder` (artist, number, rarity, cardLanguage DEFAULT 'EN',
-  versionName) + `secondary_binder` parity. Migration test required. Remember
-  `fallbackToDestructiveMigration()` is live — a wrong migration wipes silently.
-- Publish diff must NOT emit REPLACED for metadata-only changes (same cardId) — verify
-  explicitly, it's a P0 checkbox.
-- Restore overlays the new fields (extend the existing overlay regression test).
-- Language codes: EN/JA/TH/ID/ZH-TW/ZH-CN/KO.
-- Planner must verify whether Connecting Art / Personal Collection entries appear in
-  binder.json — parity scope follows the data.
+1. Unown binder v1 (standalone, Room v8) + TCGCSV search fallback — built via
+   `dev-team-pipeline`, shipped.
+2. Personal Collection: collapsible sections + jump-to-binder chips (later replaced by a
+   dropdown, see below).
+3. Connecting Art + Personal Collection publish/restore support (content-gated, no toggle) —
+   built via `dev-team-pipeline`. This resolves the 2026-07-11 open question below: both are now
+   wired into `buildSnapshot()`.
+4. **Bug found & fixed**: TCGCSV requests were silently 401'd by tcgcsv.com's bot protection
+   (OkHttp's default User-Agent). Added a browser-like UA header scoped to the TCGCSV client
+   only.
+5. Concurrent 3-source search (`searchStreaming`) + image backfill — built via
+   `dev-team-pipeline`, replacing the old retry-on-empty TCGCSV button.
+6. **Bug found & fixed**: TCGCSV's group-scan filter required the WHOLE query to be a literal
+   substring of the product name — "CLB Mr Mime" failed to match "Mr. Mime" because "CLB" isn't
+   in the product's own name field. Changed to token-based matching (any word ≥3 chars matches).
+7. Unown reworked to live inside Personal Collection as 28 sections (Charizard/Celebi-style
+   auto-search + owned toggle) — per explicit request, later reversed.
+8. **Bug found & fixed**: `PersonalCollectionViewModel.refreshAll()`'s concurrent refresh wrapped
+   all sections in one `coroutineScope` — one section throwing cancelled every sibling and
+   aborted every unstarted chunk, which could silently prevent later-listed sections (like
+   Unown's 28 letters) from ever being attempted. Fixed with per-section `runCatching`.
+9. Unown reverted to a standalone binder (fallback request), simplified to a broad `"Unown"`
+   search query instead of per-letter queries.
+10. **Serious incident**: reverting the Room schema from v8 back to v7 (to undo step 7's
+    migration) triggered `fallbackToDestructiveMigrationOnDowngrade()` because Skyler's device
+    was already at v8 — wiped his entire local database (Pokédex, Card History, Connecting Art,
+    Personal Collection, all gone). Recovered via his last GitHub publish snapshot (he'd
+    published before, so Pokédex/Card History came back via Restore).
+11. `QuickScanViewModel` found to never have used `searchStreaming`/TCGCSV at all — every TCGCSV
+    fix up to this point only applied to `ManualSearchViewModel`, which doesn't back the main
+    Pokédex binder's actual slot-tap assign flow. Fixed: wired `QuickScanViewModel` onto
+    `searchStreaming` too.
+12. Unown briefly re-merged into Personal Collection on a miscommunication, then reverted back
+    to standalone once the actual data-model difference (one-slot-one-card vs.
+    many-cards-with-toggle) was explained and confirmed. **This is the final state.**
+13. Personal Collection's chip row replaced with a "Jump to section" `DropdownMenu` (mirrors the
+    main Pokédex binder's existing pattern) — the chip row became impractical once section count
+    grew.
+14. Unown drawer position moved to directly after Personal Collection (was between Pokédex and
+    Connecting Art).
+15. Card History (`SecondaryBinderScreen`) found to have never had a hamburger-menu button at
+    all — unrelated pre-existing gap, fixed.
+16. Session-end: `project-overview.md` and `gaps.md` created (didn't exist before), this
+    `handoff.md` rewritten, session archived to Digital Brain.
 
-Sequence per global rules: dev-team-pipeline for the app side (Room v8 + rarity + language
-tagging etc.). The web lightbox details panel portion of this spec still applies to
-`web/pokedex-binder-site/` since it's a distinct, non-superseded feature — but given that
-viewer's pending retirement, confirm with Skyler whether it's still worth shipping there vs.
-deferring until/unless the equivalent lightbox exists on the new site. Full unit suite +
-preview verification after (mind the stale-cache workaround, point 1 above).
+## Failed Attempts / Reversed Decisions
 
-## Still open (unchanged from 2026-07-06 unless noted)
+- Unown-inside-Personal-Collection (28 auto-search sections) — built twice, reverted both times.
+  Root cause of the confusion: "put Unown in PC" was interpreted as adopting PC's data model,
+  when what was actually wanted was Unown's own model just reachable from a different place in
+  the UI. Final answer: standalone binder, own nav-drawer entry.
+- Reverting Room from v8 to v7 to "clean up" the schema after undoing the PC-merge — caused a
+  real data-loss incident (see Changes Made #10). Going forward: don't revert a Room version once
+  any build might have reached the device; leave unused columns/tables in place instead.
+- CJK/SEA language card-art matching via TCGdex name-search — investigated live, found genuinely
+  unreliable (many zero-result searches, sparse images even on hits). Confirmed not worth
+  building; explicitly parked by Skyler.
 
-- **On-device verification of multi-binder/restore/backfill** — oldest open gap; only Skyler
-  can do it. DB backup or publish first (untested v6→v7 migration + destructive fallback).
-- ~~2 months of app-repo work uncommitted~~ **COMMITTED 2026-07-08** on Skyler's instruction,
-  4 commits on master (local only — repo has NO remote): db2b43d gitignore (nested site repo
-  ignored — it has its own git history; local.properties/.idea/.pipeline/.claude ignored),
-  4c181ed app feature batch (87 files), c0dc297 notes/handoff/tooling, 5e5d247 docs/specs +
-  pipeline archives. Secrets audited first: none hardcoded (all runtime-entered). fsck clean.
-  **Environment quirk:** `git add`/`commit` intermittently fails with "unable to write file
-  .git/objects/... Permission denied" (likely AV scanning) — an immediate retry always
-  succeeds; don't misdiagnose as repo corruption, verify with `git fsck`.
-- Custom domain (CNAME + DNS) and og:image — low urgency, og:image now tracked in site README.
-- Unown letters deferred; "Braincheck" (Skyler's term, undefined trigger) — asked once, no
-  answer; re-ask if it recurs.
+## Next Steps
 
-## Environment notes (still true)
+1. **Ask Skyler whether to commit.** This is the single biggest open item — a huge amount of
+   verified, tested work is sitting uncommitted.
+2. **On-device re-verification of the very latest build** (12:22 SGT APK) — confirm: Unown shows
+   in the drawer after Personal Collection with 28 working slots; Card History has a working
+   hamburger menu; TCGCSV/CLB Mr. Mime works via the main Pokédex binder's QuickScan flow, not
+   just Connecting Art search.
+3. `Migration7to8Test.kt` (androidTest) was never recreated after the standalone Unown binder's
+   final rebuild — flagged in `gaps.md`.
+4. Decide whether Connecting Art/Personal Collection/Unown's publish data has ever actually been
+   verified end-to-end on the live site (published, then checked on the website project) — this
+   session built and unit-tested the wiring but never confirmed the real GitHub Pages output.
+5. **Carried over from 2026-07-08/2026-07-12, still not started:**
+   - Custom domain (CNAME + DNS) and og:image for the GitHub Pages viewer — low urgency, and
+     that viewer is in maintenance-only mode pending the website project's redesign anyway.
+   - Recent-pulls feed idea (2026-07-12): a stream-facing "latest additions" view driven by
+     `changelog.json`, tying the binder into on-stream pack openings. App side is effectively
+     done (changelog data already published) — this is almost entirely the website project's
+     feature to build. Not yet specced.
+   - "Braincheck" (Skyler's term, used 2026-07-08) — still undefined; re-ask if it recurs.
+
+## Environment Notes (still true)
 
 - `JAVA_HOME=D:\jdk17\jdk-17.0.14+7`; `TEMP=TMP=C:\Windows\Temp` for Gradle runs.
-- No Android emulator in this sandbox; on-device checks happen on Skyler's machine.
+- No Android emulator in this sandbox — every on-device fact this session came from Skyler's
+  live reports, not direct observation. Treat "should work" with extra suspicion until he
+  confirms; this session had several rounds where code was verified correct in isolation but the
+  actual on-device symptom persisted because the fix was in the wrong file (see `QuickScanViewModel`
+  gotcha in `project-overview.md`).
+- Android Studio's "Apply Changes" does not pick up new nav routes/composables/migrations — a
+  full Run/Debug or `adb install -r` is required after every code change, confirmed as the root
+  cause of at least two "my fix isn't showing up" false alarms this session.
 - Session JSONL for this project: `C:\Users\SkylerMayday\.claude\projects\D--Claude-Projects-PokedexBinderV2\`.

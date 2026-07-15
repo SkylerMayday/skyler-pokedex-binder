@@ -1,13 +1,21 @@
 package com.skyler.pokedexbinder.publish
 
+import com.skyler.pokedexbinder.data.local.ConnectingArtSlot
 import com.skyler.pokedexbinder.data.local.MainBinderEntry
+import com.skyler.pokedexbinder.data.local.UnownBinderEntry
 import com.skyler.pokedexbinder.publish.model.SnapshotSlot
 import com.skyler.pokedexbinder.repository.BinderRepository
+import com.skyler.pokedexbinder.repository.ConnectingArtRepository
+import com.skyler.pokedexbinder.repository.PersonalCollectionRepository
 import com.skyler.pokedexbinder.repository.PublishSettingsRepository
+import com.skyler.pokedexbinder.repository.UnownBinderRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val BINDER_ID_POKEDEX = "pokedex"
+private const val BINDER_ID_CONNECTING_ART = "connectingArt"
+private const val BINDER_ID_PERSONAL_COLLECTION = "personalCollection"
+private const val BINDER_ID_UNOWN = "unown"
 
 sealed interface RestoreStep {
     data object Fetching : RestoreStep
@@ -31,7 +39,10 @@ sealed interface RestoreResult {
 class RestoreRepository @Inject constructor(
     private val publishRepository: PublishRepository,
     private val publishSettingsRepository: PublishSettingsRepository,
-    private val binderRepository: BinderRepository
+    private val binderRepository: BinderRepository,
+    private val connectingArtRepository: ConnectingArtRepository,
+    private val personalCollectionRepository: PersonalCollectionRepository,
+    private val unownBinderRepository: UnownBinderRepository
 ) {
 
     suspend fun restore(onStep: (RestoreStep) -> Unit): RestoreResult {
@@ -97,9 +108,111 @@ class RestoreRepository @Inject constructor(
             }
 
             val currentPokemonIds = currentEntries.map { it.pokemonId }.toSet()
-            val skipped = snapshotSlots.keys.count { it !in currentPokemonIds }
+            var skipped = snapshotSlots.keys.count { it !in currentPokemonIds }
 
             binderRepository.seedFromJson(updated)
+
+            // --- Connecting Art overlay — match local slots by "ca-<groupId>-<slotIndex>" key ---
+            val caSnapshotSlots: Map<String, SnapshotSlot> = snapshot.binders
+                .firstOrNull { it.id == BINDER_ID_CONNECTING_ART }
+                ?.sections.orEmpty()
+                .flatMap { it.slots }
+                .associateBy { it.slotId }
+            if (caSnapshotSlots.isNotEmpty()) {
+                val localCaSlots = connectingArtRepository.getAllSlots()
+                val caToUpdate = mutableListOf<ConnectingArtSlot>()
+                localCaSlots.forEach { caSlot ->
+                    val key = "ca-${caSlot.groupId}-${caSlot.slotIndex}"
+                    val snap = caSnapshotSlots[key] ?: return@forEach
+                    when {
+                        snap.cardId != null -> {
+                            restored++
+                            caToUpdate += caSlot.copy(
+                                cardId = snap.cardId,
+                                cardName = snap.cardName,
+                                cardImageUrl = snap.imageUrl,
+                                owned = snap.owned            // R7
+                            )
+                        }
+                        caSlot.cardId != null -> {
+                            cleared++
+                            caToUpdate += caSlot.copy(
+                                cardId = null, cardName = null, cardImageUrl = null, owned = false
+                            )
+                        }
+                        // else: both empty — no-op
+                    }
+                }
+                val localCaKeys = localCaSlots.map { "ca-${it.groupId}-${it.slotIndex}" }.toSet()
+                skipped += caSnapshotSlots.keys.count { it !in localCaKeys }
+                if (caToUpdate.isNotEmpty()) connectingArtRepository.updateSlots(caToUpdate)
+            }
+
+            // --- Personal Collection overlay — restore OWNED state onto personal_collection_entry by cardId.
+            // Does NOT write personal_collection_cache (cache is network-refreshed separately). R6/R8. ---
+            val pcSnapshotSlots: List<SnapshotSlot> = snapshot.binders
+                .firstOrNull { it.id == BINDER_ID_PERSONAL_COLLECTION }
+                ?.sections.orEmpty()
+                .flatMap { it.slots }
+            if (pcSnapshotSlots.isNotEmpty()) {
+                val locallyOwned = personalCollectionRepository.getAllEntries()
+                    .filter { it.owned }.map { it.cardId }.toSet()
+                pcSnapshotSlots.forEach { snap ->
+                    val cardId = snap.cardId ?: return@forEach   // PC slots always carry cardId; guard anyway
+                    val isLocallyOwned = cardId in locallyOwned
+                    when {
+                        snap.owned && !isLocallyOwned -> {
+                            restored++
+                            personalCollectionRepository.setOwned(cardId, true)
+                        }
+                        !snap.owned && isLocallyOwned -> {
+                            cleared++
+                            personalCollectionRepository.removeOwned(cardId)
+                        }
+                        // else: already matches snapshot — no-op
+                    }
+                }
+            }
+
+            // --- Unown overlay — match local letter slots by "unown-<letterId>" key.
+            // Single-assignment overlay, same shape as the main Pokédex binder's, not owned-toggle. ---
+            val unownSnapshotSlots: Map<String, SnapshotSlot> = snapshot.binders
+                .firstOrNull { it.id == BINDER_ID_UNOWN }
+                ?.sections.orEmpty()
+                .flatMap { it.slots }
+                .associateBy { it.slotId }
+            if (unownSnapshotSlots.isNotEmpty()) {
+                val localUnownEntries = unownBinderRepository.getAllEntries()
+                val unownToUpdate = mutableListOf<UnownBinderEntry>()
+                localUnownEntries.forEach { entry ->
+                    val key = "unown-${entry.letterId}"
+                    val snap = unownSnapshotSlots[key] ?: return@forEach
+                    when {
+                        snap.cardId != null -> {
+                            restored++
+                            unownToUpdate += entry.copy(
+                                assignedCardId = snap.cardId,
+                                assignedCardName = snap.cardName,
+                                assignedCardSetName = snap.cardSet,
+                                assignedCardImageUrl = snap.imageUrl
+                            )
+                        }
+                        entry.assignedCardId != null -> {
+                            cleared++
+                            unownToUpdate += entry.copy(
+                                assignedCardId = null,
+                                assignedCardName = null,
+                                assignedCardSetName = null,
+                                assignedCardImageUrl = null
+                            )
+                        }
+                        // else: both empty — no-op
+                    }
+                }
+                val localUnownKeys = localUnownEntries.map { "unown-${it.letterId}" }.toSet()
+                skipped += unownSnapshotSlots.keys.count { it !in localUnownKeys }
+                if (unownToUpdate.isNotEmpty()) unownBinderRepository.overwriteAll(unownToUpdate)
+            }
 
             currentStep = RestoreStep.Done(restored, cleared, skipped)
             onStep(currentStep)

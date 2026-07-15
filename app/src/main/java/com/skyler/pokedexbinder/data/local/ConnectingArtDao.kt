@@ -49,11 +49,17 @@ interface ConnectingArtDao {
     @Query("SELECT * FROM connecting_art_slot ORDER BY groupId ASC, slotIndex ASC")
     fun observeAllSlots(): Flow<List<ConnectingArtSlot>>
 
+    @Query("SELECT * FROM connecting_art_slot ORDER BY groupId ASC, slotIndex ASC")
+    suspend fun getAllSlots(): List<ConnectingArtSlot>
+
     @Insert
     suspend fun insertSlots(slots: List<ConnectingArtSlot>)
 
     @Update
     suspend fun updateSlot(slot: ConnectingArtSlot)
+
+    @Update
+    suspend fun updateSlots(slots: List<ConnectingArtSlot>)
 
     @Query(
         "UPDATE connecting_art_slot SET cardId = :cardId, cardName = :cardName, " +
