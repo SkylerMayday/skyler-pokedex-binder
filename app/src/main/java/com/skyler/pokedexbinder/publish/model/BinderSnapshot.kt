@@ -34,5 +34,8 @@ data class SnapshotSlot(
     val cardName: String?,             // fallback handled by viewer/Discord, not here
     val cardSet: String?,
     val imageUrl: String?,
-    val owned: Boolean = true          // additive, backward-compatible (old JSON with no field defaults to true)
+    val owned: Boolean = true,         // additive, backward-compatible (old JSON with no field defaults to true)
+    val language: String = "EN",       // additive, backward-compatible (old JSON with no field defaults to "EN")
+    val remarks: String? = null,       // additive, backward-compatible (old JSON with no field defaults to null); Pokédex/Unown only, unset elsewhere
+    val isLocked: Boolean = false      // additive, backward-compatible (old JSON with no field defaults to false); Pokédex/Unown only, unset elsewhere
 )

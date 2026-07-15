@@ -106,7 +106,15 @@ class PublishRepositoryTest {
 
     private fun pcEntry(cardId: String, owned: Boolean) = PersonalCollectionEntry(cardId, owned)
 
-    private fun entry(id: String, name: String, dex: Int, cardId: String? = null) = MainBinderEntry(
+    private fun entry(
+        id: String,
+        name: String,
+        dex: Int,
+        cardId: String? = null,
+        language: String = "EN",
+        remarks: String? = null,
+        isLocked: Boolean = false
+    ) = MainBinderEntry(
         pokemonId = id,
         pokemonName = name,
         dexNumber = dex,
@@ -115,7 +123,10 @@ class PublishRepositoryTest {
         assignedCardId = cardId,
         assignedCardImageUrl = cardId?.let { "https://img.url/$it" },
         assignedCardName = cardId?.let { name },
-        assignedCardSetName = cardId?.let { "Base Set" }
+        assignedCardSetName = cardId?.let { "Base Set" },
+        language = language,
+        remarks = remarks,
+        isLocked = isLocked
     )
 
     private fun notFound(): Response<GitHubContentDto> =
@@ -234,9 +245,17 @@ class PublishRepositoryTest {
 
     // --- computeDiff matrix tests ---
 
-    private fun slot(id: String, cardId: String?, name: String = "Slot$id", set: String? = "Set", owned: Boolean = true) = SnapshotSlot(
+    private fun slot(
+        id: String,
+        cardId: String?,
+        name: String = "Slot$id",
+        set: String? = "Set",
+        owned: Boolean = true,
+        isLocked: Boolean = false
+    ) = SnapshotSlot(
         dexNumber = 1, slotName = name, slotType = "BASE", slotId = id,
-        cardId = cardId, cardName = cardId?.let { name }, cardSet = cardId?.let { set }, imageUrl = null, owned = owned
+        cardId = cardId, cardName = cardId?.let { name }, cardSet = cardId?.let { set }, imageUrl = null,
+        owned = owned, isLocked = isLocked
     )
 
     private fun binderWith(vararg slots: SnapshotSlot) = BinderSnapshot(
@@ -642,5 +661,236 @@ class PublishRepositoryTest {
         val diff = repository.computeDiff(null, next)
 
         assertEquals(1, diff.pokedexComplete)
+    }
+
+    // --- language/remarks/isLocked buildSnapshot + computeDiff tests ---
+
+    @Test
+    fun `buildSnapshot pokedex slot carries language remarks and isLocked from entity`() {
+        val entries = listOf(
+            entry("bulbasaur", "Bulbasaur", 1, cardId = "xy1-1", language = "JA", remarks = "mint", isLocked = true)
+        )
+
+        val snapshot = repository.buildSnapshot(entries, emptyList(), defaultConfig)
+
+        val slot = snapshot.binders.single { it.id == "pokedex" }.sections.single().slots.single()
+        assertEquals("JA", slot.language)
+        assertEquals("mint", slot.remarks)
+        assertTrue(slot.isLocked)
+    }
+
+    @Test
+    fun `buildSnapshot unown slot carries language remarks and isLocked from entity`() {
+        val unownEntries = listOf(
+            UnownBinderEntry(
+                letterId = "A", position = 0, assignedCardId = "c1", assignedCardImageUrl = "https://img/c1",
+                assignedCardName = "Unown A", assignedCardSetName = "Set",
+                language = "KO", remarks = "signed", isLocked = true
+            )
+        )
+
+        val snapshot = repository.buildSnapshot(emptyList(), emptyList(), defaultConfig, unownEntries = unownEntries)
+
+        val slot = snapshot.binders.single { it.id == "unown" }.sections.single().slots.single()
+        assertEquals("KO", slot.language)
+        assertEquals("signed", slot.remarks)
+        assertTrue(slot.isLocked)
+    }
+
+    @Test
+    fun `buildSnapshot cardHistory slot carries language but defaults remarks and isLocked`() {
+        val secondaryEntries = listOf(
+            SecondaryBinderEntry(
+                id = 1, pokemonId = "pikachu", pokemonName = "Pikachu", cardId = "sv1-1",
+                cardImageUrl = "https://img.url/sv1-1", language = "FR"
+            )
+        )
+        val config = defaultConfig.copy(publishCardHistory = true)
+
+        val snapshot = repository.buildSnapshot(emptyList(), secondaryEntries, config)
+
+        val slot = snapshot.binders.single { it.id == "cardHistory" }.sections.single().slots.single()
+        assertEquals("FR", slot.language)
+        assertEquals(null, slot.remarks)
+        assertFalse(slot.isLocked)
+    }
+
+    @Test
+    fun `buildSnapshot connectingArt slot carries language but defaults remarks and isLocked`() {
+        val groups = listOf(caGroup(1, "Group A"))
+        val slots = listOf(
+            ConnectingArtSlot(
+                id = 100, groupId = 1, slotIndex = 0, cardId = "c1", cardName = "Card c1",
+                cardImageUrl = "https://img/c1", owned = true, language = "DE"
+            )
+        )
+
+        val snapshot = repository.buildSnapshot(
+            emptyList(), emptyList(), defaultConfig,
+            connectingArtGroups = groups, connectingArtSlots = slots
+        )
+
+        val slot = snapshot.binders.single { it.id == "connectingArt" }.sections.single().slots.single()
+        assertEquals("DE", slot.language)
+        assertEquals(null, slot.remarks)
+        assertFalse(slot.isLocked)
+    }
+
+    @Test
+    fun `buildSnapshot personalCollection slot looks up language by cardId and defaults remarks and isLocked`() {
+        val cache = listOf(pcCache("c1", "charizard"))
+        val entries = listOf(PersonalCollectionEntry(cardId = "c1", owned = true, language = "ES"))
+
+        val snapshot = repository.buildSnapshot(
+            emptyList(), emptyList(), defaultConfig,
+            personalCache = cache, personalEntries = entries
+        )
+
+        val slot = snapshot.binders.single { it.id == "personalCollection" }.sections.single().slots.single()
+        assertEquals("ES", slot.language)
+        assertEquals(null, slot.remarks)
+        assertFalse(slot.isLocked)
+    }
+
+    @Test
+    fun `buildSnapshot personalCollection slot falls back to EN when cache row has no entry row`() {
+        val cache = listOf(pcCache("c1", "charizard"))
+
+        val snapshot = repository.buildSnapshot(
+            emptyList(), emptyList(), defaultConfig,
+            personalCache = cache, personalEntries = emptyList()
+        )
+
+        val slot = snapshot.binders.single { it.id == "personalCollection" }.sections.single().slots.single()
+        assertEquals("EN", slot.language)
+    }
+
+    @Test
+    fun `computeDiff isLocked flip on same card is REPLACED`() {
+        val baseline = binderWith(slot("c1", cardId = "c1", isLocked = false))
+        val next = binderWith(slot("c1", cardId = "c1", isLocked = true))
+
+        val diff = repository.computeDiff(baseline, next)
+
+        assertEquals(1, diff.deltas.size)
+        assertEquals(ChangeType.REPLACED, diff.deltas[0].type)
+    }
+
+    @Test
+    fun `computeDiff language or remarks only change on same card is no change`() {
+        val baseline = BinderSnapshot(
+            publishedAt = "2026-07-04T12:00:00+08:00",
+            binders = listOf(
+                SnapshotBinder(
+                    "pokedex", "Pokédex",
+                    listOf(
+                        SnapshotSection(
+                            "Generation I",
+                            listOf(
+                                SnapshotSlot(
+                                    1, "Slotc1", "BASE", "c1", cardId = "c1", cardName = "Slotc1", cardSet = "Set",
+                                    imageUrl = null, owned = true, language = "EN", remarks = "old note", isLocked = false
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+        val next = BinderSnapshot(
+            publishedAt = "2026-07-04T12:00:00+08:00",
+            binders = listOf(
+                SnapshotBinder(
+                    "pokedex", "Pokédex",
+                    listOf(
+                        SnapshotSection(
+                            "Generation I",
+                            listOf(
+                                SnapshotSlot(
+                                    1, "Slotc1", "BASE", "c1", cardId = "c1", cardName = "Slotc1", cardSet = "Set",
+                                    imageUrl = null, owned = true, language = "JA", remarks = "new note", isLocked = false
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        val diff = repository.computeDiff(baseline, next)
+
+        assertTrue(diff.deltas.isEmpty())
+    }
+
+    // --- backward compatibility: old binder.json predating language/remarks/isLocked ---
+
+    @Test
+    fun `SnapshotSlot parses old JSON missing owned language remarks and isLocked with safe defaults`() {
+        // Simulates a binder.json published before the `owned` field existed (pre-R3) AND before
+        // this change's language/remarks/isLocked fields existed — the oldest possible shape still
+        // in the wild. Moshi's generated adapter must fall back to the Kotlin default values for
+        // every missing key rather than failing to parse or nulling out non-nullable fields.
+        val oldJson = """
+            {
+              "dexNumber": 1,
+              "slotName": "Bulbasaur",
+              "slotType": "BASE",
+              "slotId": "bulbasaur",
+              "cardId": "xy1-1",
+              "cardName": "Bulbasaur",
+              "cardSet": "Base Set",
+              "imageUrl": "https://img.url/xy1-1"
+            }
+        """.trimIndent()
+
+        val slot = moshi.adapter(SnapshotSlot::class.java).fromJson(oldJson)
+
+        assertEquals(true, slot?.owned)
+        assertEquals("EN", slot?.language)
+        assertEquals(null, slot?.remarks)
+        assertEquals(false, slot?.isLocked)
+    }
+
+    @Test
+    fun `BinderSnapshot round-trips a full old-shape JSON without the 3 new fields`() {
+        val oldBinderJson = """
+            {
+              "schemaVersion": 1,
+              "publishedAt": "2026-01-01T00:00:00+08:00",
+              "binders": [
+                {
+                  "id": "pokedex",
+                  "name": "Pokédex",
+                  "sections": [
+                    {
+                      "name": "Generation I",
+                      "slots": [
+                        {
+                          "dexNumber": 1,
+                          "slotName": "Bulbasaur",
+                          "slotType": "BASE",
+                          "slotId": "bulbasaur",
+                          "cardId": "xy1-1",
+                          "cardName": "Bulbasaur",
+                          "cardSet": "Base Set",
+                          "imageUrl": "https://img.url/xy1-1",
+                          "owned": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val parsed = moshi.adapter(BinderSnapshot::class.java).fromJson(oldBinderJson)
+
+        assertEquals(1, parsed?.schemaVersion)
+        val slot = parsed?.binders?.single()?.sections?.single()?.slots?.single()
+        assertEquals(true, slot?.owned)
+        assertEquals("EN", slot?.language)
+        assertEquals(null, slot?.remarks)
+        assertEquals(false, slot?.isLocked)
     }
 }

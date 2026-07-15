@@ -3,6 +3,7 @@ package com.skyler.pokedexbinder.publish
 import com.skyler.pokedexbinder.data.local.ConnectingArtSlot
 import com.skyler.pokedexbinder.data.local.MainBinderEntry
 import com.skyler.pokedexbinder.data.local.UnownBinderEntry
+import com.skyler.pokedexbinder.data.model.Language
 import com.skyler.pokedexbinder.publish.model.SnapshotSlot
 import com.skyler.pokedexbinder.repository.BinderRepository
 import com.skyler.pokedexbinder.repository.ConnectingArtRepository
@@ -91,7 +92,10 @@ class RestoreRepository @Inject constructor(
                             assignedCardId = snap.cardId,
                             assignedCardName = snap.cardName,
                             assignedCardSetName = snap.cardSet,
-                            assignedCardImageUrl = snap.imageUrl
+                            assignedCardImageUrl = snap.imageUrl,
+                            language = snap.language,
+                            remarks = snap.remarks,
+                            isLocked = snap.isLocked
                         )
                     }
                     entry.assignedCardId != null -> {
@@ -131,7 +135,8 @@ class RestoreRepository @Inject constructor(
                                 cardId = snap.cardId,
                                 cardName = snap.cardName,
                                 cardImageUrl = snap.imageUrl,
-                                owned = snap.owned            // R7
+                                owned = snap.owned,           // R7
+                                language = snap.language
                             )
                         }
                         caSlot.cardId != null -> {
@@ -155,11 +160,12 @@ class RestoreRepository @Inject constructor(
                 ?.sections.orEmpty()
                 .flatMap { it.slots }
             if (pcSnapshotSlots.isNotEmpty()) {
-                val locallyOwned = personalCollectionRepository.getAllEntries()
-                    .filter { it.owned }.map { it.cardId }.toSet()
+                val localPcEntriesByCardId = personalCollectionRepository.getAllEntries()
+                    .associateBy { it.cardId }
                 pcSnapshotSlots.forEach { snap ->
                     val cardId = snap.cardId ?: return@forEach   // PC slots always carry cardId; guard anyway
-                    val isLocallyOwned = cardId in locallyOwned
+                    val localEntry = localPcEntriesByCardId[cardId]
+                    val isLocallyOwned = localEntry?.owned == true
                     when {
                         snap.owned && !isLocallyOwned -> {
                             restored++
@@ -170,6 +176,14 @@ class RestoreRepository @Inject constructor(
                             personalCollectionRepository.removeOwned(cardId)
                         }
                         // else: already matches snapshot — no-op
+                    }
+                    // Language is a slot-level property independent of the owned overlay above —
+                    // restore it whenever it differs from the locally stored value. A missing local
+                    // entry implies the Room column default ("EN"), same as the publish-side fallback,
+                    // so this doesn't force-create an entry row just to restate the default.
+                    val localLanguage = localEntry?.language ?: "EN"
+                    if (localLanguage != snap.language) {
+                        personalCollectionRepository.updateLanguage(cardId, Language.fromRaw(snap.language))
                     }
                 }
             }
@@ -194,7 +208,10 @@ class RestoreRepository @Inject constructor(
                                 assignedCardId = snap.cardId,
                                 assignedCardName = snap.cardName,
                                 assignedCardSetName = snap.cardSet,
-                                assignedCardImageUrl = snap.imageUrl
+                                assignedCardImageUrl = snap.imageUrl,
+                                language = snap.language,
+                                remarks = snap.remarks,
+                                isLocked = snap.isLocked
                             )
                         }
                         entry.assignedCardId != null -> {

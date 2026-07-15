@@ -34,7 +34,7 @@ class PokedexDatabaseTest {
 
     @Test
     fun insertAndObserveMainBinder() = runTest {
-        val entry = MainBinderEntry("bulbasaur", "Bulbasaur", 1)
+        val entry = MainBinderEntry("bulbasaur", "Bulbasaur", dexNumber = 1, dexOrder = 1)
         mainDao.upsert(entry)
         mainDao.observeAll().test {
             val items = awaitItem()
@@ -47,7 +47,7 @@ class PokedexDatabaseTest {
 
     @Test
     fun upsertUpdatesExistingEntry() = runTest {
-        val entry = MainBinderEntry("bulbasaur", "Bulbasaur", 1)
+        val entry = MainBinderEntry("bulbasaur", "Bulbasaur", dexNumber = 1, dexOrder = 1)
         mainDao.upsert(entry)
         mainDao.upsert(entry.copy(assignedCardId = "xy1-1", assignedCardImageUrl = "https://img.url"))
         val result = mainDao.getByPokemonId("bulbasaur")

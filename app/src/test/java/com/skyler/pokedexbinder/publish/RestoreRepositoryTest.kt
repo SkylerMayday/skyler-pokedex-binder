@@ -62,7 +62,10 @@ class RestoreRepositoryTest {
         dex: Int,
         dexOrder: Int = dex,
         slotType: String = "BASE",
-        cardId: String? = null
+        cardId: String? = null,
+        language: String = "EN",
+        remarks: String? = null,
+        isLocked: Boolean = false
     ) = MainBinderEntry(
         pokemonId = id,
         pokemonName = name,
@@ -72,15 +75,27 @@ class RestoreRepositoryTest {
         assignedCardId = cardId,
         assignedCardImageUrl = cardId?.let { "https://img.url/$it" },
         assignedCardName = cardId?.let { name },
-        assignedCardSetName = cardId?.let { "Base Set" }
+        assignedCardSetName = cardId?.let { "Base Set" },
+        language = language,
+        remarks = remarks,
+        isLocked = isLocked
     )
 
-    private fun snapshotSlot(id: String, cardId: String?, name: String = "Slot$id", set: String? = "Set", owned: Boolean = true) =
-        SnapshotSlot(
-            dexNumber = 1, slotName = name, slotType = "BASE", slotId = id,
-            cardId = cardId, cardName = cardId?.let { name }, cardSet = cardId?.let { set },
-            imageUrl = cardId?.let { "https://img.url/$it" }, owned = owned
-        )
+    private fun snapshotSlot(
+        id: String,
+        cardId: String?,
+        name: String = "Slot$id",
+        set: String? = "Set",
+        owned: Boolean = true,
+        language: String = "EN",
+        remarks: String? = null,
+        isLocked: Boolean = false
+    ) = SnapshotSlot(
+        dexNumber = 1, slotName = name, slotType = "BASE", slotId = id,
+        cardId = cardId, cardName = cardId?.let { name }, cardSet = cardId?.let { set },
+        imageUrl = cardId?.let { "https://img.url/$it" }, owned = owned,
+        language = language, remarks = remarks, isLocked = isLocked
+    )
 
     private fun localCaSlot(groupId: Int, slotIndex: Int, cardId: String? = null, owned: Boolean = false) =
         ConnectingArtSlot(
@@ -97,6 +112,17 @@ class RestoreRepositoryTest {
     private fun pcSnapshot(vararg slots: SnapshotSlot) = BinderSnapshot(
         publishedAt = "2026-07-10T12:00:00+08:00",
         binders = listOf(SnapshotBinder("personalCollection", "Personal Collection", listOf(SnapshotSection("Charizard", slots.toList()))))
+    )
+
+    private fun unownSnapshot(vararg slots: SnapshotSlot) = BinderSnapshot(
+        publishedAt = "2026-07-10T12:00:00+08:00",
+        binders = listOf(SnapshotBinder("unown", "Unown", listOf(SnapshotSection("Unown", slots.toList()))))
+    )
+
+    private fun localUnownEntry(letterId: String, position: Int, cardId: String? = null) = UnownBinderEntry(
+        letterId = letterId, position = position, assignedCardId = cardId,
+        assignedCardImageUrl = cardId?.let { "https://img/$it" },
+        assignedCardName = cardId?.let { "Unown $letterId" }, assignedCardSetName = cardId?.let { "Set" }
     )
 
     private fun pokedexSnapshot(vararg slots: SnapshotSlot, binderId: String = "pokedex") = BinderSnapshot(
@@ -521,5 +547,133 @@ class RestoreRepositoryTest {
         coVerify { personalCollectionRepository.setOwned("ownedCard", true) }
         coVerify(exactly = 0) { personalCollectionRepository.setOwned("unownedCard", any()) }
         coVerify(exactly = 0) { personalCollectionRepository.removeOwned(any()) }
+    }
+
+    // --- language/remarks/isLocked restore tests ---
+
+    @Test
+    fun `main_binder restore overlays language remarks and isLocked on restored slot`() = runTest {
+        val snapshot = pokedexSnapshot(
+            snapshotSlot("s1", cardId = "c1-new", name = "S1", language = "JA", remarks = "mint", isLocked = true)
+        )
+        val localEntries = listOf(entry("s1", "S1", dex = 1, cardId = "c1-old"))
+
+        coEvery { publishSettingsRepository.getConfig() } returns defaultConfig
+        coEvery { publishRepository.fetchBaselineSnapshot(any(), any()) } returns (snapshot to "sha-1")
+        coEvery { binderRepository.getAllEntries() } returns localEntries
+        val capturedSlot = slot<List<MainBinderEntry>>()
+        coEvery { binderRepository.seedFromJson(capture(capturedSlot)) } returns Unit
+
+        val result = repository.restore {}
+
+        assertTrue(result is RestoreResult.Success)
+        val written = capturedSlot.captured.single()
+        assertEquals("JA", written.language)
+        assertEquals("mint", written.remarks)
+        assertTrue(written.isLocked)
+    }
+
+    @Test
+    fun `main_binder cleared branch leaves language remarks and isLocked untouched`() = runTest {
+        val snapshot = pokedexSnapshot(snapshotSlot("s1", cardId = null, name = "S1"))
+        val localEntries = listOf(
+            entry("s1", "S1", dex = 1, cardId = "c1-old", language = "KO", remarks = "keep me", isLocked = true)
+        )
+
+        coEvery { publishSettingsRepository.getConfig() } returns defaultConfig
+        coEvery { publishRepository.fetchBaselineSnapshot(any(), any()) } returns (snapshot to "sha-1")
+        coEvery { binderRepository.getAllEntries() } returns localEntries
+        val capturedSlot = slot<List<MainBinderEntry>>()
+        coEvery { binderRepository.seedFromJson(capture(capturedSlot)) } returns Unit
+
+        val result = repository.restore {}
+
+        assertTrue(result is RestoreResult.Success)
+        val written = capturedSlot.captured.single()
+        assertEquals(null, written.assignedCardId)
+        assertEquals("KO", written.language)
+        assertEquals("keep me", written.remarks)
+        assertTrue(written.isLocked)
+    }
+
+    @Test
+    fun `connecting art restore overlays language on restored slot`() = runTest {
+        val snapshot = caSnapshot(
+            snapshotSlot("ca-1-0", cardId = "c-new", name = "Group A #1", language = "DE")
+        )
+        val localEntries = listOf(entry("s1", "S1", dex = 1, cardId = null))
+        val localCa = listOf(localCaSlot(groupId = 1, slotIndex = 0, cardId = null))
+
+        coEvery { publishSettingsRepository.getConfig() } returns defaultConfig
+        coEvery { publishRepository.fetchBaselineSnapshot(any(), any()) } returns (snapshot to "sha-1")
+        coEvery { binderRepository.getAllEntries() } returns localEntries
+        coEvery { binderRepository.seedFromJson(any()) } returns Unit
+        coEvery { connectingArtRepository.getAllSlots() } returns localCa
+        val capturedCa = slot<List<ConnectingArtSlot>>()
+        coEvery { connectingArtRepository.updateSlots(capture(capturedCa)) } returns Unit
+
+        val result = repository.restore {}
+
+        assertTrue(result is RestoreResult.Success)
+        assertEquals("DE", capturedCa.captured.single().language)
+    }
+
+    @Test
+    fun `personal collection restore updates language when it differs from local value`() = runTest {
+        val snapshot = pcSnapshot(snapshotSlot("cardA", cardId = "cardA", owned = true, language = "FR"))
+        val localEntries = listOf(entry("s1", "S1", dex = 1, cardId = null))
+
+        coEvery { publishSettingsRepository.getConfig() } returns defaultConfig
+        coEvery { publishRepository.fetchBaselineSnapshot(any(), any()) } returns (snapshot to "sha-1")
+        coEvery { binderRepository.getAllEntries() } returns localEntries
+        coEvery { binderRepository.seedFromJson(any()) } returns Unit
+        coEvery { personalCollectionRepository.getAllEntries() } returns
+            listOf(PersonalCollectionEntry(cardId = "cardA", owned = true, language = "EN"))
+
+        repository.restore {}
+
+        coVerify { personalCollectionRepository.updateLanguage("cardA", com.skyler.pokedexbinder.data.model.Language.FR) }
+    }
+
+    @Test
+    fun `personal collection restore skips language write when it already matches the EN default`() = runTest {
+        val snapshot = pcSnapshot(snapshotSlot("cardA", cardId = "cardA", owned = true, language = "EN"))
+        val localEntries = listOf(entry("s1", "S1", dex = 1, cardId = null))
+
+        coEvery { publishSettingsRepository.getConfig() } returns defaultConfig
+        coEvery { publishRepository.fetchBaselineSnapshot(any(), any()) } returns (snapshot to "sha-1")
+        coEvery { binderRepository.getAllEntries() } returns localEntries
+        coEvery { binderRepository.seedFromJson(any()) } returns Unit
+        // No local entry row at all yet — implies the "EN" Room default, matching the snapshot's "EN".
+        coEvery { personalCollectionRepository.getAllEntries() } returns emptyList()
+
+        repository.restore {}
+
+        coVerify(exactly = 0) { personalCollectionRepository.updateLanguage(any(), any()) }
+    }
+
+    @Test
+    fun `unown restore overlays language remarks and isLocked on restored slot`() = runTest {
+        val snapshot = unownSnapshot(
+            snapshotSlot("unown-A", cardId = "c1", name = "Unown A", language = "IT", remarks = "signed", isLocked = true)
+        )
+        val localEntries = listOf(entry("s1", "S1", dex = 1, cardId = null))
+        val localUnown = listOf(localUnownEntry("A", position = 0, cardId = null))
+
+        coEvery { publishSettingsRepository.getConfig() } returns defaultConfig
+        coEvery { publishRepository.fetchBaselineSnapshot(any(), any()) } returns (snapshot to "sha-1")
+        coEvery { binderRepository.getAllEntries() } returns localEntries
+        coEvery { binderRepository.seedFromJson(any()) } returns Unit
+        coEvery { unownBinderRepository.getAllEntries() } returns localUnown
+        val capturedUnown = slot<List<UnownBinderEntry>>()
+        coEvery { unownBinderRepository.overwriteAll(capture(capturedUnown)) } returns Unit
+
+        val result = repository.restore {}
+
+        assertTrue(result is RestoreResult.Success)
+        val written = capturedUnown.captured.single()
+        assertEquals("IT", written.language)
+        assertEquals("signed", written.remarks)
+        assertTrue(written.isLocked)
     }
 }

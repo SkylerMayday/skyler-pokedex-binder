@@ -316,7 +316,8 @@ class PublishRepository @Inject constructor(
                     cardId = entry.cardId,
                     cardName = null,
                     cardSet = null,
-                    imageUrl = entry.cardImageUrl
+                    imageUrl = entry.cardImageUrl,
+                    language = entry.language
                 )
             }
             binders += SnapshotBinder(
@@ -348,7 +349,8 @@ class PublishRepository @Inject constructor(
                                 cardName = slot.cardName,
                                 cardSet = null,                 // CA slots carry no set name
                                 imageUrl = slot.cardImageUrl,
-                                owned = slot.owned              // R3
+                                owned = slot.owned,             // R3
+                                language = slot.language
                             )
                         }
                 )
@@ -360,6 +362,7 @@ class PublishRepository @Inject constructor(
         // Personal Collection — content-gated. One section per fixed Pokémon section that has ≥1 cache row.
         // Publish ALL cached cards (owned + unowned); owned flag from personal_collection_entry.
         val pcOwnedIds = personalEntries.filter { it.owned }.map { it.cardId }.toSet()
+        val pcLanguageByCardId = personalEntries.associate { it.cardId to it.language }
         val pcCacheByKey = personalCache.groupBy { it.pokemonKey }
         val pcSections = PERSONAL_COLLECTION_SECTION_ORDER.mapNotNull { (key, title) ->
             val rows = pcCacheByKey[key].orEmpty()
@@ -378,7 +381,8 @@ class PublishRepository @Inject constructor(
                             cardName = row.name,
                             cardSet = row.setName,
                             imageUrl = row.imageUrl,
-                            owned = row.cardId in pcOwnedIds     // R6: absent entry => false
+                            owned = row.cardId in pcOwnedIds,     // R6: absent entry => false
+                            language = pcLanguageByCardId[row.cardId] ?: "EN"
                         )
                     }
             )
@@ -400,7 +404,10 @@ class PublishRepository @Inject constructor(
                         cardId = entry.assignedCardId,
                         cardName = entry.assignedCardName,
                         cardSet = entry.assignedCardSetName,
-                        imageUrl = entry.assignedCardImageUrl
+                        imageUrl = entry.assignedCardImageUrl,
+                        language = entry.language,
+                        remarks = entry.remarks,
+                        isLocked = entry.isLocked
                     )
                 }
             binders += SnapshotBinder(
@@ -424,7 +431,10 @@ class PublishRepository @Inject constructor(
         cardId = assignedCardId,
         cardName = assignedCardName,
         cardSet = assignedCardSetName,
-        imageUrl = assignedCardImageUrl
+        imageUrl = assignedCardImageUrl,
+        language = language,
+        remarks = remarks,
+        isLocked = isLocked
     )
 
     internal fun computeDiff(baseline: BinderSnapshot?, next: BinderSnapshot): PublishDiff {
@@ -489,7 +499,7 @@ class PublishRepository @Inject constructor(
                     }
                     baselineCardId != null && nextCardId != null &&
                         baselineCardId == nextCardId &&
-                        baselineSlot!!.owned != nextSlot!!.owned -> {
+                        (baselineSlot!!.owned != nextSlot!!.owned || baselineSlot.isLocked != nextSlot.isLocked) -> {
                         deltas += SlotDelta(
                             type = ChangeType.REPLACED,
                             slotId = slotId,
