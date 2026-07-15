@@ -10,5 +10,6 @@ data class SecondaryBinderEntry(
     val pokemonName: String,
     val cardId: String,
     val cardImageUrl: String,
-    val position: Int = 0
+    val position: Int = 0,
+    val language: String = "EN"
 )

@@ -27,4 +27,10 @@ interface UnownBinderDao {
 
     @Query("SELECT COUNT(*) FROM unown_binder")
     suspend fun count(): Int
+
+    @Query("""
+        UPDATE unown_binder SET language = :language, remarks = :remarks, isLocked = :isLocked
+        WHERE letterId = :letterId
+    """)
+    suspend fun updateDetails(letterId: String, language: String, remarks: String?, isLocked: Boolean)
 }

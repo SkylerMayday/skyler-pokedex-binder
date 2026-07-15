@@ -22,7 +22,8 @@ object DatabaseModule {
                 PokedexDatabase.MIGRATION_4_5,
                 PokedexDatabase.MIGRATION_5_6,
                 PokedexDatabase.MIGRATION_6_7,
-                PokedexDatabase.MIGRATION_7_8
+                PokedexDatabase.MIGRATION_7_8,
+                PokedexDatabase.MIGRATION_8_9
             )
             .fallbackToDestructiveMigration()
             .fallbackToDestructiveMigrationOnDowngrade()

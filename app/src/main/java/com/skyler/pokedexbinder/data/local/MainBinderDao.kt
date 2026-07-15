@@ -355,4 +355,10 @@ interface MainBinderDao {
         WHERE pokemonId = :pokemonId AND assignedCardId = :expectedCardId AND assignedCardName IS NULL
     """)
     suspend fun backfillCardNameSet(pokemonId: String, expectedCardId: String, cardName: String, cardSetName: String)
+
+    @Query("""
+        UPDATE main_binder SET language = :language, remarks = :remarks, isLocked = :isLocked
+        WHERE pokemonId = :pokemonId
+    """)
+    suspend fun updateDetails(pokemonId: String, language: String, remarks: String?, isLocked: Boolean)
 }

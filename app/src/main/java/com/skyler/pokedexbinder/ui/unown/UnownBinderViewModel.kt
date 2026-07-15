@@ -3,10 +3,13 @@ package com.skyler.pokedexbinder.ui.unown
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.skyler.pokedexbinder.data.local.UnownBinderEntry
+import com.skyler.pokedexbinder.data.model.Language
 import com.skyler.pokedexbinder.data.model.TcgCard
 import com.skyler.pokedexbinder.repository.UnownBinderRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -26,6 +29,10 @@ class UnownBinderViewModel @Inject constructor(
     // read by AppNavigation's search result). Mirrors ConnectingArtViewModel.
     private val _pendingAssignLetterId = MutableStateFlow<String?>(null)
 
+    /** One-shot event: a clear/reassign was blocked by a locked slot (defense in depth). */
+    private val _blockedByLock = MutableSharedFlow<Unit>()
+    val blockedByLock: SharedFlow<Unit> = _blockedByLock
+
     init {
         viewModelScope.launch { repository.seedIfEmpty() }
     }
@@ -43,6 +50,13 @@ class UnownBinderViewModel @Inject constructor(
     }
 
     fun clearCard(letterId: String) {
-        viewModelScope.launch { repository.clearCard(letterId) }
+        viewModelScope.launch {
+            val proceeded = repository.clearCard(letterId)
+            if (!proceeded) _blockedByLock.emit(Unit)
+        }
+    }
+
+    fun updateDetails(letterId: String, language: Language, remarks: String?, isLocked: Boolean) {
+        viewModelScope.launch { repository.updateDetails(letterId, language, remarks, isLocked) }
     }
 }

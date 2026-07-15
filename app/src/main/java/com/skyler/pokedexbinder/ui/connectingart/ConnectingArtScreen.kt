@@ -21,7 +21,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.skyler.pokedexbinder.data.local.ConnectingArtGroup
 import com.skyler.pokedexbinder.data.local.ConnectingArtSlot
+import com.skyler.pokedexbinder.data.model.Language
 import com.skyler.pokedexbinder.ui.common.DimmableCardImage
+import com.skyler.pokedexbinder.ui.components.EditCardDetailsDialog
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -39,6 +41,7 @@ fun ConnectingArtScreen(
     var showCreateSheet by remember { mutableStateOf(false) }
     var groupPendingDelete by remember { mutableStateOf<ConnectingArtGroup?>(null) }
     var slotSheetTarget by remember { mutableStateOf<ConnectingArtSlot?>(null) }
+    var editDetailsTarget by remember { mutableStateOf<ConnectingArtSlot?>(null) }
 
     val listState = rememberLazyListState()
     val reorderState = rememberReorderableLazyListState(listState) { from, to ->
@@ -110,7 +113,20 @@ fun ConnectingArtScreen(
             onDismiss = { slotSheetTarget = null },
             onMarkOwned = { viewModel.setOwned(slot.id, true); slotSheetTarget = null },
             onMarkUnowned = { viewModel.setOwned(slot.id, false); slotSheetTarget = null },
-            onRemoveCard = { viewModel.removeCard(slot.id); slotSheetTarget = null }
+            onRemoveCard = { viewModel.removeCard(slot.id); slotSheetTarget = null },
+            onEditDetails = { slotSheetTarget = null; editDetailsTarget = slot }
+        )
+    }
+
+    editDetailsTarget?.let { slot ->
+        EditCardDetailsDialog(
+            currentLanguage = Language.fromRaw(slot.language),
+            showLockAndRemarks = false,
+            onDismiss = { editDetailsTarget = null },
+            onSave = { language, _, _ ->
+                viewModel.updateLanguage(slot.id, language)
+                editDetailsTarget = null
+            }
         )
     }
 
@@ -268,7 +284,8 @@ private fun SlotActionSheet(
     onDismiss: () -> Unit,
     onMarkOwned: () -> Unit,
     onMarkUnowned: () -> Unit,
-    onRemoveCard: () -> Unit
+    onRemoveCard: () -> Unit,
+    onEditDetails: () -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
@@ -282,6 +299,10 @@ private fun SlotActionSheet(
                 Button(onClick = onMarkUnowned, modifier = Modifier.fillMaxWidth()) {
                     Text("Mark as Unowned")
                 }
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = onEditDetails, modifier = Modifier.fillMaxWidth()) {
+                Text("Edit Details")
             }
             Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = onRemoveCard, modifier = Modifier.fillMaxWidth()) {

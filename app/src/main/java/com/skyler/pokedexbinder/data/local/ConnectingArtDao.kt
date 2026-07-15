@@ -75,4 +75,7 @@ interface ConnectingArtDao {
 
     @Query("UPDATE connecting_art_slot SET owned = :owned WHERE id = :slotId")
     suspend fun setOwned(slotId: Int, owned: Boolean)
+
+    @Query("UPDATE connecting_art_slot SET language = :language WHERE id = :slotId")
+    suspend fun updateLanguage(slotId: Int, language: String)
 }

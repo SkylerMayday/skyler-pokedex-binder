@@ -3,6 +3,7 @@ package com.skyler.pokedexbinder.repository
 import com.skyler.pokedexbinder.data.local.ConnectingArtDao
 import com.skyler.pokedexbinder.data.local.ConnectingArtGroup
 import com.skyler.pokedexbinder.data.local.ConnectingArtSlot
+import com.skyler.pokedexbinder.data.model.Language
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -34,4 +35,6 @@ class ConnectingArtRepository @Inject constructor(
     suspend fun removeCard(slotId: Int) = dao.clearSlot(slotId)
 
     suspend fun setOwned(slotId: Int, owned: Boolean) = dao.setOwned(slotId, owned)
+
+    suspend fun updateLanguage(slotId: Int, language: Language) = dao.updateLanguage(slotId, language.name)
 }

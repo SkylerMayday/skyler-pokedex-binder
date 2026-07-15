@@ -1,10 +1,13 @@
 package com.skyler.pokedexbinder.ui
 
 import app.cash.turbine.test
+import com.skyler.pokedexbinder.data.model.Language
 import com.skyler.pokedexbinder.data.model.PokemonSlot
 import com.skyler.pokedexbinder.data.model.SlotType
 import com.skyler.pokedexbinder.repository.BinderRepository
 import com.skyler.pokedexbinder.ui.slotdetail.SlotDetailViewModel
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -42,5 +45,40 @@ class SlotDetailViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
         assertFalse(vm.isLoading.value)
+    }
+
+    @Test
+    fun `clearCard emits blockedByLock when repository reports the slot was locked`() = runTest {
+        val vm = SlotDetailViewModel(binderRepo)
+        vm.loadSlot("charizard")
+        coEvery { binderRepo.clearCard("charizard") } returns false
+
+        vm.blockedByLock.test {
+            vm.clearCard()
+            awaitItem() // Unit event fired — proves the block surfaced to the UI layer.
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `clearCard does not emit blockedByLock when the slot was unlocked`() = runTest {
+        val vm = SlotDetailViewModel(binderRepo)
+        vm.loadSlot("charizard")
+        coEvery { binderRepo.clearCard("charizard") } returns true
+
+        vm.blockedByLock.test {
+            vm.clearCard()
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `updateDetails delegates language, remarks, and lock state to the repository`() = runTest {
+        val vm = SlotDetailViewModel(binderRepo)
+        vm.loadSlot("charizard")
+
+        vm.updateDetails(Language.JA, "Holo copy", true)
+
+        coVerify { binderRepo.updateDetails("charizard", Language.JA, "Holo copy", true) }
     }
 }

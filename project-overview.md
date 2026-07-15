@@ -47,8 +47,8 @@ no users beyond himself.
 2. **Connecting Art** (`connecting_art_group`/`connecting_art_slot`) — user-created named grids
    (rows×cols), each cell optionally holding one assigned card + an owned/unowned flag. Search
    via `ManualSearchScreen`.
-3. **Personal Collection** (`personal_collection_cache`/`personal_collection_entry`) — 5 FIXED
-   named sections (Charizard, Celebi, Leafeon, Tangela, Minccino & Cinccino,
+3. **Personal Collection** (`personal_collection_cache`/`personal_collection_entry`) — 4 FIXED
+   named sections (Charizard, Celebi, Tangela, Minccino & Cinccino — Leafeon removed 2026-07-15,
    `ui/personalcollection/PersonalCollectionViewModel.kt`'s `PERSONAL_COLLECTION_SECTIONS`).
    Each section auto-searches its Pokémon name(s) and caches EVERY result (not one slot — can be
    dozens of cards), with a separate owned/unowned toggle per card (`_entry` table is separate

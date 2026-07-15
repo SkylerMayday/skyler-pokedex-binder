@@ -3,6 +3,7 @@ package com.skyler.pokedexbinder.ui.connectingart
 import app.cash.turbine.test
 import com.skyler.pokedexbinder.data.local.ConnectingArtGroup
 import com.skyler.pokedexbinder.data.local.ConnectingArtSlot
+import com.skyler.pokedexbinder.data.model.Language
 import com.skyler.pokedexbinder.data.model.TcgCard
 import com.skyler.pokedexbinder.repository.ConnectingArtRepository
 import io.mockk.coEvery
@@ -173,5 +174,14 @@ class ConnectingArtViewModelTest {
         vm.reorderGroups(fromIndex = 0, toIndex = 2)
 
         coVerify(exactly = 1) { repository.reorderGroups(listOf(2, 3, 1)) }
+    }
+
+    @Test
+    fun `updateLanguage delegates slotId and language to the repository`() = runTest {
+        val vm = ConnectingArtViewModel(repository)
+
+        vm.updateLanguage(slotId = 5, language = Language.ZH)
+
+        coVerify(exactly = 1) { repository.updateLanguage(5, Language.ZH) }
     }
 }

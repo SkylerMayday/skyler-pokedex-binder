@@ -3,6 +3,7 @@ package com.skyler.pokedexbinder.ui.personalcollection
 import app.cash.turbine.test
 import com.skyler.pokedexbinder.data.local.PersonalCollectionCache
 import com.skyler.pokedexbinder.data.local.PersonalCollectionEntry
+import com.skyler.pokedexbinder.data.model.Language
 import com.skyler.pokedexbinder.repository.PersonalCollectionRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -201,22 +202,49 @@ class PersonalCollectionViewModelTest {
     }
 
     @Test
-    fun `section list contains only the 5 original sections`() {
+    fun `section list contains only the 4 current sections`() {
         // Unown lives in its own standalone binder (ui/unown/) — not part of this screen.
-        assertEquals(5, PERSONAL_COLLECTION_SECTIONS.size)
+        // Leafeon removed 2026-07-15.
+        assertEquals(4, PERSONAL_COLLECTION_SECTIONS.size)
         assertEquals(
-            listOf("charizard", "celebi", "leafeon", "tangela", "minccino_cinccino"),
+            listOf("charizard", "celebi", "tangela", "minccino_cinccino"),
             PERSONAL_COLLECTION_SECTIONS.map { it.key }
         )
     }
 
     @Test
-    fun `refreshAll refreshes every one of the 5 sections`() = runTest {
+    fun `refreshAll refreshes every one of the 4 sections`() = runTest {
         coEvery { repository.cacheCount() } returns 1
         val vm = PersonalCollectionViewModel(repository)
 
         vm.refreshAll()
 
-        coVerify(exactly = 5) { repository.refreshPokemon(any(), any()) }
+        coVerify(exactly = 4) { repository.refreshPokemon(any(), any()) }
+    }
+
+    @Test
+    fun `updateLanguage delegates cardId and language to the repository`() = runTest {
+        val vm = PersonalCollectionViewModel(repository)
+
+        vm.updateLanguage(cardId = "card-1", language = Language.FR)
+
+        coVerify(exactly = 1) { repository.updateLanguage("card-1", Language.FR) }
+    }
+
+    @Test
+    fun `uiState threads each card's language from its entry, defaulting to EN when absent`() = runTest {
+        cacheFlow.value = listOf(cacheRow("card-1"), cacheRow("card-2"))
+        entriesFlow.value = listOf(PersonalCollectionEntry(cardId = "card-1", owned = false, language = "JA"))
+
+        val vm = PersonalCollectionViewModel(repository)
+
+        vm.uiState.test {
+            val state = awaitItem()
+            val cards = state.sections["charizard"].orEmpty()
+            assertEquals("JA", cards.first { it.cardId == "card-1" }.language)
+            // No entry row exists yet for card-2 — must default to EN, not crash or null out.
+            assertEquals("EN", cards.first { it.cardId == "card-2" }.language)
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 }

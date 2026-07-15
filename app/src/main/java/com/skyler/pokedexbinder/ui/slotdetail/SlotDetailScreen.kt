@@ -11,6 +11,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.skyler.pokedexbinder.data.model.Language
+import com.skyler.pokedexbinder.ui.components.EditCardDetailsDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,6 +25,12 @@ fun SlotDetailScreen(
     LaunchedEffect(pokemonId) { viewModel.loadSlot(pokemonId) }
     val slot by viewModel.slot.collectAsState()
     var showRemoveDialog by remember { mutableStateOf(false) }
+    var showEditDetailsDialog by remember { mutableStateOf(false) }
+    var showBlockedDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(viewModel) {
+        viewModel.blockedByLock.collect { showBlockedDialog = true }
+    }
 
     if (showRemoveDialog) {
         AlertDialog(
@@ -39,6 +47,33 @@ fun SlotDetailScreen(
                 TextButton(onClick = { showRemoveDialog = false }) { Text("Cancel") }
             }
         )
+    }
+
+    if (showBlockedDialog) {
+        AlertDialog(
+            onDismissRequest = { showBlockedDialog = false },
+            title = { Text("Card locked") },
+            text = { Text("Unlock this card before removing or reassigning it.") },
+            confirmButton = {
+                TextButton(onClick = { showBlockedDialog = false }) { Text("OK") }
+            }
+        )
+    }
+
+    if (showEditDetailsDialog) {
+        slot?.let { currentSlot ->
+            EditCardDetailsDialog(
+                currentLanguage = Language.fromRaw(currentSlot.language),
+                currentRemarks = currentSlot.remarks,
+                currentIsLocked = currentSlot.isLocked,
+                showLockAndRemarks = true,
+                onDismiss = { showEditDetailsDialog = false },
+                onSave = { language, remarks, isLocked ->
+                    viewModel.updateDetails(language, remarks, isLocked)
+                    showEditDetailsDialog = false
+                }
+            )
+        }
     }
 
     Scaffold(
@@ -79,24 +114,43 @@ fun SlotDetailScreen(
             }
 
             val occupied = slot?.isOccupied == true
+            val locked = slot?.isLocked == true
 
             Button(
                 onClick = { slot?.let { onSearch(it.effectiveSearchName, it.id, occupied) } },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = slot != null
+                enabled = slot != null && !(occupied && locked)
             ) {
                 Text(if (occupied) "Replace" else "Search")
             }
 
             if (occupied) {
+                if (locked) {
+                    OutlinedButton(
+                        onClick = { showEditDetailsDialog = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Unlock to Remove")
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = { showRemoveDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Remove Card")
+                    }
+                }
+            }
+
+            if (slot != null) {
                 OutlinedButton(
-                    onClick = { showRemoveDialog = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
+                    onClick = { showEditDetailsDialog = true },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Remove Card")
+                    Text("Edit Details")
                 }
             }
         }

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.skyler.pokedexbinder.data.local.SecondaryBinderDao
 import com.skyler.pokedexbinder.data.local.SecondaryBinderEntry
+import com.skyler.pokedexbinder.data.model.Language
 import com.skyler.pokedexbinder.data.model.TcgCard
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +42,10 @@ class SecondaryBinderViewModel @Inject constructor(
 
     fun deleteCard(id: Int) {
         viewModelScope.launch { secondaryBinderDao.deleteById(id) }
+    }
+
+    fun updateLanguage(id: Int, language: Language) {
+        viewModelScope.launch { secondaryBinderDao.updateLanguage(id, language.name) }
     }
 
     fun reorder(fromIndex: Int, toIndex: Int) {

@@ -3,6 +3,7 @@ package com.skyler.pokedexbinder.repository
 import android.util.Log
 import com.skyler.pokedexbinder.data.local.MainBinderDao
 import com.skyler.pokedexbinder.data.local.MainBinderEntry
+import com.skyler.pokedexbinder.data.model.Language
 import com.skyler.pokedexbinder.data.model.PokemonSlot
 import com.skyler.pokedexbinder.data.model.SlotType
 import kotlinx.coroutines.flow.Flow
@@ -36,14 +37,16 @@ class BinderRepository @Inject constructor(
     fun observeSlot(pokemonId: String): Flow<PokemonSlot?> =
         mainBinderDao.observeByPokemonId(pokemonId).map { it?.toDomain() }
 
+    /** Returns false (no-op) if the slot is locked; true if the assignment proceeded. */
     suspend fun assignCard(
         pokemonId: String,
         cardId: String,
         cardImageUrl: String,
         cardName: String?,
         cardSetName: String?
-    ) {
-        val existing = mainBinderDao.getByPokemonId(pokemonId) ?: return
+    ): Boolean {
+        val existing = mainBinderDao.getByPokemonId(pokemonId) ?: return false
+        if (existing.isLocked) return false
         mainBinderDao.upsert(
             existing.copy(
                 assignedCardId = cardId,
@@ -52,10 +55,13 @@ class BinderRepository @Inject constructor(
                 assignedCardSetName = cardSetName
             )
         )
+        return true
     }
 
-    suspend fun clearCard(pokemonId: String) {
-        val existing = mainBinderDao.getByPokemonId(pokemonId) ?: return
+    /** Returns false (no-op) if the slot is locked; true if the clear proceeded. */
+    suspend fun clearCard(pokemonId: String): Boolean {
+        val existing = mainBinderDao.getByPokemonId(pokemonId) ?: return false
+        if (existing.isLocked) return false
         mainBinderDao.upsert(
             existing.copy(
                 assignedCardId = null,
@@ -64,7 +70,11 @@ class BinderRepository @Inject constructor(
                 assignedCardSetName = null
             )
         )
+        return true
     }
+
+    suspend fun updateDetails(pokemonId: String, language: Language, remarks: String?, isLocked: Boolean) =
+        mainBinderDao.updateDetails(pokemonId, language.name, remarks, isLocked)
 
     suspend fun seedFromJson(slots: List<MainBinderEntry>) {
         mainBinderDao.insertAll(slots)
@@ -132,7 +142,10 @@ class BinderRepository @Inject constructor(
         },
         assignedCardId = assignedCardId,
         assignedCardImageUrl = assignedCardImageUrl,
-        searchName = ALTERNATE_FORM_SEARCH_NAMES[pokemonId]
+        searchName = ALTERNATE_FORM_SEARCH_NAMES[pokemonId],
+        language = language,
+        remarks = remarks,
+        isLocked = isLocked
     )
 
     companion object {

@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -21,6 +22,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.skyler.pokedexbinder.data.local.SecondaryBinderEntry
+import com.skyler.pokedexbinder.data.model.Language
+import com.skyler.pokedexbinder.ui.components.EditCardDetailsDialog
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyGridState
 
@@ -38,6 +42,7 @@ fun SecondaryBinderScreen(
         viewModel.reorder(from.index, to.index)
     }
     var showAddSheet by remember { mutableStateOf(false) }
+    var editDetailsTarget by remember { mutableStateOf<SecondaryBinderEntry?>(null) }
 
     Scaffold(
         topBar = {
@@ -118,11 +123,40 @@ fun SecondaryBinderScreen(
                                     tint = MaterialTheme.colorScheme.onSurface
                                 )
                             }
+                            IconButton(
+                                onClick = { editDetailsTarget = entry },
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .align(Alignment.TopStart)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                                        shape = CircleShape
+                                    )
+                            ) {
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = "Edit Details",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    editDetailsTarget?.let { entry ->
+        EditCardDetailsDialog(
+            currentLanguage = Language.fromRaw(entry.language),
+            showLockAndRemarks = false,
+            onDismiss = { editDetailsTarget = null },
+            onSave = { language, _, _ ->
+                viewModel.updateLanguage(entry.id, language)
+                editDetailsTarget = null
+            }
+        )
     }
 
     if (showAddSheet) {

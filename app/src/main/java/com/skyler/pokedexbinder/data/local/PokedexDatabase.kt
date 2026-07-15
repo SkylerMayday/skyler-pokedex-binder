@@ -15,7 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         PersonalCollectionEntry::class,
         UnownBinderEntry::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class PokedexDatabase : RoomDatabase() {
@@ -98,6 +98,22 @@ abstract class PokedexDatabase : RoomDatabase() {
                         "`assignedCardName` TEXT, " +
                         "`assignedCardSetName` TEXT)"
                 )
+            }
+        }
+
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE main_binder ADD COLUMN language TEXT NOT NULL DEFAULT 'EN'")
+                db.execSQL("ALTER TABLE main_binder ADD COLUMN remarks TEXT")
+                db.execSQL("ALTER TABLE main_binder ADD COLUMN isLocked INTEGER NOT NULL DEFAULT 0")
+
+                db.execSQL("ALTER TABLE unown_binder ADD COLUMN language TEXT NOT NULL DEFAULT 'EN'")
+                db.execSQL("ALTER TABLE unown_binder ADD COLUMN remarks TEXT")
+                db.execSQL("ALTER TABLE unown_binder ADD COLUMN isLocked INTEGER NOT NULL DEFAULT 0")
+
+                db.execSQL("ALTER TABLE connecting_art_slot ADD COLUMN language TEXT NOT NULL DEFAULT 'EN'")
+                db.execSQL("ALTER TABLE personal_collection_entry ADD COLUMN language TEXT NOT NULL DEFAULT 'EN'")
+                db.execSQL("ALTER TABLE secondary_binder ADD COLUMN language TEXT NOT NULL DEFAULT 'EN'")
             }
         }
     }

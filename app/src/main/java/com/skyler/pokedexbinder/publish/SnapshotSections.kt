@@ -48,12 +48,11 @@ fun sectionNameFor(entry: MainBinderEntry): String? =
 /**
  * Personal Collection fixed sections: pokemonKey -> display name, in app order.
  * Mirrors PERSONAL_COLLECTION_SECTIONS in ui/personalcollection/PersonalCollectionViewModel.kt —
- * keep the two lists in sync if the 5 Pokémon or their order change.
+ * keep the two lists in sync if the 4 Pokémon or their order change.
  */
 val PERSONAL_COLLECTION_SECTION_ORDER: List<Pair<String, String>> = listOf(
     "charizard" to "Charizard",
     "celebi" to "Celebi",
-    "leafeon" to "Leafeon",
     "tangela" to "Tangela",
     "minccino_cinccino" to "Minccino & Cinccino"
 )

@@ -10,5 +10,8 @@ data class UnownBinderEntry(
     val assignedCardId: String? = null,
     val assignedCardImageUrl: String? = null,
     val assignedCardName: String? = null,
-    val assignedCardSetName: String? = null
+    val assignedCardSetName: String? = null,
+    val language: String = "EN",
+    val remarks: String? = null,
+    val isLocked: Boolean = false
 )

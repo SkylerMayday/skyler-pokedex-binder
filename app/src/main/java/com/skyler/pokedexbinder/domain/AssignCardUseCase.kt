@@ -10,8 +10,10 @@ class AssignCardUseCase @Inject constructor(
     private val binderRepository: BinderRepository,
     private val secondaryBinderDao: SecondaryBinderDao
 ) {
-    suspend fun assign(pokemonId: String, card: TcgCard) {
-        val slot = binderRepository.getSlotByPokemonId(pokemonId) ?: return
+    /** Returns false if the target slot is locked (assignment blocked); true if it proceeded. */
+    suspend fun assign(pokemonId: String, card: TcgCard): Boolean {
+        val slot = binderRepository.getSlotByPokemonId(pokemonId) ?: return false
+        if (slot.isLocked) return false
 
         if (slot.isOccupied) {
             secondaryBinderDao.insertAtEnd(
@@ -24,6 +26,6 @@ class AssignCardUseCase @Inject constructor(
             )
         }
 
-        binderRepository.assignCard(pokemonId, card.id, card.imageUrl, card.name, card.setName)
+        return binderRepository.assignCard(pokemonId, card.id, card.imageUrl, card.name, card.setName)
     }
 }

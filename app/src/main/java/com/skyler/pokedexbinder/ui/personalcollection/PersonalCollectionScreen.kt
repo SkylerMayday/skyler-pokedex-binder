@@ -21,7 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.skyler.pokedexbinder.data.model.Language
 import com.skyler.pokedexbinder.ui.common.DimmableCardImage
+import com.skyler.pokedexbinder.ui.components.EditCardDetailsDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,6 +33,7 @@ fun PersonalCollectionScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     var showSheetFor by remember { mutableStateOf<PersonalCard?>(null) }
+    var editDetailsTarget by remember { mutableStateOf<PersonalCard?>(null) }
     var collapsedSections by rememberSaveable { mutableStateOf(emptySet<String>()) }
     var pendingScrollTo by remember { mutableStateOf<String?>(null) }
     var dropdownExpanded by remember { mutableStateOf(false) }
@@ -206,6 +209,22 @@ fun PersonalCollectionScreen(
             onToggleOwned = {
                 viewModel.toggleOwned(card.cardId, card.owned)
                 showSheetFor = null
+            },
+            onEditDetails = {
+                showSheetFor = null
+                editDetailsTarget = card
+            }
+        )
+    }
+
+    editDetailsTarget?.let { card ->
+        EditCardDetailsDialog(
+            currentLanguage = Language.fromRaw(card.language),
+            showLockAndRemarks = false,
+            onDismiss = { editDetailsTarget = null },
+            onSave = { language, _, _ ->
+                viewModel.updateLanguage(card.cardId, language)
+                editDetailsTarget = null
             }
         )
     }
@@ -216,7 +235,8 @@ fun PersonalCollectionScreen(
 private fun CardActionSheet(
     card: PersonalCard,
     onDismiss: () -> Unit,
-    onToggleOwned: () -> Unit
+    onToggleOwned: () -> Unit,
+    onEditDetails: () -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
@@ -230,6 +250,10 @@ private fun CardActionSheet(
                 Button(onClick = onToggleOwned, modifier = Modifier.fillMaxWidth()) {
                     Text("Remove Card")
                 }
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = onEditDetails, modifier = Modifier.fillMaxWidth()) {
+                Text("Edit Details")
             }
             Spacer(Modifier.height(8.dp))
             TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {

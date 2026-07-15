@@ -2,6 +2,7 @@ package com.skyler.pokedexbinder.ui.personalcollection
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.skyler.pokedexbinder.data.model.Language
 import com.skyler.pokedexbinder.repository.PersonalCollectionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -23,7 +24,6 @@ data class PokemonSection(val key: String, val title: String, val queryNames: Li
 val PERSONAL_COLLECTION_SECTIONS: List<PokemonSection> = listOf(
     PokemonSection("charizard", "Charizard", listOf("Charizard")),
     PokemonSection("celebi", "Celebi", listOf("Celebi")),
-    PokemonSection("leafeon", "Leafeon", listOf("Leafeon")),
     PokemonSection("tangela", "Tangela", listOf("Tangela")),
     PokemonSection("minccino_cinccino", "Minccino & Cinccino", listOf("Minccino", "Cinccino"))
 )
@@ -32,7 +32,8 @@ data class PersonalCard(
     val cardId: String,
     val name: String,
     val imageUrl: String,
-    val owned: Boolean
+    val owned: Boolean,
+    val language: String = "EN"
 )
 
 data class PersonalCollectionUiState(
@@ -56,8 +57,17 @@ class PersonalCollectionViewModel @Inject constructor(
         _errorMessage
     ) { cache, entries, refreshing, error ->
         val ownedIds = entries.filter { it.owned }.map { it.cardId }.toSet()
+        val languageByCardId = entries.associate { it.cardId to it.language }
         val grouped = cache.groupBy { it.pokemonKey }.mapValues { (_, rows) ->
-            rows.map { PersonalCard(it.cardId, it.name, it.imageUrl, it.cardId in ownedIds) }
+            rows.map { row ->
+                PersonalCard(
+                    cardId = row.cardId,
+                    name = row.name,
+                    imageUrl = row.imageUrl,
+                    owned = row.cardId in ownedIds,
+                    language = languageByCardId[row.cardId] ?: "EN"
+                )
+            }
         }
         PersonalCollectionUiState(sections = grouped, isRefreshing = refreshing, errorMessage = error)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PersonalCollectionUiState())
@@ -105,5 +115,9 @@ class PersonalCollectionViewModel @Inject constructor(
         viewModelScope.launch {
             if (currentlyOwned) repository.removeOwned(cardId) else repository.setOwned(cardId, true)
         }
+    }
+
+    fun updateLanguage(cardId: String, language: Language) {
+        viewModelScope.launch { repository.updateLanguage(cardId, language) }
     }
 }

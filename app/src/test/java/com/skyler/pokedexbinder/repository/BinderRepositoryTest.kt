@@ -44,13 +44,14 @@ class BinderRepositoryTest {
     }
 
     @Test
-    fun `assignCard upserts entry with card info`() = runTest {
+    fun `assignCard upserts entry with card info and returns true when unlocked`() = runTest {
         val existing = MainBinderEntry("charizard", "Charizard", dexNumber = 6, dexOrder = 6)
         coEvery { mainDao.getByPokemonId("charizard") } returns existing
         val repo = BinderRepository(mainDao)
 
-        repo.assignCard("charizard", "base4-4", "https://img.pokemontcg.io/base4/4.png", "Charizard", "Base Set")
+        val result = repo.assignCard("charizard", "base4-4", "https://img.pokemontcg.io/base4/4.png", "Charizard", "Base Set")
 
+        assertTrue(result)
         coVerify {
             mainDao.upsert(
                 MainBinderEntry(
@@ -65,5 +66,65 @@ class BinderRepositoryTest {
                 )
             )
         }
+    }
+
+    @Test
+    fun `assignCard no-ops and returns false when slot is locked`() = runTest {
+        val existing = MainBinderEntry("charizard", "Charizard", dexNumber = 6, dexOrder = 6, isLocked = true)
+        coEvery { mainDao.getByPokemonId("charizard") } returns existing
+        val repo = BinderRepository(mainDao)
+
+        val result = repo.assignCard("charizard", "base4-4", "https://img.pokemontcg.io/base4/4.png", "Charizard", "Base Set")
+
+        assertFalse(result)
+        coVerify(exactly = 0) { mainDao.upsert(any()) }
+    }
+
+    @Test
+    fun `clearCard clears assignment and returns true when unlocked`() = runTest {
+        val existing = MainBinderEntry(
+            "charizard", "Charizard", dexNumber = 6, dexOrder = 6,
+            assignedCardId = "base4-4", assignedCardImageUrl = "https://img.pokemontcg.io/base4/4.png"
+        )
+        coEvery { mainDao.getByPokemonId("charizard") } returns existing
+        val repo = BinderRepository(mainDao)
+
+        val result = repo.clearCard("charizard")
+
+        assertTrue(result)
+        coVerify {
+            mainDao.upsert(
+                existing.copy(
+                    assignedCardId = null,
+                    assignedCardImageUrl = null,
+                    assignedCardName = null,
+                    assignedCardSetName = null
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `clearCard no-ops and returns false when slot is locked`() = runTest {
+        val existing = MainBinderEntry(
+            "charizard", "Charizard", dexNumber = 6, dexOrder = 6,
+            assignedCardId = "base4-4", isLocked = true
+        )
+        coEvery { mainDao.getByPokemonId("charizard") } returns existing
+        val repo = BinderRepository(mainDao)
+
+        val result = repo.clearCard("charizard")
+
+        assertFalse(result)
+        coVerify(exactly = 0) { mainDao.upsert(any()) }
+    }
+
+    @Test
+    fun `updateDetails delegates to dao with raw language name`() = runTest {
+        val repo = BinderRepository(mainDao)
+
+        repo.updateDetails("charizard", com.skyler.pokedexbinder.data.model.Language.JA, "Holo copy", true)
+
+        coVerify { mainDao.updateDetails("charizard", "JA", "Holo copy", true) }
     }
 }

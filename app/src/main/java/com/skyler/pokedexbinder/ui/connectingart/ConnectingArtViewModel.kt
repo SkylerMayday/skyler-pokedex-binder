@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.skyler.pokedexbinder.data.local.ConnectingArtGroup
 import com.skyler.pokedexbinder.data.local.ConnectingArtSlot
+import com.skyler.pokedexbinder.data.model.Language
 import com.skyler.pokedexbinder.data.model.TcgCard
 import com.skyler.pokedexbinder.repository.ConnectingArtRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -75,5 +76,9 @@ class ConnectingArtViewModel @Inject constructor(
 
     fun removeCard(slotId: Int) {
         viewModelScope.launch { repository.removeCard(slotId) }
+    }
+
+    fun updateLanguage(slotId: Int, language: Language) {
+        viewModelScope.launch { repository.updateLanguage(slotId, language) }
     }
 }

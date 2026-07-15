@@ -50,4 +50,7 @@ interface PersonalCollectionDao {
 
     @Query("DELETE FROM personal_collection_entry WHERE cardId = :cardId")
     suspend fun deleteEntry(cardId: String)
+
+    @Query("UPDATE personal_collection_entry SET language = :language WHERE cardId = :cardId")
+    suspend fun updateLanguage(cardId: String, language: String)
 }

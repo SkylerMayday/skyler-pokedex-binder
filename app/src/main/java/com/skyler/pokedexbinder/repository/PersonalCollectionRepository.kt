@@ -3,6 +3,7 @@ package com.skyler.pokedexbinder.repository
 import com.skyler.pokedexbinder.data.local.PersonalCollectionCache
 import com.skyler.pokedexbinder.data.local.PersonalCollectionDao
 import com.skyler.pokedexbinder.data.local.PersonalCollectionEntry
+import com.skyler.pokedexbinder.data.model.Language
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -29,6 +30,16 @@ class PersonalCollectionRepository @Inject constructor(
         dao.upsertEntry(PersonalCollectionEntry(cardId = cardId, owned = owned))
 
     suspend fun removeOwned(cardId: String) = dao.deleteEntry(cardId)
+
+    /**
+     * Sets language for [cardId], creating the entry row first (default `owned = false`) if one
+     * doesn't exist yet — entries are otherwise only created via the first owned-toggle
+     * ([setOwned]), and a plain UPDATE would silently no-op on a nonexistent row.
+     */
+    suspend fun updateLanguage(cardId: String, language: Language) {
+        if (dao.getEntry(cardId) == null) dao.upsertEntry(PersonalCollectionEntry(cardId = cardId, owned = false))
+        dao.updateLanguage(cardId, language.name)
+    }
 
     /**
      * Queries pokemontcg.io/TCGdex for each name in [names] (Pocket filter enforced in

@@ -11,7 +11,10 @@ data class PokemonSlot(
     val assignedCardId: String? = null,
     val assignedCardImageUrl: String? = null,
     /** Override for TCG API search. If null, `name` is used directly. */
-    val searchName: String? = null
+    val searchName: String? = null,
+    val language: String = "EN",
+    val remarks: String? = null,
+    val isLocked: Boolean = false
 ) {
     val isOccupied: Boolean get() = assignedCardId != null
 

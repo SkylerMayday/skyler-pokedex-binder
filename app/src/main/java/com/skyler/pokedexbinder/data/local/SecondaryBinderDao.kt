@@ -29,4 +29,7 @@ interface SecondaryBinderDao {
 
     @Query("DELETE FROM secondary_binder WHERE id = :id")
     suspend fun deleteById(id: Int)
+
+    @Query("UPDATE secondary_binder SET language = :language WHERE id = :id")
+    suspend fun updateLanguage(id: Int, language: String)
 }

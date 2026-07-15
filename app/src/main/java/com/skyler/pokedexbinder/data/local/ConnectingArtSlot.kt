@@ -24,5 +24,6 @@ data class ConnectingArtSlot(
     val cardId: String? = null,
     val cardName: String? = null,
     val cardImageUrl: String? = null,
-    val owned: Boolean = false
+    val owned: Boolean = false,
+    val language: String = "EN"
 )
