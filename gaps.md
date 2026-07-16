@@ -22,15 +22,24 @@ actually fixed and verified, not when merely planned.
   startup. Went through the full `dev-team-pipeline` (Planner→Coder→Tester→Reviewer), verdict
   **SHIP**. 14 new JVM unit tests + 1 new instrumented test (compiles, not run — see standing
   no-emulator constraint below); full suite 182/182, no regressions.
-  **Known gap, not yet closed:** no test proves the `DatabaseModule.provideDatabase` wiring itself
-  is in place — the Tester stage ran a mutation test (removed the backup call, restored it
-  afterward, confirmed via `git diff`) and the full suite still passed green with the call
-  missing. All 14 new tests validate `DatabaseBackupManager` in isolation; none prove it's actually
-  called from production code. A silent future removal of that one line would ship undetected. Fix
-  would require an instrumented `@HiltAndroidTest` — blocked by the same no-emulator constraint as
-  everything else in this list. Consistent with this project's existing pattern (no Hilt module in
-  this codebase has ever had a wiring test), so not treated as a regression, but flagged distinctly
-  here since this specific feature exists to prevent a proven data-loss incident.
+  ~~**Known gap: no test proved the `DatabaseModule.provideDatabase` wiring itself is in
+  place**~~ — **closed 2026-07-16.** The Tester stage had run a mutation test (removed the backup
+  call, restored it afterward, confirmed via `git diff`) and found the full suite still passed
+  green with the call missing — none of the 14 tests proved `DatabaseBackupManager` was actually
+  called from production code, only that it worked correctly in isolation. Fixed without needing
+  full Hilt test infra (this project has none — no `hilt-android-testing` dependency, no
+  `HiltTestApplication`): extracted `DatabaseModule.provideDatabase`'s body into an
+  `internal fun buildDatabase(context, dbFileName)` that `provideDatabase` now one-line-delegates
+  to, then added `di/DatabaseModuleWiringTest.kt` (androidTest, 2 tests) which calls
+  `DatabaseModule.buildDatabase` directly — the exact function `provideDatabase` delegates to, not
+  a reimplementation — against a test-only file name (never the real on-device `pokedex_binder.db`,
+  since `provideDatabase` itself still hardcodes that and was deliberately left uncalled by the
+  test). A future accidental removal of the backup call from `buildDatabase` now fails this test.
+  Residual, accepted limitation: doesn't cover the one-line delegation in `provideDatabase` itself
+  (e.g. if someone bypassed `buildDatabase` entirely) — judged not worth chasing further, since
+  that's a much less likely mistake than dropping the backup call, which is the actual risk this
+  guards against. Compiles; not executed live (same standing no-emulator constraint as every other
+  instrumented test in this project).
   **This is a safety net, not a restore feature** — no in-app UI to browse/restore backup files;
   restoring one currently requires manual `adb` file access. Explicitly out of scope per the spec.
 - **`Migration7to8Test.kt` still doesn't exist** — accepted, not being pursued (Skyler, 2026-07-16:
@@ -97,11 +106,6 @@ actually fixed and verified, not when merely planned.
 - ~~Nothing committed since `e42eeb5` (2026-07-10)~~ — **fixed 2026-07-15.** All prior-session work
   committed as `b0686a0`; this session's work committed as `c632c52` and `7921b82`, both pushed to
   `origin/master`.
-- **Two independent pre-existing bugs in `PokedexDatabaseTest.kt`** (missing
-  `androidTestImplementation(turbine)`, a `MainBinderEntry(...)` call missing `dexOrder`) blocked
-  `compileDebugAndroidTestKotlin` for the whole module until Skyler flagged it and it was fixed
-  2026-07-15 (commit `7921b82`). Resolved, no longer a gap — noted here only so the fix's history
-  is visible; remove this line on the next audit.
 - **No real device/emulator available in this dev sandbox at all.** Every "verified" claim this
   session (and the one before it) is build/unit-test/compile-level only — nothing has been
   confirmed by actually running the app. This is a standing constraint, not a one-off gap; keep

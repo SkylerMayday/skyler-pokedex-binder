@@ -46,7 +46,13 @@ no users beyond himself.
   diff against the last published `binder.json` (GitHub Contents API), upload if changed, post a
   Discord embed. Manual-only (no auto-publish — explicitly rejected 2026-07-12). Content-gated
   binders (Connecting Art, Personal Collection, Unown) publish automatically when non-empty, no
-  separate Settings toggle — only Pokédex/Card History have toggles (legacy).
+  separate Settings toggle — only Pokédex/Card History have toggles (legacy). **Card History's
+  toggle (`publishCardHistory`) defaults OFF** (`PublishSettingsRepository.kt`) — cards already in
+  Card History locally will NOT appear in `binder.json`/the website until this is manually
+  enabled in Settings and a publish is run. Card History publishes under binder id `"cardHistory"`,
+  which the website's `SHELF_1_BINDER_IDS` allowlist places on shelf 1 alongside Pokédex — the
+  plumbing works fine, this is purely a default-off toggle catching people out (caught 2026-07-16:
+  Skyler had cards in Card History but nothing showing on the site).
   `publish/model/BinderSnapshot.kt`'s `SnapshotSlot` carries `language`/`remarks`/`isLocked` as of
   2026-07-15 (additive fields, no `SNAPSHOT_SCHEMA_VERSION` bump — same pattern as the earlier
   `owned` field addition). Card History has no restore path at all (by design, append-only), so

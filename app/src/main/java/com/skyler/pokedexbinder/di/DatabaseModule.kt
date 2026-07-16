@@ -1,6 +1,7 @@
 package com.skyler.pokedexbinder.di
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import androidx.room.Room
 import com.skyler.pokedexbinder.data.local.*
 import com.skyler.pokedexbinder.data.local.backup.DatabaseBackupManager
@@ -19,17 +20,29 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): PokedexDatabase {
+    fun provideDatabase(@ApplicationContext context: Context): PokedexDatabase =
+        buildDatabase(context, DB_FILE_NAME)
+
+    /**
+     * Extracted from [provideDatabase] so an instrumented test can exercise this exact production
+     * code path (backup check, real migrations, both destructive-fallback flags) against a
+     * test-only [dbFileName] — this project has no Hilt test infra (no `hilt-android-testing`
+     * dependency, no `HiltTestApplication`), and calling [provideDatabase] directly in a test
+     * would operate on the real on-device `pokedex_binder.db` file, which is unacceptable for a
+     * feature whose entire purpose is protecting that file from data loss.
+     */
+    @VisibleForTesting
+    internal fun buildDatabase(context: Context, dbFileName: String): PokedexDatabase {
         // Safety net: if Room's destructive fallback is about to drop + recreate every table
         // (no migration path from the on-disk version to SCHEMA_VERSION), back up the current
         // DB file first. No-op on the normal path (matching version or a clean migration chain).
         DatabaseBackupManager().backupIfDestructiveMigrationImminent(
             context = context,
-            dbFileName = DB_FILE_NAME,
+            dbFileName = dbFileName,
             targetVersion = PokedexDatabase.SCHEMA_VERSION,
             migrations = PokedexDatabase.ALL_MIGRATIONS
         )
-        return Room.databaseBuilder(context, PokedexDatabase::class.java, DB_FILE_NAME)
+        return Room.databaseBuilder(context, PokedexDatabase::class.java, dbFileName)
             .addMigrations(*PokedexDatabase.ALL_MIGRATIONS)
             .fallbackToDestructiveMigration()
             .fallbackToDestructiveMigrationOnDowngrade()
