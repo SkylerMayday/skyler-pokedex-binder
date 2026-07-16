@@ -1,138 +1,135 @@
-# Handoff — 2026-07-15
+# Handoff — 2026-07-16 (session 3, pre-migration DB backup safety net)
 
 ## Goals (this session)
 
-Started from "check handoff, do what's needed" and expanded into a long, iterative on-device
-debugging session covering: a new Unown binder feature, TCGCSV search integration, Connecting
-Art/Personal Collection publish support, and multiple rounds of real bug fixes discovered only
-through actual on-device testing (which this session had none of directly — all "on-device"
-findings came from Skyler's live reports).
+Fix the highest-priority item in `gaps.md`: `fallbackToDestructiveMigrationOnDowngrade()` (and,
+discovered this session, the unconditional `fallbackToDestructiveMigration()` upgrade-side
+variant too) is a proven data-loss landmine — it already wiped Skyler's entire local database
+once for real (v8→v7 downgrade, no warning). Build a safety net: automatically back up the DB
+file before any destructive Room migration fallback actually fires.
+
+Skyler also triaged the rest of the prior session's `gaps.md` register in this session: accepted
+several items as-is (no action wanted), one was reclassified as already effectively resolved
+through his own real-device usage. See Changes Made #2 below.
 
 ## Current State
 
-**Nothing has been committed since `e42eeb5` (2026-07-10).** The entire session's work — several
-complete features plus multiple real bug fixes — is sitting uncommitted in the working tree.
-Skyler has NOT explicitly said "commit this" yet this session; do not commit without asking.
+**Not yet committed.** All changes below are in the working tree, unpushed. Full
+`dev-team-pipeline` run completed (Planner → Coder → Tester → Reviewer), **verdict: SHIP**.
 
-All code compiles clean and the full unit suite is green (`./gradlew.bat testDebugUnitTest`,
-verified fresh multiple times this session with `JAVA_HOME=D:\jdk17\jdk-17.0.14+7` and
-`TEMP=TMP=C:\Windows\Temp` set). The debug APK (`app/build/outputs/apk/debug/app-debug.apk`) was
-last rebuilt at 2026-07-15 12:22 SGT with everything below included.
+- Full unit suite: **182/182 passing, 0 failures** (up from 168 at last handoff — 14 new tests,
+  no regressions). Verified independently three times across the pipeline (Coder, Tester,
+  Reviewer each ran the suite fresh rather than trusting the prior stage's claim).
+- `compileDebugAndroidTestKotlin` succeeds module-wide, including a new instrumented test.
+- **Database schema is unchanged at v9** — this feature adds no migration, no schema bump. Purely
+  additive safety-net code sitting in front of the existing `Room.databaseBuilder(...).build()`
+  call.
 
-**Database is at schema v8 on Skyler's device**, reached via a real `MIGRATION_7_8` (not a
-destructive wipe) — do not revert the Room version below 8 without reading the Gotchas section
-in `project-overview.md` first; a prior revert this session wiped his entire local database.
+**Database is at schema v9** via a real forward `MIGRATION_8_9` (not destructive) — do not revert
+below v9 without reading `project-overview.md`'s Gotchas section first (a prior v8→v7 downgrade
+wiped the user's device DB; this session's feature mitigates but does not eliminate that risk for
+any *future* downgrade).
 
-## Active Files (most-touched this session)
+## Active Files (this session)
 
-- `app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt` — TCGCSV
-  integration, `searchStreaming`, token-based matching.
-- `app/src/main/java/com/skyler/pokedexbinder/ui/quickscan/QuickScanViewModel.kt` +
-  `QuickScanScreen.kt` — wired onto `searchStreaming` (was previously bypassing TCGCSV entirely).
-- `app/src/main/java/com/skyler/pokedexbinder/ui/unown/` +
-  `data/local/UnownBinderEntry.kt`/`UnownBinderDao.kt` +
-  `repository/UnownBinderRepository.kt` — standalone Unown binder (current, final design).
-- `app/src/main/java/com/skyler/pokedexbinder/ui/personalcollection/PersonalCollectionViewModel.kt` —
-  per-section `runCatching` isolation in `refreshAll()` (real fix, keep it).
-- `app/src/main/java/com/skyler/pokedexbinder/ui/navigation/AppNavigation.kt` — drawer order,
-  Unown routes, Card History `onOpenDrawer` wiring.
-- `app/src/main/java/com/skyler/pokedexbinder/publish/PublishRepository.kt` +
-  `RestoreRepository.kt` — Connecting Art + Personal Collection + Unown publish/restore, all
-  content-gated (no Settings toggle for any of the three).
-- `app/src/main/java/com/skyler/pokedexbinder/di/NetworkModule.kt` — TCGCSV `User-Agent`
-  interceptor (tcgcsv.com bot-blocks OkHttp's default UA).
+- `app/src/main/java/com/skyler/pokedexbinder/data/local/backup/SqliteVersionReader.kt` — new.
+  Reads on-disk `PRAGMA user_version` directly via `SQLiteDatabase.openDatabase(..., OPEN_READONLY)`,
+  bypassing Room entirely so this check runs before Room ever opens the file.
+- `app/src/main/java/com/skyler/pokedexbinder/data/local/backup/MigrationPathResolver.kt` — new.
+  BFS over `Migration.(startVersion, endVersion)` edges; direction-agnostic, honors multi-version
+  jump migrations, doesn't hardcode a "+1 per step" assumption.
+- `app/src/main/java/com/skyler/pokedexbinder/data/local/backup/DatabaseBackupManager.kt` — new.
+  Orchestrator: `backupIfDestructiveMigrationImminent(context, dbFileName, targetVersion, migrations)`.
+  No-op fast path when versions match or a clean migration path exists (one cheap read-only PRAGMA
+  query). Otherwise copies `.db` + `-wal`/`-shm` sidecars into `context.filesDir/db_backups/`,
+  rotates to keep the newest 5 sets. All failures logged and swallowed — never blocks startup.
+- `app/src/main/java/com/skyler/pokedexbinder/data/local/PokedexDatabase.kt` — added
+  `SCHEMA_VERSION` const + `ALL_MIGRATIONS` array as the single source of truth (previously the
+  `@Database(version = 9)` annotation and any migration list were separately hand-maintained).
+- `app/src/main/java/com/skyler/pokedexbinder/di/DatabaseModule.kt` — `provideDatabase` now calls
+  the backup check synchronously before `.build()`; confirmed both `fallbackToDestructiveMigration()`
+  and `fallbackToDestructiveMigrationOnDowngrade()` are covered by the same guard.
+- `app/src/test/java/com/skyler/pokedexbinder/data/local/backup/` — new: `MigrationPathResolverTest.kt`
+  (5 tests), `DatabaseBackupManagerTest.kt` (9 tests, fake version reader + real JVM temp dirs).
+- `app/src/androidTest/java/com/skyler/pokedexbinder/data/local/backup/DatabaseBackupManagerInstrumentedTest.kt`
+  — new, 2 tests. Compiles; not executed (no emulator in this sandbox).
+- `gaps.md` — updated: backup item marked mitigated with implementation detail + one known
+  residual gap (see Next Steps #1); several other items marked accepted/no-action per Skyler's
+  triage this session; two migration-test items reclassified per Skyler's reasoning.
 
-## Changes Made (chronological, condensed — full detail in the session transcript)
+## Changes Made
 
-1. Unown binder v1 (standalone, Room v8) + TCGCSV search fallback — built via
-   `dev-team-pipeline`, shipped.
-2. Personal Collection: collapsible sections + jump-to-binder chips (later replaced by a
-   dropdown, see below).
-3. Connecting Art + Personal Collection publish/restore support (content-gated, no toggle) —
-   built via `dev-team-pipeline`. This resolves the 2026-07-11 open question below: both are now
-   wired into `buildSnapshot()`.
-4. **Bug found & fixed**: TCGCSV requests were silently 401'd by tcgcsv.com's bot protection
-   (OkHttp's default User-Agent). Added a browser-like UA header scoped to the TCGCSV client
-   only.
-5. Concurrent 3-source search (`searchStreaming`) + image backfill — built via
-   `dev-team-pipeline`, replacing the old retry-on-empty TCGCSV button.
-6. **Bug found & fixed**: TCGCSV's group-scan filter required the WHOLE query to be a literal
-   substring of the product name — "CLB Mr Mime" failed to match "Mr. Mime" because "CLB" isn't
-   in the product's own name field. Changed to token-based matching (any word ≥3 chars matches).
-7. Unown reworked to live inside Personal Collection as 28 sections (Charizard/Celebi-style
-   auto-search + owned toggle) — per explicit request, later reversed.
-8. **Bug found & fixed**: `PersonalCollectionViewModel.refreshAll()`'s concurrent refresh wrapped
-   all sections in one `coroutineScope` — one section throwing cancelled every sibling and
-   aborted every unstarted chunk, which could silently prevent later-listed sections (like
-   Unown's 28 letters) from ever being attempted. Fixed with per-section `runCatching`.
-9. Unown reverted to a standalone binder (fallback request), simplified to a broad `"Unown"`
-   search query instead of per-letter queries.
-10. **Serious incident**: reverting the Room schema from v8 back to v7 (to undo step 7's
-    migration) triggered `fallbackToDestructiveMigrationOnDowngrade()` because Skyler's device
-    was already at v8 — wiped his entire local database (Pokédex, Card History, Connecting Art,
-    Personal Collection, all gone). Recovered via his last GitHub publish snapshot (he'd
-    published before, so Pokédex/Card History came back via Restore).
-11. `QuickScanViewModel` found to never have used `searchStreaming`/TCGCSV at all — every TCGCSV
-    fix up to this point only applied to `ManualSearchViewModel`, which doesn't back the main
-    Pokédex binder's actual slot-tap assign flow. Fixed: wired `QuickScanViewModel` onto
-    `searchStreaming` too.
-12. Unown briefly re-merged into Personal Collection on a miscommunication, then reverted back
-    to standalone once the actual data-model difference (one-slot-one-card vs.
-    many-cards-with-toggle) was explained and confirmed. **This is the final state.**
-13. Personal Collection's chip row replaced with a "Jump to section" `DropdownMenu` (mirrors the
-    main Pokédex binder's existing pattern) — the chip row became impractical once section count
-    grew.
-14. Unown drawer position moved to directly after Personal Collection (was between Pokédex and
-    Connecting Art).
-15. Card History (`SecondaryBinderScreen`) found to have never had a hamburger-menu button at
-    all — unrelated pre-existing gap, fixed.
-16. Session-end: `project-overview.md` and `gaps.md` created (didn't exist before), this
-    `handoff.md` rewritten, session archived to Digital Brain.
+1. Ran the full `dev-team-pipeline` on the backup feature. Planner grounded in the actual codebase
+   (found `DatabaseModule.kt` already had *both* destructive-fallback variants enabled, correcting
+   a `gaps.md` entry that only named the downgrade one) and chose a pre-`.build()`
+   `PRAGMA user_version` check over a `SupportSQLiteOpenHelper.Callback` wrapper (the callback
+   fires too late — after Room has already opened/locked the connection).
+2. **Skyler triaged the rest of the prior `gaps.md` register in this session** (2026-07-16), all
+   reflected in the updated file:
+   - Accepted, no action: TCGCSV's per-search full-group-scan cost ("it's fine"); no manual
+     card-entry fallback for Connecting Art/Personal Collection ("fine to have... currently");
+     website not yet consuming `language`/`remarks`/`isLocked` (already queued in a separate
+     `skylermayday-site` session).
+   - `Migration7to8Test.kt` missing, and `Migration5to6Test`/`Migration6to7Test` never run as
+     standalone JUnit executions: accepted as low priority — "we will most likely not go back to
+     [schema version] 7", so the downgrade path these would most protect against is unlikely to be
+     exercised.
+   - `Migration8to9Test.kt` "never run on a real device": reclassified as effectively verified —
+     Skyler confirmed every test he actually performs is on his real phone, meaning the v8→v9
+     migration itself has already run for real through normal app usage since it shipped, even
+     though the standalone instrumented JUnit test file was never formally executed in CI/sandbox.
+3. **Coder subagent hit the account session limit mid-task**, before writing `.pipeline/changes.md`
+   or the instrumented test file. Per the `check-subagent-artifacts-before-rerunning` lesson,
+   checked its on-disk output before resuming rather than blind-restarting: all main-source files
+   (`SqliteVersionReader`, `MigrationPathResolver`, `DatabaseBackupManager`, `DatabaseModule`
+   wiring, `PokedexDatabase` constants) and both JVM test files were already complete and correct
+   on disk. Finished the remaining work directly in the orchestrating session rather than
+   re-spawning a fresh Coder: fixed one test compile error (`arrayOf(jumpMigration)` on an
+   anonymous `Migration` subclass inferred the wrong array type — one-line fix), wrote the missing
+   instrumented test following the `Migration8to9Test.kt` convention, ran full verification
+   (182/182 unit tests, `compileDebugAndroidTestKotlin` clean), and wrote `.pipeline/changes.md`.
+4. Tester stage independently re-ran everything rather than trusting `changes.md`'s numbers, and
+   went further: **ran a real mutation test** — temporarily removed the `DatabaseBackupManager`
+   call from `DatabaseModule.provideDatabase`, confirmed the full suite still passes green with it
+   missing, then restored the file and verified byte-identical via `git diff --stat`. This exposed
+   a real gap: no test proves the DI wiring itself is in place, only that `DatabaseBackupManager`
+   works correctly in isolation. Documented as a known, non-blocking gap (see Next Steps #1).
+5. Reviewer independently re-verified test counts, traced the `DatabaseModule.provideDatabase`
+   ordering by hand (confirmed the backup call is a synchronous statement fully preceding
+   `.build()` — no path exists for Room to wipe data before the check runs), and confirmed the BFS
+   correctness against the actual (linear, no-branch) migration chain. **Verdict: SHIP.**
 
-## Failed Attempts / Reversed Decisions
+## Failed Attempts
 
-- Unown-inside-Personal-Collection (28 auto-search sections) — built twice, reverted both times.
-  Root cause of the confusion: "put Unown in PC" was interpreted as adopting PC's data model,
-  when what was actually wanted was Unown's own model just reachable from a different place in
-  the UI. Final answer: standalone binder, own nav-drawer entry.
-- Reverting Room from v8 to v7 to "clean up" the schema after undoing the PC-merge — caused a
-  real data-loss incident (see Changes Made #10). Going forward: don't revert a Room version once
-  any build might have reached the device; leave unused columns/tables in place instead.
-- CJK/SEA language card-art matching via TCGdex name-search — investigated live, found genuinely
-  unreliable (many zero-result searches, sparse images even on hits). Confirmed not worth
-  building; explicitly parked by Skyler.
+- Stage 2 (Coder) subagent hit the account session limit mid-task and was cut off before writing
+  its output file or the instrumented test. Not a wasted run — checked artifacts on disk first
+  (per the standing lesson), found the core implementation and JVM tests were already complete and
+  correct, and finished the remainder directly rather than re-running the whole stage.
 
 ## Next Steps
 
-1. **Ask Skyler whether to commit.** This is the single biggest open item — a huge amount of
-   verified, tested work is sitting uncommitted.
-2. **On-device re-verification of the very latest build** (12:22 SGT APK) — confirm: Unown shows
-   in the drawer after Personal Collection with 28 working slots; Card History has a working
-   hamburger menu; TCGCSV/CLB Mr. Mime works via the main Pokédex binder's QuickScan flow, not
-   just Connecting Art search.
-3. `Migration7to8Test.kt` (androidTest) was never recreated after the standalone Unown binder's
-   final rebuild — flagged in `gaps.md`.
-4. Decide whether Connecting Art/Personal Collection/Unown's publish data has ever actually been
-   verified end-to-end on the live site (published, then checked on the website project) — this
-   session built and unit-tested the wiring but never confirmed the real GitHub Pages output.
-5. **Carried over from 2026-07-08/2026-07-12, still not started:**
-   - Custom domain (CNAME + DNS) and og:image for the GitHub Pages viewer — low urgency, and
-     that viewer is in maintenance-only mode pending the website project's redesign anyway.
-   - Recent-pulls feed idea (2026-07-12): a stream-facing "latest additions" view driven by
-     `changelog.json`, tying the binder into on-stream pack openings. App side is effectively
-     done (changelog data already published) — this is almost entirely the website project's
-     feature to build. Not yet specced.
-   - "Braincheck" (Skyler's term, used 2026-07-08) — still undefined; re-ask if it recurs.
+1. **Known residual gap, not yet closed:** no test exercises `DatabaseModule.provideDatabase`'s
+   actual wiring — a future accidental removal of the `DatabaseBackupManager` call would ship with
+   a fully green test suite. Proper fix needs an instrumented `@HiltAndroidTest`, blocked by the
+   same no-emulator constraint as everything else. Consistent with this project's existing pattern
+   (no Hilt module here has ever had a wiring test), so treated as acceptable for now, not urgent.
+2. **This session's work is uncommitted.** Confirm with Skyler before committing/pushing (per this
+   project's usual flow — not a live-deploy-on-push repo, so no auto-push expectation here).
+3. **Instrumented test still unexecuted on a real device** — `DatabaseBackupManagerInstrumentedTest.kt`
+   compiles but has never run against real Android SQLite. Same standing no-emulator constraint as
+   every other migration/instrumented test in this project; worth a real on-device pass whenever
+   Skyler next has the app on a device/emulator he's willing to test destructive-migration
+   scenarios against.
+4. Carried over, still not started: custom domain/og:image for the maintenance-mode GitHub Pages
+   viewer; the recent-pulls/changelog-driven stream feature idea (mostly website-side); "Braincheck"
+   (Skyler's term, still undefined).
 
 ## Environment Notes (still true)
 
-- `JAVA_HOME=D:\jdk17\jdk-17.0.14+7`; `TEMP=TMP=C:\Windows\Temp` for Gradle runs.
-- No Android emulator in this sandbox — every on-device fact this session came from Skyler's
-  live reports, not direct observation. Treat "should work" with extra suspicion until he
-  confirms; this session had several rounds where code was verified correct in isolation but the
-  actual on-device symptom persisted because the fix was in the wrong file (see `QuickScanViewModel`
-  gotcha in `project-overview.md`).
-- Android Studio's "Apply Changes" does not pick up new nav routes/composables/migrations — a
-  full Run/Debug or `adb install -r` is required after every code change, confirmed as the root
-  cause of at least two "my fix isn't showing up" false alarms this session.
+- `JAVA_HOME=D:\jdk17\jdk-17.0.14+7`; Gradle wrapper is `gradlew.bat` (Windows-only — no Unix
+  `gradlew` in this repo). Run it via the **PowerShell tool**, not Bash — Bash's `./gradlew` fails
+  outright since the file doesn't exist; PowerShell needs `$env:JAVA_HOME`, `$env:TEMP`,
+  `$env:TMP = "C:\Windows\Temp"` set first.
+- No Android emulator in this sandbox — all builds/tests this session were unit-level +
+  compile-level only, never on-device.
 - Session JSONL for this project: `C:\Users\SkylerMayday\.claude\projects\D--Claude-Projects-PokedexBinderV2\`.

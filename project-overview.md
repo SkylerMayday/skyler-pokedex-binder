@@ -8,10 +8,19 @@ no users beyond himself.
 
 ## Architecture
 
-- **Local storage**: Room database (`pokedex_binder.db`), currently schema v8. Each nav-drawer
+- **Local storage**: Room database (`pokedex_binder.db`), currently schema v9. Each nav-drawer
   section is its own independent entity/table set — there is no shared "binder" abstraction.
   A new section means: new entity + DAO + repository + ViewModel + Screen + `Screen` route +
   drawer item, wired by hand in `ui/navigation/AppNavigation.kt`.
+- **Per-card metadata** (2026-07-15): every card-holding entity has a `language` column (string,
+  `data/model/Language.kt` enum, default `"EN"`). `main_binder` and `unown_binder` additionally
+  have `remarks` (nullable text) and `isLocked` (boolean). A locked Pokédex/Unown slot shows a
+  lock icon overlay and `BinderRepository`/`UnownBinderRepository`'s `assignCard`/`clearCard`
+  refuse to act on it until unlocked. `ui/components/EditCardDetailsDialog.kt` is the shared
+  dialog (language dropdown everywhere; remarks + lock toggle only on Pokédex/Unown), wired into
+  each binder's existing per-card action surface (bottom sheets, `SlotDetailScreen`, or a small
+  edit icon for Card History which has no sheet). Full spec:
+  `docs/specs/2026-07-15-card-language-lock-remarks.md`.
 - **Card search**: `CardSearchRepository` merges three sources:
   - **pokemontcg.io** (primary) — single fast query, `-set.series:Pocket` filter always applied.
   - **TCGdex** (secondary) — single fast query, English locale only
@@ -38,6 +47,10 @@ no users beyond himself.
   Discord embed. Manual-only (no auto-publish — explicitly rejected 2026-07-12). Content-gated
   binders (Connecting Art, Personal Collection, Unown) publish automatically when non-empty, no
   separate Settings toggle — only Pokédex/Card History have toggles (legacy).
+  `publish/model/BinderSnapshot.kt`'s `SnapshotSlot` carries `language`/`remarks`/`isLocked` as of
+  2026-07-15 (additive fields, no `SNAPSHOT_SCHEMA_VERSION` bump — same pattern as the earlier
+  `owned` field addition). Card History has no restore path at all (by design, append-only), so
+  its `language` field publishes but never restores.
 
 ## The Six Nav-Drawer Sections
 
@@ -125,6 +138,19 @@ no users beyond himself.
   means ANY app build that declares a lower Room version than what's already on a device wipes
   that device's entire local database silently, no confirmation. Treat every Room version change
   as a one-way door once any build might have reached a real device.
+- **Adding a DB column is not the same as publishing it.** The 2026-07-15 language/lock/remarks
+  feature shipped a full Room migration + UI in one pipeline run, but nothing in that run touched
+  `PublishRepository`/`RestoreRepository` — the public `binder.json` didn't carry the new fields
+  until a second, separate pipeline run. When a feature's data needs to reach the website, check
+  the publish layer explicitly; it is not automatically in scope of "add a DB field."
+- **`PokedexDatabaseTest.kt` had two independent pre-existing compile bugs** (fixed 2026-07-15,
+  commit `7921b82`, predate any recent schema work per `git show HEAD`): `turbine` was only
+  declared as `testImplementation`, not `androidTestImplementation`, so `import app.cash.turbine.test`
+  didn't resolve in the androidTest source set; and two `MainBinderEntry(...)` calls used
+  3-arg positional construction that predates the `dexOrder: Int` field being added (no default),
+  leaving it unfilled. Both fixed directly (named-arg construction, added the missing dependency)
+  — if `compileDebugAndroidTestKotlin` ever breaks again in this file, check these two classes of
+  issue first.
 
 ## Conventions
 

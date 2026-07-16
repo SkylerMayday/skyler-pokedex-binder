@@ -15,7 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         PersonalCollectionEntry::class,
         UnownBinderEntry::class
     ],
-    version = 9,
+    version = PokedexDatabase.SCHEMA_VERSION,
     exportSchema = false
 )
 abstract class PokedexDatabase : RoomDatabase() {
@@ -26,6 +26,9 @@ abstract class PokedexDatabase : RoomDatabase() {
     abstract fun unownBinderDao(): UnownBinderDao
 
     companion object {
+        /** Single source of truth for the DB schema version — kept in sync with the [Database] annotation above. */
+        const val SCHEMA_VERSION = 9
+
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE secondary_binder ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
@@ -116,5 +119,10 @@ abstract class PokedexDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE secondary_binder ADD COLUMN language TEXT NOT NULL DEFAULT 'EN'")
             }
         }
+
+        /** Single list every migration-aware call site (DI wiring, pre-migration backup check) reads from. */
+        val ALL_MIGRATIONS: Array<Migration> = arrayOf(
+            MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9
+        )
     }
 }
