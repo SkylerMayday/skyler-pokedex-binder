@@ -3,6 +3,38 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
+## Refreshed — 2026-08-21 (session 4)
+
+### Open, needs real-device confirmation
+
+- **Scanner camera never actually focused — no `Camera` handle, no tap-to-focus, no metering
+  point tied to the guide frame.** Skyler reported "camera seems to be very blurry and unable to
+  focus on card when card is placed within the frame of the OCR." Root cause:
+  `CameraPreview` (`ui/scanner/ScannerScreen.kt`) discarded the `Camera` object
+  `bindToLifecycle(...)` returns, so nothing could ever call `cameraControl.startFocusAndMetering()`
+  — the camera was running on default continuous AF with zero metering hint, at typical card-scan
+  distance (~10-15cm) where that alone often can't lock. Confirmed via CameraX 1.6.1 release notes
+  check this predates today's `camerax` version bump — identical gap at 1.3.4, not a regression.
+  Fixed via a new `requestFocusAndMetering` helper: initial focus-and-meter on bind completion
+  (targeting the guide-frame center, geometrically confirmed equal to
+  `previewView.width/2f, previewView.height/2f`), edge-triggered refocus on the card-detection
+  analyzer's not-detected→detected transition, plus tap-to-focus as a manual fallback. Every call
+  site guarded (`camera?.let`, zero-size early-return, `runCatching`), bounded 4s auto-cancel —
+  worst case on real hardware is a no-op, not a crash. Ran through `dev-team-pipeline`
+  (Planner→Coder→Tester→Reviewer), verdict **ship at 95/100**; all 10 new CameraX API call sites
+  verified twice independently against the actual `camerax:1.6.1` `-sources.jar` in the Gradle
+  cache (not guessed, not from possibly-stale docs).
+  **Not yet verified on real hardware — no emulator in this sandbox.** Every stage was explicit
+  about this: the gate proves code-correctness (compiles, builds signed+minified release, 182/182
+  unit tests, API signatures match exactly) but has zero evidence the camera actually focuses
+  better in practice. **Skyler needs a full reinstall on his device and to confirm the camera
+  visibly locks focus on a card in the guide frame before this is closed.** If it doesn't fully
+  resolve the blur, the next things to check: whether the device's AF hardware actually supports
+  `FLAG_AF` at macro/close distance at all (`CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS`/
+  minimum focus distance), and whether the 4s auto-cancel is too short if the user holds the card
+  still for calibration but the auto-capture flow (`holdDurationMs`) takes longer than that to
+  trigger.
+
 ## Refreshed — 2026-07-15 (session 2)
 
 ### Data-integrity / migration risk (highest priority)

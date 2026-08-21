@@ -3,6 +3,7 @@ package com.skyler.pokedexbinder.ui.scanner
 import android.Manifest
 import android.os.Handler
 import android.os.Looper
+import android.view.MotionEvent
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -39,6 +40,7 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.skyler.pokedexbinder.data.model.TcgCard
 import kotlinx.coroutines.delay
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 // ------- Card detection -------------------------------------------------------
 
@@ -176,6 +178,20 @@ private fun CardFrameOverlay(cardDetected: Boolean, modifier: Modifier = Modifie
     }
 }
 
+// ------- Camera focus ----------------------------------------------------------
+
+private fun requestFocusAndMetering(camera: Camera, previewView: PreviewView, x: Float, y: Float) {
+    if (previewView.width == 0 || previewView.height == 0) return
+    val point = previewView.meteringPointFactory.createPoint(x, y)
+    val action = FocusMeteringAction.Builder(
+        point,
+        FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE
+    )
+        .setAutoCancelDuration(4, TimeUnit.SECONDS)
+        .build()
+    runCatching { camera.cameraControl.startFocusAndMetering(action) }
+}
+
 // ------- Camera preview -------------------------------------------------------
 
 @Composable
@@ -196,6 +212,8 @@ private fun CameraPreview(
     AndroidView(
         factory = { ctx ->
             val previewView = PreviewView(ctx)
+            var camera: Camera? = null
+            var wasCardDetected = false
             val future = ProcessCameraProvider.getInstance(ctx)
             future.addListener({
                 val provider = future.get()
@@ -211,16 +229,45 @@ private fun CameraPreview(
                 analysis.setAnalyzer(analysisExecutor) { imageProxy ->
                     val detected = detectCardInFrame(imageProxy)
                     imageProxy.close()
-                    mainHandler.post { onCardPresenceChanged(detected) }
+                    mainHandler.post {
+                        onCardPresenceChanged(detected)
+                        // Edge-triggered refocus: only on the not-detected -> detected transition,
+                        // so a card sitting still in frame doesn't spam focus-metering calls.
+                        if (detected && !wasCardDetected) {
+                            camera?.let { cam ->
+                                // Guide-frame center is always (width/2, height/2) — the overlay's
+                                // 0.75f/88:63 ratio math isn't needed here since CameraPreview and
+                                // CardFrameOverlay are same-sized siblings centered the same way.
+                                requestFocusAndMetering(cam, previewView, previewView.width / 2f, previewView.height / 2f)
+                            }
+                        }
+                        wasCardDetected = detected
+                    }
                 }
 
                 provider.unbindAll()
-                provider.bindToLifecycle(
+                camera = provider.bindToLifecycle(
                     lifecycleOwner,
                     CameraSelector.DEFAULT_BACK_CAMERA,
                     preview, capture, analysis
                 )
+                // Initial focus once binding completes; deferred via post{} so previewView.width/height
+                // are populated (they may still be 0 at the exact moment bindToLifecycle returns).
+                previewView.post {
+                    camera?.let { cam ->
+                        requestFocusAndMetering(cam, previewView, previewView.width / 2f, previewView.height / 2f)
+                    }
+                }
             }, ContextCompat.getMainExecutor(ctx))
+
+            previewView.setOnTouchListener { view, event ->
+                if (event.action == MotionEvent.ACTION_UP) {
+                    camera?.let { cam -> requestFocusAndMetering(cam, previewView, event.x, event.y) }
+                    view.performClick()
+                }
+                true
+            }
+
             previewView
         },
         modifier = modifier
