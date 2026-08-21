@@ -24,16 +24,33 @@ actually fixed and verified, not when merely planned.
   (Planner→Coder→Tester→Reviewer), verdict **ship at 95/100**; all 10 new CameraX API call sites
   verified twice independently against the actual `camerax:1.6.1` `-sources.jar` in the Gradle
   cache (not guessed, not from possibly-stale docs).
-  **Not yet verified on real hardware — no emulator in this sandbox.** Every stage was explicit
-  about this: the gate proves code-correctness (compiles, builds signed+minified release, 182/182
-  unit tests, API signatures match exactly) but has zero evidence the camera actually focuses
-  better in practice. **Skyler needs a full reinstall on his device and to confirm the camera
-  visibly locks focus on a card in the guide frame before this is closed.** If it doesn't fully
-  resolve the blur, the next things to check: whether the device's AF hardware actually supports
-  `FLAG_AF` at macro/close distance at all (`CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS`/
-  minimum focus distance), and whether the 4s auto-cancel is too short if the user holds the card
-  still for calibration but the auto-capture flow (`holdDurationMs`) takes longer than that to
-  trigger.
+  **Attempt #1 confirmed insufficient on real hardware (Skyler, same day): "camera doesnt fix the
+  blur... i cant tap it in time - it will just say card detected and take the snap."**
+
+  **Attempt #2, same day:** root cause was a race, not a missing feature — `onCardPresenceChanged`
+  (which drives `ScannerScreen`'s 1500ms auto-capture countdown) fired the instant raw
+  contrast-detection succeeded, the *same instant* attempt #1's refocus request went out, and
+  attempt #1 explicitly discarded the `ListenableFuture<FocusMeteringResult>` that call returns —
+  nothing gated the countdown on focus actually converging. CameraX AF convergence at macro
+  distance routinely exceeds 1500ms on budget hardware; the shutter fired mid-defocus, exactly
+  matching what Skyler saw (card "detected" almost instantly, no time to even test tap-to-focus).
+  Fixed by gating `onCardPresenceChanged(true)` on BOTH card-detected AND the most recent
+  focus-metering request having settled (via the previously-discarded future), guarded by a
+  monotonic `focusRequestId` token so a stale/superseded request's late completion can never
+  incorrectly mark a newer request as locked — entirely inside `CameraPreview`, `ScannerScreen`'s
+  own timer logic untouched. Went through a full Reviewer auto-loop this time: pass 1 caught a
+  real single-frame ordering bug (`focusLocked` read before the same-frame `triggerFocus()` reset
+  it — self-corrects next frame, doesn't reintroduce the blur, but violated spec AC1), scored
+  82/100; Coder fixed it with a `justTransitioned` guard, pass 2 verified the fix via independent
+  frame-trace + boolean-algebra proof, scored 99/100, **ship**.
+  **Still not yet verified on real hardware — no emulator in this sandbox, same standing
+  constraint as attempt #1.** Everything above proves code-correctness only (compiles, builds
+  signed release, 182/182 unit tests, all CameraX API calls re-verified against the actual
+  `camerax:1.6.1` `-sources.jar`) — zero evidence yet the blur is actually gone in practice.
+  **Skyler needs another full reinstall + real-device test.** Per the spec's own escalation path:
+  if attempt #2 also fails to resolve the blur, the next step is investigating actual camera
+  hardware AF capability (`CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE` — if 0, the lens
+  is fixed-focus and no software fix can help at all) — not a third blind software attempt.
 
 ## Refreshed — 2026-07-15 (session 2)
 

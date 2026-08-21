@@ -39,6 +39,7 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.skyler.pokedexbinder.data.model.TcgCard
 import kotlinx.coroutines.delay
+import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
@@ -180,8 +181,18 @@ private fun CardFrameOverlay(cardDetected: Boolean, modifier: Modifier = Modifie
 
 // ------- Camera focus ----------------------------------------------------------
 
-private fun requestFocusAndMetering(camera: Camera, previewView: PreviewView, x: Float, y: Float) {
-    if (previewView.width == 0 || previewView.height == 0) return
+private fun requestFocusAndMetering(
+    camera: Camera,
+    previewView: PreviewView,
+    x: Float,
+    y: Float,
+    mainExecutor: Executor,
+    onSettled: () -> Unit
+) {
+    if (previewView.width == 0 || previewView.height == 0) {
+        onSettled()
+        return
+    }
     val point = previewView.meteringPointFactory.createPoint(x, y)
     val action = FocusMeteringAction.Builder(
         point,
@@ -189,7 +200,15 @@ private fun requestFocusAndMetering(camera: Camera, previewView: PreviewView, x:
     )
         .setAutoCancelDuration(4, TimeUnit.SECONDS)
         .build()
-    runCatching { camera.cameraControl.startFocusAndMetering(action) }
+    // FocusMeteringResult.isFocusSuccessful() is deliberately never inspected here — a
+    // completed-but-unsuccessful result must still unblock capture (see spec). addListener
+    // fires on any completion type (success, failure, or cancellation).
+    val future = runCatching { camera.cameraControl.startFocusAndMetering(action) }.getOrNull()
+    if (future == null) {
+        onSettled()
+        return
+    }
+    future.addListener({ onSettled() }, mainExecutor)
 }
 
 // ------- Camera preview -------------------------------------------------------
@@ -204,6 +223,7 @@ private fun CameraPreview(
     val lifecycleOwner = LocalLifecycleOwner.current
     val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
+    val mainExecutor = remember { Executor { command -> mainHandler.post(command) } }
 
     DisposableEffect(Unit) {
         onDispose { analysisExecutor.shutdown() }
@@ -214,6 +234,23 @@ private fun CameraPreview(
             val previewView = PreviewView(ctx)
             var camera: Camera? = null
             var wasCardDetected = false
+            // True once the most recently issued focus-and-metering request has settled
+            // (success or failure — either way capture must not stay blocked on it forever).
+            var focusLocked = false
+            // Monotonically increasing token so a stale, superseded request's late completion
+            // can never incorrectly re-lock focus over a newer, still-in-flight request.
+            var focusRequestId = 0
+
+            fun triggerFocus(x: Float, y: Float) {
+                val cam = camera ?: return
+                focusRequestId++
+                val myRequestId = focusRequestId
+                focusLocked = false
+                requestFocusAndMetering(cam, previewView, x, y, mainExecutor) {
+                    if (myRequestId == focusRequestId) focusLocked = true
+                }
+            }
+
             val future = ProcessCameraProvider.getInstance(ctx)
             future.addListener({
                 val provider = future.get()
@@ -230,16 +267,23 @@ private fun CameraPreview(
                     val detected = detectCardInFrame(imageProxy)
                     imageProxy.close()
                     mainHandler.post {
-                        onCardPresenceChanged(detected)
+                        // Only report presence once the most recently issued focus request has
+                        // actually settled — gates ScannerScreen's auto-capture hold-timer on
+                        // real focus convergence, not just contrast-heuristic detection.
+                        // On the not-detected -> detected transition frame, focusLocked may still
+                        // reflect a stale, unrelated prior request (bind-time focus or a previous
+                        // card's settled focus) that has nothing to do with *this* card — so the
+                        // transition frame's own report is forced false, without reordering the
+                        // presence-report line ahead of the edge-triggered refocus call below.
+                        val justTransitioned = detected && !wasCardDetected
+                        onCardPresenceChanged(detected && focusLocked && !justTransitioned)
                         // Edge-triggered refocus: only on the not-detected -> detected transition,
                         // so a card sitting still in frame doesn't spam focus-metering calls.
-                        if (detected && !wasCardDetected) {
-                            camera?.let { cam ->
-                                // Guide-frame center is always (width/2, height/2) — the overlay's
-                                // 0.75f/88:63 ratio math isn't needed here since CameraPreview and
-                                // CardFrameOverlay are same-sized siblings centered the same way.
-                                requestFocusAndMetering(cam, previewView, previewView.width / 2f, previewView.height / 2f)
-                            }
+                        if (justTransitioned) {
+                            // Guide-frame center is always (width/2, height/2) — the overlay's
+                            // 0.75f/88:63 ratio math isn't needed here since CameraPreview and
+                            // CardFrameOverlay are same-sized siblings centered the same way.
+                            triggerFocus(previewView.width / 2f, previewView.height / 2f)
                         }
                         wasCardDetected = detected
                     }
@@ -254,15 +298,13 @@ private fun CameraPreview(
                 // Initial focus once binding completes; deferred via post{} so previewView.width/height
                 // are populated (they may still be 0 at the exact moment bindToLifecycle returns).
                 previewView.post {
-                    camera?.let { cam ->
-                        requestFocusAndMetering(cam, previewView, previewView.width / 2f, previewView.height / 2f)
-                    }
+                    triggerFocus(previewView.width / 2f, previewView.height / 2f)
                 }
             }, ContextCompat.getMainExecutor(ctx))
 
             previewView.setOnTouchListener { view, event ->
                 if (event.action == MotionEvent.ACTION_UP) {
-                    camera?.let { cam -> requestFocusAndMetering(cam, previewView, event.x, event.y) }
+                    triggerFocus(event.x, event.y)
                     view.performClick()
                 }
                 true
