@@ -181,6 +181,15 @@ private fun CardFrameOverlay(cardDetected: Boolean, modifier: Modifier = Modifie
 
 // ------- Camera focus ----------------------------------------------------------
 
+// Minimum elapsed time after camera bind completes before ANY card presence can be
+// reported to ScannerScreen — gives the user physical time to lift a card into frame
+// before auto-capture logic can fire at all, independent of how fast the false-positive
+// contrast heuristic + focus-lock gate settle against an empty/background scene.
+// Additive to ScannerScreen's own holdDurationMs (1500ms) continuous-detection hold —
+// together they set the true floor for auto-capture at bind-completion + this value +
+// holdDurationMs (~3.5s total from camera bind to earliest possible auto-capture).
+private const val POST_BIND_DETECTION_DELAY_MS = 2000L
+
 private fun requestFocusAndMetering(
     camera: Camera,
     previewView: PreviewView,
@@ -196,7 +205,7 @@ private fun requestFocusAndMetering(
     val point = previewView.meteringPointFactory.createPoint(x, y)
     val action = FocusMeteringAction.Builder(
         point,
-        FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE
+        FocusMeteringAction.FLAG_AF
     )
         .setAutoCancelDuration(4, TimeUnit.SECONDS)
         .build()
@@ -240,6 +249,8 @@ private fun CameraPreview(
             // Monotonically increasing token so a stale, superseded request's late completion
             // can never incorrectly re-lock focus over a newer, still-in-flight request.
             var focusRequestId = 0
+            // 0L until camera bind actually completes; used to gate presence-reporting below.
+            var bindCompletedAtMs = 0L
 
             fun triggerFocus(x: Float, y: Float) {
                 val cam = camera ?: return
@@ -276,7 +287,9 @@ private fun CameraPreview(
                         // transition frame's own report is forced false, without reordering the
                         // presence-report line ahead of the edge-triggered refocus call below.
                         val justTransitioned = detected && !wasCardDetected
-                        onCardPresenceChanged(detected && focusLocked && !justTransitioned)
+                        val withinPostBindDelay = bindCompletedAtMs == 0L ||
+                            (System.currentTimeMillis() - bindCompletedAtMs) < POST_BIND_DETECTION_DELAY_MS
+                        onCardPresenceChanged(detected && focusLocked && !justTransitioned && !withinPostBindDelay)
                         // Edge-triggered refocus: only on the not-detected -> detected transition,
                         // so a card sitting still in frame doesn't spam focus-metering calls.
                         if (justTransitioned) {
@@ -295,6 +308,7 @@ private fun CameraPreview(
                     CameraSelector.DEFAULT_BACK_CAMERA,
                     preview, capture, analysis
                 )
+                bindCompletedAtMs = System.currentTimeMillis()
                 // Initial focus once binding completes; deferred via post{} so previewView.width/height
                 // are populated (they may still be 0 at the exact moment bindToLifecycle returns).
                 previewView.post {

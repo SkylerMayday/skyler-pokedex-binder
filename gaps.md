@@ -43,14 +43,48 @@ actually fixed and verified, not when merely planned.
   it — self-corrects next frame, doesn't reintroduce the blur, but violated spec AC1), scored
   82/100; Coder fixed it with a `justTransitioned` guard, pass 2 verified the fix via independent
   frame-trace + boolean-algebra proof, scored 99/100, **ship**.
-  **Still not yet verified on real hardware — no emulator in this sandbox, same standing
-  constraint as attempt #1.** Everything above proves code-correctness only (compiles, builds
-  signed release, 182/182 unit tests, all CameraX API calls re-verified against the actual
-  `camerax:1.6.1` `-sources.jar`) — zero evidence yet the blur is actually gone in practice.
-  **Skyler needs another full reinstall + real-device test.** Per the spec's own escalation path:
-  if attempt #2 also fails to resolve the blur, the next step is investigating actual camera
-  hardware AF capability (`CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE` — if 0, the lens
-  is fixed-focus and no software fix can help at all) — not a third blind software attempt.
+  **Attempt #2 confirmed insufficient on real hardware too — but a different failure mode, not the
+  blur returning (Skyler, same day): "now it instantly says card detected and take the shot, before
+  i even place the card into the frame."** Not a phone-hardware issue (confirmed explicitly — this
+  is new code added this session, would happen identically on any phone running this exact build,
+  including his prior S23 Ultra). Root cause: attempt #1/#2's `FocusMeteringAction` speculatively
+  included `FLAG_AE` (auto-exposure) alongside `FLAG_AF`, never actually needed for the blur fix.
+  Triggering AE on camera bind (before any card is present) shifts exposure right as
+  `detectCardInFrame`'s crude contrast heuristic (`totalContrast/count > 20f`, border-edge luma
+  difference only, no real card-shape validation) samples frames — false "card detected" trip,
+  confirmed by Skyler to happen **regardless of background** (ruling out a texture-specific
+  detector flaw, pointing squarely at the exposure trigger). Because background/empty-scene
+  autofocus converges fast (easy target vs. macro-focusing a close card), attempt #2's
+  focus-lock gate settled quickly against the background too, not meaningfully delaying the false
+  capture.
+
+  **Attempt #3, same day:** (1) removed `FLAG_AE`, `FLAG_AF`-only now — reverts the scope-creep
+  addition that's the confirmed-plausible trigger, no downside since AE was never needed for
+  sharpness. (2) Added defense-in-depth independent of that hypothesis: `POST_BIND_DETECTION_DELAY_MS
+  = 2000L` unconditionally blocks `onCardPresenceChanged(true)` for 2s after camera bind regardless
+  of detector/focus-lock state — directly addresses "before I even place the card" literally, not
+  contingent on the AE theory being the whole explanation. Reviewer traced the interaction with the
+  pre-existing 1500ms `holdDurationMs` continuous-detection hold and confirmed an unbypassable floor
+  of `bindCompletedAtMs + 2000ms + 1500ms ≈ 3.5s` before any capture can fire — every `false` report
+  during the grace window resets `ScannerScreen`'s `detectionStartMs`, so the two timers can't be
+  raced against each other. Ship at 99/100, single-pass (no auto-loop needed this time).
+
+  **Still not yet verified on real hardware — no emulator in this sandbox, same standing constraint
+  as attempts #1 and #2.** 182/182 unit tests, clean build, `FLAG_AE` confirmed fully removed
+  (grepped whole file), timer-interaction proof independently traced twice (Tester + Reviewer) — but
+  zero evidence yet either failure mode (blur, false-capture) is actually resolved in practice.
+  **Skyler needs another full reinstall + real-device test, this build in isolation from any other
+  scanner change.** Per the Reviewer's explicit framing: attempt #2's bug and attempt #3's bug are
+  NOT the same recurring failure — attempt #2 genuinely fixed the race it targeted and, in doing so,
+  exposed a distinct second bug (the AE-triggered false capture) that attempt #3 is the first real
+  attempt at. **If attempt #3 also fails on this exact symptom** (instant/early false capture), that
+  would point at `detectCardInFrame`'s heuristic itself needing real work, not another gating patch
+  — per the spec's escalation path, the next step should be either a properly `planning`-first
+  rebuild of the detector with real card-shape/rectangle detection, or falling back to
+  manual-capture-only (the existing "Capture" button) with auto-capture disabled until a more
+  robust detector exists — not a 4th blind software patch. If instead the ORIGINAL blur returns
+  with AE removed, that's the separate escalation path already noted: check actual camera hardware
+  AF capability (`CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE`).
 
 ## Refreshed — 2026-07-15 (session 2)
 
