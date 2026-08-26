@@ -152,21 +152,11 @@ actually fixed and verified, not when merely planned.
   instrumented test in this project).
   **This is a safety net, not a restore feature** — no in-app UI to browse/restore backup files;
   restoring one currently requires manual `adb` file access. Explicitly out of scope per the spec.
-- **`Migration7to8Test.kt` still doesn't exist** — accepted, not being pursued (Skyler, 2026-07-16:
-  "we will most likely not go back to 7"). Every prior Room migration (4→5, 5→6, 6→7) has a
-  paired `androidTest` following the `Migration6to7Test` template. The v7→v8 migration (adding
-  `unown_binder`) was built, then the standalone Unown binder went through several rebuilds, and
-  the test was never recreated for the final version. `Migration8to9Test.kt` (added this session,
-  for the language/lock/remarks columns) does not fill this gap — it's a separate migration.
 - ~~**`Migration8to9Test.kt` (new, added 2026-07-15) has never run on a real device/emulator**~~ —
   the standalone JUnit instrumented test itself was still never formally executed in this sandbox
   (no emulator), but Skyler confirmed 2026-07-16 that every actual test he performs is on his real
   phone — meaning the v8→v9 migration this test covers has already run for real through normal app
   usage/updates since it shipped. Counted as effectively verified; not re-flagging further.
-- **`Migration5to6Test`/`Migration6to7Test` have never actually executed as standalone JUnit runs**
-  — accepted, low priority (Skyler, 2026-07-16: "we will most likely not go back to 7"), same
-  reasoning as `Migration7to8Test.kt` above. Oldest open item in the project, kept open only
-  because it's cheap to note, not because it's actively being pursued.
 
 ### Test coverage gaps
 
@@ -216,7 +206,9 @@ actually fixed and verified, not when merely planned.
 - ~~Nothing committed since `e42eeb5` (2026-07-10)~~ — **fixed 2026-07-15.** All prior-session work
   committed as `b0686a0`; this session's work committed as `c632c52` and `7921b82`, both pushed to
   `origin/master`.
-- **No real device/emulator available in this dev sandbox at all.** Every "verified" claim this
-  session (and the one before it) is build/unit-test/compile-level only — nothing has been
-  confirmed by actually running the app. This is a standing constraint, not a one-off gap; keep
-  flagging it per-session until Skyler does an on-device pass.
+- ~~No real device/emulator available in this dev sandbox at all.~~ **Resolved 2026-08-22.** Built
+  a local AVD (`pokedex_test`, Android 36 Google Play x86_64, WHPX-accelerated) — build/install/
+  launch/logcat-crash-check confirmed working end-to-end. Every "verified" claim can now go one
+  step further than compile-level (actually launches, doesn't crash, logcat is inspectable) —
+  still can't validate real camera/sensor/hardware-dependent behavior (no real AF hardware in an
+  emulated camera backend), so on-device passes for anything camera-related are still required.
