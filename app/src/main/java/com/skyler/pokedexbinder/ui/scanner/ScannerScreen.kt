@@ -5,6 +5,8 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.MotionEvent
+import androidx.camera.camera2.interop.Camera2CameraInfo
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -191,6 +193,28 @@ private fun CardFrameOverlay(cardDetected: Boolean, modifier: Modifier = Modifie
 // holdDurationMs (~3.5s total from camera bind to earliest possible auto-capture).
 private const val POST_BIND_DETECTION_DELAY_MS = 2000L
 
+// Diagnostic only — logs the actual bound camera's real AF hardware capability, so "focus never
+// locks" (isFocusSuccessful=false in requestFocusAndMetering's logs) can be told apart from "this
+// lens has no usable close-range AF at all." Camera2CameraInfo is an experimental CameraX interop
+// API, opted into only for this narrow diagnostic use, not the whole file.
+@androidx.annotation.OptIn(ExperimentalCamera2Interop::class)
+private fun logCameraAfCapabilities(camera: Camera) {
+    runCatching {
+        val info = Camera2CameraInfo.from(camera.cameraInfo)
+        val chars = info.getCameraCharacteristic(
+            android.hardware.camera2.CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE
+        )
+        val afModes = info.getCameraCharacteristic(
+            android.hardware.camera2.CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES
+        )
+        Log.i(
+            "ScannerFocus",
+            "camera id=${info.cameraId} minFocusDistance=$chars (0 or null = fixed-focus " +
+                "lens, cannot focus at all) afAvailableModes=${afModes?.toList()}"
+        )
+    }.onFailure { Log.w("ScannerFocus", "could not read camera AF characteristics", it) }
+}
+
 private fun requestFocusAndMetering(
     camera: Camera,
     previewView: PreviewView,
@@ -326,25 +350,7 @@ private fun CameraPreview(
                     preview, capture, analysis
                 )
                 bindCompletedAtMs = System.currentTimeMillis()
-                // Diagnostic only — logs the actual bound camera's real AF hardware capability,
-                // so "focus never locks" (isFocusSuccessful=false in requestFocusAndMetering's
-                // logs) can be told apart from "this lens has no usable close-range AF at all."
-                camera?.let { cam ->
-                    runCatching {
-                        val info = androidx.camera.camera2.interop.Camera2CameraInfo.from(cam.cameraInfo)
-                        val chars = info.getCameraCharacteristic(
-                            android.hardware.camera2.CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE
-                        )
-                        val afModes = info.getCameraCharacteristic(
-                            android.hardware.camera2.CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES
-                        )
-                        Log.i(
-                            "ScannerFocus",
-                            "camera id=${info.cameraId} minFocusDistance=$chars (0 or null = fixed-focus " +
-                                "lens, cannot focus at all) afAvailableModes=${afModes?.toList()}"
-                        )
-                    }.onFailure { Log.w("ScannerFocus", "could not read camera AF characteristics", it) }
-                }
+                camera?.let { logCameraAfCapabilities(it) }
                 // Initial focus once binding completes; deferred via post{} so previewView.width/height
                 // are populated (they may still be 0 at the exact moment bindToLifecycle returns).
                 previewView.post {
