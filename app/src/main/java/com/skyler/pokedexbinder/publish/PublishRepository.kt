@@ -317,6 +317,7 @@ class PublishRepository @Inject constructor(
                     cardName = null,
                     cardSet = null,
                     imageUrl = entry.cardImageUrl,
+                    owned = true,                 // every Card History row is a genuine add; cardId is non-nullable
                     language = entry.language
                 )
             }
@@ -405,6 +406,7 @@ class PublishRepository @Inject constructor(
                         cardName = entry.assignedCardName,
                         cardSet = entry.assignedCardSetName,
                         imageUrl = entry.assignedCardImageUrl,
+                        owned = entry.assignedCardId != null,   // same rule as Pokédex
                         language = entry.language,
                         remarks = entry.remarks,
                         isLocked = entry.isLocked
@@ -432,6 +434,7 @@ class PublishRepository @Inject constructor(
         cardName = assignedCardName,
         cardSet = assignedCardSetName,
         imageUrl = assignedCardImageUrl,
+        owned = assignedCardId != null,   // a Pokédex slot is "owned" iff a card is assigned
         language = language,
         remarks = remarks,
         isLocked = isLocked
@@ -455,7 +458,7 @@ class PublishRepository @Inject constructor(
 
         if (isFirstPublish) {
             nextSlots.values.forEach { slot ->
-                if (slot.cardId != null) {
+                if (slot.owned) {
                     deltas += SlotDelta(
                         type = ChangeType.ADDED,
                         slotId = slot.slotId,
@@ -469,27 +472,27 @@ class PublishRepository @Inject constructor(
             allSlotIds.forEach { slotId ->
                 val baselineSlot = baselineSlots[slotId]
                 val nextSlot = nextSlots[slotId]
-                val baselineCardId = baselineSlot?.cardId
-                val nextCardId = nextSlot?.cardId
+                val wasOwned = baselineSlot?.owned == true
+                val isOwned = nextSlot?.owned == true
 
                 when {
-                    baselineCardId == null && nextCardId != null -> {
+                    !wasOwned && isOwned -> {
                         deltas += SlotDelta(
                             type = ChangeType.ADDED,
                             slotId = slotId,
-                            displayName = nextSlot.cardName ?: nextSlot.slotName,
+                            displayName = nextSlot!!.cardName ?: nextSlot.slotName,
                             cardSet = nextSlot.cardSet
                         )
                     }
-                    baselineCardId != null && nextCardId == null -> {
+                    wasOwned && !isOwned -> {
                         deltas += SlotDelta(
                             type = ChangeType.REMOVED,
                             slotId = slotId,
-                            displayName = baselineSlot.cardName ?: baselineSlot.slotName,
+                            displayName = baselineSlot!!.cardName ?: baselineSlot.slotName,
                             cardSet = baselineSlot.cardSet
                         )
                     }
-                    baselineCardId != null && nextCardId != null && baselineCardId != nextCardId -> {
+                    wasOwned && isOwned && baselineSlot!!.cardId != nextSlot!!.cardId -> {
                         deltas += SlotDelta(
                             type = ChangeType.REPLACED,
                             slotId = slotId,
@@ -497,9 +500,7 @@ class PublishRepository @Inject constructor(
                             cardSet = nextSlot.cardSet
                         )
                     }
-                    baselineCardId != null && nextCardId != null &&
-                        baselineCardId == nextCardId &&
-                        (baselineSlot!!.owned != nextSlot!!.owned || baselineSlot.isLocked != nextSlot.isLocked) -> {
+                    wasOwned && isOwned && baselineSlot!!.isLocked != nextSlot!!.isLocked -> {
                         deltas += SlotDelta(
                             type = ChangeType.REPLACED,
                             slotId = slotId,
@@ -507,7 +508,7 @@ class PublishRepository @Inject constructor(
                             cardSet = nextSlot.cardSet
                         )
                     }
-                    // both null, or both non-null and equal → no change
+                    // both unowned, or both owned with identical cardId + isLocked → no change
                 }
             }
         }

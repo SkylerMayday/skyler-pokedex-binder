@@ -3,6 +3,33 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
+## Refreshed — 2026-08-22 (session 5)
+
+### Fixed this session
+
+- ~~**Publish/Discord diff falsely reported unowned cards as "ADDED."**~~ **Fixed 2026-08-22.**
+  Skyler's Discord webhook posted "Pokédex Binder updated: +294 more" listing dozens of Charizard
+  TCG prints (BASE1, PL4, GYM2, SM7.5, etc.) he never marked owned — confirmed in-app the cards
+  correctly showed as unowned/dimmed, so the bug was purely in what got published/notified, not in
+  actual ownership state. Root cause: `PublishRepository.computeDiff()` decided ADDED/REMOVED by
+  checking `SnapshotSlot.cardId` nullness — correct for the Pokédex/Card History/Unown binders
+  (where `cardId` genuinely is null until owned) but wrong for Personal Collection and Connecting
+  Art, both of which by design can have `cardId != null` while unowned (Personal Collection
+  publishes its entire search cache, owned and unowned, dimmed if unowned — confirmed intentional
+  design from an earlier session). A local reinstall this session wiped the Room DB, the app's own
+  `if (cacheCount() == 0) refreshAll()` re-populated Personal Collection's cache fresh from a full
+  TCG search, and every newly-cached (still-unowned) row got reported as ADDED since `computeDiff`
+  never consulted the separate `owned` field for those branches.
+  Fixed by making `SnapshotSlot.owned` the single correctly-populated "counts as filled" signal
+  across all 5 binder types — 3 construction sites (Pokédex, Card History, Unown) were silently
+  relying on `owned`'s surprising `true` default instead of setting it from `assignedCardId`/`cardId`
+  nullability — then rewrote `computeDiff`'s ADDED/REMOVED/REPLACED classification to key off `owned`
+  transitions instead of raw `cardId` nullness, for every binder type uniformly. Confirmed with
+  Skyler directly: Discord should only say "added" on a genuine ownership change, never on a cache
+  refresh surfacing more unowned candidates. `binder.json`'s schema is unchanged (additive field,
+  no restructure) — the website consumer is unaffected. 189/189 unit tests (182 baseline + 7 new,
+  including a direct regression test reproducing the exact reported scenario), ship at 100/100.
+
 ## Refreshed — 2026-08-21 (session 4)
 
 ### Open, needs real-device confirmation

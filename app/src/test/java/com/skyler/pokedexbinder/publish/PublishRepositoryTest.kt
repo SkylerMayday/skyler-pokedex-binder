@@ -250,7 +250,7 @@ class PublishRepositoryTest {
         cardId: String?,
         name: String = "Slot$id",
         set: String? = "Set",
-        owned: Boolean = true,
+        owned: Boolean = cardId != null,   // matches corrected production defaults
         isLocked: Boolean = false
     ) = SnapshotSlot(
         dexNumber = 1, slotName = name, slotType = "BASE", slotId = id,
@@ -418,6 +418,20 @@ class PublishRepositoryTest {
     }
 
     @Test
+    fun `buildSnapshot pokedex slot owned is true when assigned and false when empty`() {
+        val entries = listOf(
+            entry("bulbasaur", "Bulbasaur", 1, cardId = "xy1-1"),
+            entry("ivysaur", "Ivysaur", 2, cardId = null)
+        )
+
+        val snapshot = repository.buildSnapshot(entries, emptyList(), defaultConfig)
+
+        val slots = snapshot.binders.single { it.id == "pokedex" }.sections.flatMap { it.slots }
+        assertTrue(slots.single { it.slotId == "bulbasaur" }.owned)
+        assertFalse(slots.single { it.slotId == "ivysaur" }.owned)
+    }
+
+    @Test
     fun `buildSnapshot includes cardHistory binder when toggle is on`() {
         val secondaryEntries = listOf(
             SecondaryBinderEntry(id = 1, pokemonId = "pikachu", pokemonName = "Pikachu", cardId = "sv1-1", cardImageUrl = "https://img.url/sv1-1")
@@ -429,6 +443,19 @@ class PublishRepositoryTest {
         val cardHistory = snapshot.binders.single { it.id == "cardHistory" }
         assertEquals(1, cardHistory.sections.single().slots.size)
         assertEquals("sv1-1", cardHistory.sections.single().slots[0].cardId)
+    }
+
+    @Test
+    fun `buildSnapshot cardHistory slot owned is always true`() {
+        val secondaryEntries = listOf(
+            SecondaryBinderEntry(id = 1, pokemonId = "pikachu", pokemonName = "Pikachu", cardId = "sv1-1", cardImageUrl = "https://img.url/sv1-1")
+        )
+        val config = defaultConfig.copy(publishCardHistory = true)
+
+        val snapshot = repository.buildSnapshot(emptyList(), secondaryEntries, config)
+
+        val slot = snapshot.binders.single { it.id == "cardHistory" }.sections.single().slots.single()
+        assertTrue(slot.owned)
     }
 
     @Test
@@ -626,14 +653,36 @@ class PublishRepositoryTest {
     }
 
     @Test
-    fun `computeDiff owned flip on same card is REPLACED`() {
+    fun `computeDiff owned flip false to true on same card is ADDED`() {
         val baseline = binderWith(slot("c1", cardId = "c1", owned = false))
         val next = binderWith(slot("c1", cardId = "c1", owned = true))
 
         val diff = repository.computeDiff(baseline, next)
 
         assertEquals(1, diff.deltas.size)
-        assertEquals(ChangeType.REPLACED, diff.deltas[0].type)
+        assertEquals(ChangeType.ADDED, diff.deltas[0].type)
+    }
+
+    @Test
+    fun `computeDiff owned flip true to false on same card is REMOVED`() {
+        val baseline = binderWith(slot("c1", cardId = "c1", owned = true))
+        val next = binderWith(slot("c1", cardId = "c1", owned = false))
+
+        val diff = repository.computeDiff(baseline, next)
+
+        assertEquals(1, diff.deltas.size)
+        assertEquals(ChangeType.REMOVED, diff.deltas[0].type)
+    }
+
+    @Test
+    fun `computeDiff first publish excludes owned false slots even when cardId is present`() {
+        val next = binderWith(slot("s1", cardId = "c1", owned = true), slot("s2", cardId = "c2", owned = false))
+
+        val diff = repository.computeDiff(null, next)
+
+        assertEquals(1, diff.deltas.size)
+        assertEquals("s1", diff.deltas[0].slotId)
+        assertEquals(ChangeType.ADDED, diff.deltas[0].type)
     }
 
     @Test
@@ -695,6 +744,20 @@ class PublishRepositoryTest {
         assertEquals("KO", slot.language)
         assertEquals("signed", slot.remarks)
         assertTrue(slot.isLocked)
+    }
+
+    @Test
+    fun `buildSnapshot unown slot owned is true when assigned and false when unassigned`() {
+        val unownEntries = listOf(
+            UnownBinderEntry(letterId = "A", position = 0, assignedCardId = "c1"),
+            UnownBinderEntry(letterId = "B", position = 1, assignedCardId = null)
+        )
+
+        val snapshot = repository.buildSnapshot(emptyList(), emptyList(), defaultConfig, unownEntries = unownEntries)
+
+        val slots = snapshot.binders.single { it.id == "unown" }.sections.single().slots
+        assertTrue(slots.single { it.slotId == "unown-A" }.owned)
+        assertFalse(slots.single { it.slotId == "unown-B" }.owned)
     }
 
     @Test
@@ -763,6 +826,53 @@ class PublishRepositoryTest {
 
         val slot = snapshot.binders.single { it.id == "personalCollection" }.sections.single().slots.single()
         assertEquals("EN", slot.language)
+    }
+
+    @Test
+    fun `computeDiff personalCollection cache refresh with new unowned cards produces no ADDED deltas`() {
+        val ownedCache = pcCache("c1", "charizard")
+        val baseline = repository.buildSnapshot(
+            emptyList(), emptyList(), defaultConfig,
+            personalCache = listOf(ownedCache), personalEntries = listOf(pcEntry("c1", owned = true))
+        )
+        // Simulates a fresh cache repopulation: the previously-owned card is still cached,
+        // plus 3 new candidate cardIds surface with no corresponding pcEntry (never owned).
+        val refreshedCache = listOf(
+            ownedCache,
+            pcCache("c2", "charizard"),
+            pcCache("c3", "charizard"),
+            pcCache("c4", "charizard")
+        )
+        val next = repository.buildSnapshot(
+            emptyList(), emptyList(), defaultConfig,
+            personalCache = refreshedCache, personalEntries = listOf(pcEntry("c1", owned = true))
+        )
+
+        val diff = repository.computeDiff(baseline, next)
+
+        assertTrue(diff.deltas.isEmpty())
+    }
+
+    @Test
+    fun `computeDiff personalCollection cache refresh with one newly owned card among unowned candidates produces exactly one ADDED`() {
+        val ownedCache = pcCache("c1", "charizard")
+        val baseline = repository.buildSnapshot(
+            emptyList(), emptyList(), defaultConfig,
+            personalCache = listOf(ownedCache), personalEntries = listOf(pcEntry("c1", owned = true))
+        )
+        val refreshedCache = listOf(ownedCache, pcCache("c2", "charizard"), pcCache("c3", "charizard"))
+        // Among the newly-surfaced candidates, c2 also gets marked owned in the same session.
+        val next = repository.buildSnapshot(
+            emptyList(), emptyList(), defaultConfig,
+            personalCache = refreshedCache,
+            personalEntries = listOf(pcEntry("c1", owned = true), pcEntry("c2", owned = true))
+        )
+
+        val diff = repository.computeDiff(baseline, next)
+
+        assertEquals(1, diff.deltas.size)
+        assertEquals(ChangeType.ADDED, diff.deltas[0].type)
+        assertEquals("c2", diff.deltas[0].slotId)
     }
 
     @Test
