@@ -3,6 +3,7 @@ package com.skyler.pokedexbinder.ui.scanner
 import android.Manifest
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.MotionEvent
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -209,15 +210,31 @@ private fun requestFocusAndMetering(
     )
         .setAutoCancelDuration(4, TimeUnit.SECONDS)
         .build()
-    // FocusMeteringResult.isFocusSuccessful() is deliberately never inspected here — a
-    // completed-but-unsuccessful result must still unblock capture (see spec). addListener
-    // fires on any completion type (success, failure, or cancellation).
-    val future = runCatching { camera.cameraControl.startFocusAndMetering(action) }.getOrNull()
+    // FocusMeteringResult.isFocusSuccessful() is deliberately never inspected for gating (a
+    // completed-but-unsuccessful result must still unblock capture, see spec) — but IS logged
+    // below, purely diagnostic, to tell "focus is slow" apart from "focus never locks."
+    val startedAt = System.currentTimeMillis()
+    val future = runCatching { camera.cameraControl.startFocusAndMetering(action) }
+        .onFailure { Log.w("ScannerFocus", "startFocusAndMetering threw at ($x, $y)", it) }
+        .getOrNull()
     if (future == null) {
         onSettled()
         return
     }
-    future.addListener({ onSettled() }, mainExecutor)
+    future.addListener({
+        val elapsedMs = System.currentTimeMillis() - startedAt
+        runCatching { future.get() }
+            .onSuccess { result ->
+                Log.i(
+                    "ScannerFocus",
+                    "settled in ${elapsedMs}ms at ($x, $y) — isFocusSuccessful=${result.isFocusSuccessful}"
+                )
+            }
+            .onFailure { e ->
+                Log.w("ScannerFocus", "settled in ${elapsedMs}ms at ($x, $y) — future failed", e)
+            }
+        onSettled()
+    }, mainExecutor)
 }
 
 // ------- Camera preview -------------------------------------------------------
@@ -309,6 +326,25 @@ private fun CameraPreview(
                     preview, capture, analysis
                 )
                 bindCompletedAtMs = System.currentTimeMillis()
+                // Diagnostic only — logs the actual bound camera's real AF hardware capability,
+                // so "focus never locks" (isFocusSuccessful=false in requestFocusAndMetering's
+                // logs) can be told apart from "this lens has no usable close-range AF at all."
+                camera?.let { cam ->
+                    runCatching {
+                        val info = androidx.camera.camera2.interop.Camera2CameraInfo.from(cam.cameraInfo)
+                        val chars = info.getCameraCharacteristic(
+                            android.hardware.camera2.CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE
+                        )
+                        val afModes = info.getCameraCharacteristic(
+                            android.hardware.camera2.CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES
+                        )
+                        Log.i(
+                            "ScannerFocus",
+                            "camera id=${info.cameraId} minFocusDistance=$chars (0 or null = fixed-focus " +
+                                "lens, cannot focus at all) afAvailableModes=${afModes?.toList()}"
+                        )
+                    }.onFailure { Log.w("ScannerFocus", "could not read camera AF characteristics", it) }
+                }
                 // Initial focus once binding completes; deferred via post{} so previewView.width/height
                 // are populated (they may still be 0 at the exact moment bindToLifecycle returns).
                 previewView.post {
