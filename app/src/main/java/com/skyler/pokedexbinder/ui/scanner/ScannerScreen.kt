@@ -48,6 +48,15 @@ import java.util.concurrent.TimeUnit
 
 // ------- Card detection -------------------------------------------------------
 
+// Guide frame width as a fraction of display-space width. Sized so that "card fills the
+// frame" corresponds to holding the card ~23cm (~9in) back — safely past the S26 Ultra's
+// documented 18cm minimum focus distance and Skyler's observed ~15-20cm real-device focus
+// failure threshold. Derived from a calibration photo (card ≈ 40-45% of frame width at
+// ~15-20cm) scaled to the 23cm target: 0.425 × (17.5 / 23) ≈ 0.32. Shared by
+// detectCardInFrame's analysis-space sampling and CardFrameOverlay's drawn UI geometry so
+// the two can never drift apart.
+private const val GUIDE_FRAME_WIDTH_RATIO = 0.32f
+
 private fun detectCardInFrame(imageProxy: ImageProxy): Boolean {
     val iw = imageProxy.width
     val ih = imageProxy.height
@@ -61,7 +70,7 @@ private fun detectCardInFrame(imageProxy: ImageProxy): Boolean {
     val dispH = if (isRotated) iw else ih   // display-space height
 
     // Guide frame in display space (portrait card ratio 63:88)
-    val guideW = (dispW * 0.75f).toInt()
+    val guideW = (dispW * GUIDE_FRAME_WIDTH_RATIO).toInt()
     val guideH = (guideW * 88f / 63f).toInt()
     if (guideH >= dispH) return false
 
@@ -129,7 +138,7 @@ private fun CardFrameOverlay(cardDetected: Boolean, modifier: Modifier = Modifie
 
     Box(modifier = modifier) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val guideW = size.width * 0.75f
+            val guideW = size.width * GUIDE_FRAME_WIDTH_RATIO
             val guideH = guideW * 88f / 63f
             val left = (size.width - guideW) / 2f
             val top = (size.height - guideH) / 2f
@@ -172,12 +181,24 @@ private fun CardFrameOverlay(cardDetected: Boolean, modifier: Modifier = Modifie
                 .padding(bottom = 96.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = if (cardDetected) "Card detected!" else "Align card to frame",
-                color = if (cardDetected) Color(0xFF4CAF50) else Color.White,
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = if (cardDetected) "Card detected!" else "Align card to frame",
+                    color = if (cardDetected) Color(0xFF4CAF50) else Color.White,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
+                // Distance text kept next to GUIDE_FRAME_WIDTH_RATIO's own derivation comment
+                // in spirit — update both together if the ratio/target distance ever changes.
+                if (!cardDetected) {
+                    Text(
+                        text = "Hold card ~9 in (23 cm) back",
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
         }
     }
 }
@@ -335,8 +356,9 @@ private fun CameraPreview(
                         // so a card sitting still in frame doesn't spam focus-metering calls.
                         if (justTransitioned) {
                             // Guide-frame center is always (width/2, height/2) — the overlay's
-                            // 0.75f/88:63 ratio math isn't needed here since CameraPreview and
-                            // CardFrameOverlay are same-sized siblings centered the same way.
+                            // GUIDE_FRAME_WIDTH_RATIO/88:63 ratio math isn't needed here since
+                            // CameraPreview and CardFrameOverlay are same-sized siblings
+                            // centered the same way.
                             triggerFocus(previewView.width / 2f, previewView.height / 2f)
                         }
                         wasCardDetected = detected

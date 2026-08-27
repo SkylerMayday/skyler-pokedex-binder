@@ -32,6 +32,33 @@ actually fixed and verified, not when merely planned.
   Java-interop annotation, not Kotlin's own `kotlin.OptIn`, which this particular Lint check
   (`UnsafeOptInUsageError` from `androidx.annotation.experimental`) doesn't recognize. `lintDebug`
   0 errors, confirmed clean.
+- ~~**Scanner guide frame geometrically forced holding cards inside the camera's minimum focus
+  distance.**~~ **Fixed 2026-08-27.** Real root cause behind the persistent "still as blurry when
+  the card is in frame" report — genuinely different from attempts #1-3 (`d6d5a1e`/`3e427e4`/
+  `1a44acb`, all correctly fixed real focus-trigger/timing/false-capture bugs, none of which were
+  actually it). Confirmed via 4 convergent, independent signals: (1) the S26 Ultra's main lens has
+  a documented 18cm minimum focus distance (up from 8cm last gen — a real hardware regression
+  Samsung made for a thinner body); (2) Skyler's own real-device testing in the actual app: "auto
+  focus works when the card is placed further away... anything closer, the focus will not
+  trigger"; (3) Skyler estimated the real failure threshold at ~15-20cm, matching the documented
+  spec almost exactly; (4) a calibration photo (properly EXIF-rotated to portrait, matching the
+  app's scan orientation) at that boundary distance, showing the card occupying ~40-45% of frame
+  width — vs. the app's guide frame demanding 75%, which geometrically requires ~5-10cm, deep
+  inside the failure zone. Fixed: extracted the two independently-hardcoded `0.75f` copies
+  (`detectCardInFrame`'s detection geometry, `CardFrameOverlay`'s drawn UI — previously had to be
+  kept in sync by hand) into one shared `GUIDE_FRAME_WIDTH_RATIO = 0.32f` constant, derived from
+  the calibration photo scaled to a safe ~23cm target (Planner's independent re-derivation landed
+  on the same value). Added explicit on-screen distance-guidance text ("Hold card ~9 in / 23 cm
+  back") as the precision-independent primary fix — correct even if the exact ratio isn't. Ship at
+  98/100; Reviewer caught and disproved a self-contradictory Tester claim about a shrunk text
+  margin via direct Compose layout tracing (no real issue, ship as-is).
+  **Still needs real-device confirmation — same standing constraint as every scanner fix this
+  session.** If blur persists, Reviewer's suggested next move: lower toward 0.30/0.24 (already
+  computed bounds) before re-deriving from scratch.
+
+## Refreshed — 2026-08-22 (session 5)
+
+### Fixed this session
 
 - ~~**Publish/Discord diff falsely reported unowned cards as "ADDED."**~~ **Fixed 2026-08-22.**
   Skyler's Discord webhook posted "Pokédex Binder updated: +294 more" listing dozens of Charizard
