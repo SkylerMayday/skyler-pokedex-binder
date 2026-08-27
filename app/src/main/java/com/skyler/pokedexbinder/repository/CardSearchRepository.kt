@@ -196,12 +196,14 @@ class CardSearchRepository @Inject constructor(
     // ---- Merge helpers ----
 
     /**
-     * Combines primary and secondary results, deduplicating by name+number+setName.
-     * Primary results come first; TCGdex fills in cards the primary API is missing.
+     * Combines primary and secondary results, deduplicating cross-source by physical-card identity
+     * (name + number, setName-agnostic — see isSameCard) rather than exact string match, since the
+     * two sources format setName differently for the same physical card. Primary results come first;
+     * TCGdex fills in cards the primary API is missing.
      */
     private fun mergeResults(primary: List<TcgCard>, secondary: List<TcgCard>): List<TcgCard> {
-        val seen = primary.mapTo(HashSet()) { dedupeKey(it) }
-        return primary + secondary.filter { dedupeKey(it) !in seen }
+        val newFromSecondary = secondary.filter { s -> primary.none { p -> isSameCard(p, s) } }
+        return primary + newFromSecondary
     }
 
     private fun dedupeKey(card: TcgCard) =

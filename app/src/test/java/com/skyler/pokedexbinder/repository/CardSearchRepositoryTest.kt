@@ -54,6 +54,43 @@ class CardSearchRepositoryTest {
         assertEquals("base1-58", results[0].id)
     }
 
+    @Test
+    fun `searchByName merges cross-source duplicate with mismatched setName into one card`() = runTest {
+        val dto = TcgCardDto(
+            id = "xyevo-25", name = "Pikachu", number = "25",
+            set = TcgSetDto("XY Evolutions"),
+            images = TcgImagesDto("https://small.url", "https://large.url")
+        )
+        coEvery { api.searchCards("name:*Pikachu* -set.series:Pocket") } returns
+            TcgCardsResponse(data = listOf(dto), totalCount = 1)
+        coEvery { tcgdexApi.searchCards("Pikachu") } returns
+            listOf(TcgdexCardBriefDto(id = "xyevo-25", localId = "25", name = "Pikachu"))
+
+        val repo = CardSearchRepository(api, tcgdexApi, tcgcsvApi)
+        val results = repo.searchByName("Pikachu")
+
+        assertEquals(1, results.size)
+        assertEquals("xyevo-25", results[0].id) // primary wins, not "tcgdex_xyevo-25"
+    }
+
+    @Test
+    fun `searchByName keeps both cards when same name but different number`() = runTest {
+        val dto = TcgCardDto(
+            id = "base1-25", name = "Pikachu", number = "25",
+            set = TcgSetDto("Base"),
+            images = TcgImagesDto("https://small.url", "https://large.url")
+        )
+        coEvery { api.searchCards("name:*Pikachu* -set.series:Pocket") } returns
+            TcgCardsResponse(data = listOf(dto), totalCount = 1)
+        coEvery { tcgdexApi.searchCards("Pikachu") } returns
+            listOf(TcgdexCardBriefDto(id = "base1-58", localId = "58", name = "Pikachu"))
+
+        val repo = CardSearchRepository(api, tcgdexApi, tcgcsvApi)
+        val results = repo.searchByName("Pikachu")
+
+        assertEquals(2, results.size)
+    }
+
     // --- searchTcgcsvByName (retry-on-empty fallback) ---
 
     @Test

@@ -3,9 +3,35 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
-## Refreshed — 2026-08-22 (session 5)
+## Refreshed — 2026-08-27 (session 6)
 
 ### Fixed this session
+
+- ~~**Cross-source card duplicates could survive into Personal Collection's permanently cached
+  list.**~~ **Fixed 2026-08-27.** Skyler asked to "ensure there are not duplicate entries" in
+  Personal Collection before confirming its full-search-cache design was working as intended.
+  Root cause: `CardSearchRepository.mergeResults()` (used by `searchByName()`, which
+  `PersonalCollectionRepository.refreshPokemon()` calls) deduped cross-source results
+  (pokemontcg.io/TCGdex) via an exact `name|number|setName` string match — the two sources format
+  set names differently for the same physical card (e.g. a human-readable name vs. an uppercase
+  set-code abbreviation), so the key mismatched and the same card could survive as two rows. The
+  file already had the correct fix pattern for this exact bug class one function away —
+  `isSameCard()` (name+number, setName-agnostic), built for the identical problem on the TCGCSV
+  merge path with an explicit comment: "this is what prevents the 'duplicate second Victini'
+  entry." `mergeResults` now reuses it. Also benefits the 2 other consumers of `searchByName`
+  (Manual Search, QuickScan). 191/191 unit tests, 2 new regression tests (mismatched-setName
+  duplicate merges to one; same-name-different-number cards both still survive — proving the fix
+  isn't over-aggressive), ship at 98/100.
+- **Missing `@OptIn` on this session's diagnostic camera-logging code (`4bd8bac`)** — caught by
+  lint, not by the person who wrote it. Used the bare `@ExperimentalCamera2Interop` marker instead
+  of `@OptIn(...)`, which propagates the experimental requirement to callers instead of consuming
+  it — 4 lint errors, only found because an unrelated pipeline run happened to check `lintDebug`
+  fresh (the diagnostic commit itself was only verified with `assembleDebug` + tests, lint was
+  never run on it). Fixed: extracted into its own function with the correct
+  `androidx.annotation.OptIn(ExperimentalCamera2Interop::class)` — specifically the AndroidX
+  Java-interop annotation, not Kotlin's own `kotlin.OptIn`, which this particular Lint check
+  (`UnsafeOptInUsageError` from `androidx.annotation.experimental`) doesn't recognize. `lintDebug`
+  0 errors, confirmed clean.
 
 - ~~**Publish/Discord diff falsely reported unowned cards as "ADDED."**~~ **Fixed 2026-08-22.**
   Skyler's Discord webhook posted "Pokédex Binder updated: +294 more" listing dozens of Charizard
