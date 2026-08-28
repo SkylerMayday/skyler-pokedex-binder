@@ -3,9 +3,34 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
-## Refreshed — 2026-08-27 (session 6)
+## Refreshed — 2026-08-28 (session 6, cont'd)
 
 ### Fixed this session
+
+- ~~**No test coverage on nav route wiring/drawer order; `QuickScanViewModelTest.kt` only covered
+  `searchStreaming`.**~~ **Fixed 2026-08-28.** Added `AppNavigationRouteTest.kt` (JVM, 12 tests —
+  route uniqueness, exact route strings, `createRoute()` URL-encoding including real production
+  edge cases like Unown's `!`/`?` letter IDs and "Mr. Mime") and `AppNavigationScreenTest.kt` (this
+  project's **first Hilt-instrumented test** — drawer order, reachability of all 5 destinations,
+  confirms the Scan button's default-hidden behavior found earlier this session). Extended
+  `QuickScanViewModelTest.kt` for slot-matching/manual-entry/secondary-binder-fallback plus a gap
+  the Planner found independently (the `search()` query-routing lambda had never been exercised).
+  Went through a real multi-lens review cycle: pass 1 (3 parallel Opus lenses) scored 78/100
+  needs-changes — the security lens caught that the new instrumented test ran against the REAL
+  on-device database and made real network calls, reversing an explicit prior decision documented
+  in `DatabaseModule.kt`/`DatabaseModuleWiringTest.kt` that this is unacceptable. Fixed with a new
+  `FakeDatabaseModule.kt` (`@TestInstallIn`-replaced in-memory Room DB, all 5 DAOs) plus
+  deterministic settings/cache seeding in the test's own `@Before`. Pass 2 (rendered by the
+  orchestrator directly after 3 consecutive Opus-lens spawns died instantly to account spend-limit
+  exhaustion — deviation disclosed in `.pipeline/review-verdict.md`, grounded in the Tester's own
+  thorough re-verification) scored 97/100, ship. 226/226 unit tests, 0 lint errors, zero production
+  files touched. Real bug found and fixed along the way: a Compose UI test API (`assertDoesNotExist`)
+  moved from a top-level extension function to an instance member between Compose UI versions —
+  root-caused via `javap` on the actual compiled bytecode, not guessed.
+  **`AppNavigationScreenTest.kt` has never actually executed — no AVD in this sandbox.** Everything
+  above is structural/traced verification against real code. Pending Skyler's own
+  `connectedAndroidTest` run to confirm the drawer-order disambiguation logic holds against real
+  rendered semantics.
 
 - ~~**Cross-source card duplicates could survive into Personal Collection's permanently cached
   list.**~~ **Fixed 2026-08-27.** Skyler asked to "ensure there are not duplicate entries" in
@@ -218,13 +243,6 @@ actually fixed and verified, not when merely planned.
   built and unit-tested with mocked repositories this session; the actual GitHub Pages output
   (binder.json shape, whether the website project's shelf-grouping logic renders it correctly)
   has never been checked end-to-end.
-- **`AppNavigationScreenTest.kt` was deleted during Unown's multiple reworks and never
-  recreated** for the current (final) nav layout — no test coverage on route wiring/drawer order
-  at all right now.
-- **`QuickScanViewModelTest.kt` only covers the new `searchStreaming` wiring** (6 tests added
-  this session) — no regression coverage for the rest of `QuickScanViewModel`'s existing
-  behavior (slot-matching logic, manual entry flow, secondary-binder fallback).
-
 ### Performance / efficiency
 
 - **TCGCSV's ~10-13s full-group-scan now runs on every search, not just retries.** Accepted,

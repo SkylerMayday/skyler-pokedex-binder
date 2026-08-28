@@ -23,12 +23,15 @@ import java.io.File
  * test-only file name, so a future accidental removal of the backup call from that function
  * fails this test.
  *
- * Deliberately does NOT use [DatabaseModule.provideDatabase] itself or Hilt's test runner: this
- * project has no Hilt test infra (`hilt-android-testing` isn't a dependency, no
- * `HiltTestApplication`), and [DatabaseModule.provideDatabase] hardcodes the real
+ * Deliberately does NOT use [DatabaseModule.provideDatabase] itself, even though this project now
+ * has Hilt test infra ([com.skyler.pokedexbinder.CustomTestRunner], `hilt-android-testing`) for
+ * other instrumented tests: [DatabaseModule.provideDatabase] hardcodes the real
  * `pokedex_binder.db` file name — calling it directly in a test would operate on the actual
  * on-device database if this ever runs on a device where the app is already installed, which is
- * exactly the data this feature exists to protect.
+ * exactly the data this feature exists to protect. ([FakeDatabaseModule] sidesteps this for other
+ * tests by swapping in an in-memory database entirely; this test instead validates the real
+ * [DatabaseModule.buildDatabase] production code path directly against a test-only file name, so
+ * it deliberately does not use the fake module either.)
  *
  * NOTE: this is an androidTest and requires a device/emulator to execute. No AVD/emulator was
  * available in the environment this file was authored in — this file compiles and is ready to
