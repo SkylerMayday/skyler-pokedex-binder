@@ -8,6 +8,9 @@ import com.skyler.pokedexbinder.data.local.PersonalCollectionDao
 import com.skyler.pokedexbinder.data.local.PokedexDatabase
 import com.skyler.pokedexbinder.data.local.SecondaryBinderDao
 import com.skyler.pokedexbinder.data.local.UnownBinderDao
+import com.skyler.pokedexbinder.data.local.backup.DatabaseBackupManager
+import com.skyler.pokedexbinder.data.local.backup.FrameworkSqliteVersionReader
+import com.skyler.pokedexbinder.data.local.backup.SqliteVersionReader
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -58,4 +61,16 @@ object FakeDatabaseModule {
 
     @Provides
     fun provideUnownBinderDao(db: PokedexDatabase): UnownBinderDao = db.unownBinderDao()
+
+    // Mirrors DatabaseModule's remaining surface (see the class doc): the real implementations are
+    // safe under test — they only read a file path handed to them, and nothing in an instrumented
+    // test asks either of them to touch the on-device database.
+    @Provides
+    @Singleton
+    fun provideSqliteVersionReader(): SqliteVersionReader = FrameworkSqliteVersionReader()
+
+    @Provides
+    @Singleton
+    fun provideDatabaseBackupManager(versionReader: SqliteVersionReader): DatabaseBackupManager =
+        DatabaseBackupManager(versionReader)
 }

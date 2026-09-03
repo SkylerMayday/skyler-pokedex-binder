@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Pre-Android-12 equivalent of data_extraction_rules.xml — keep the two in sync. Exclusions only,
+    so every other file the app owns is still backed up exactly as it was before.
+-->
+<full-backup-content>
+    <exclude domain="file" path="exports/" />
+</full-backup-content>

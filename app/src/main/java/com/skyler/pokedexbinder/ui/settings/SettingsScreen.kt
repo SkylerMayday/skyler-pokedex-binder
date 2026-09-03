@@ -1,5 +1,7 @@
 package com.skyler.pokedexbinder.ui.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -10,6 +12,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -46,6 +49,32 @@ fun SettingsScreen(
     var showRestore by remember { mutableStateOf(false) }
     val restoreVm: RestoreViewModel = hiltViewModel()
     val restoreState by restoreVm.state.collectAsState()
+
+    val context = LocalContext.current
+    val backupVm: BackupViewModel = hiltViewModel()
+    val backupState by backupVm.state.collectAsState()
+
+    val importVm: ImportViewModel = hiltViewModel()
+    val importState by importVm.state.collectAsState()
+    val importFilePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris -> importVm.onFilesPicked(uris) }
+
+    LaunchedEffect(backupState) {
+        val current = backupState
+        if (current is BackupUiState.Success) {
+            context.startActivity(current.shareIntent)
+            backupVm.dismiss()
+        }
+    }
+
+    BackupDialog(state = backupState, onDismiss = { backupVm.dismiss() })
+
+    ImportDialog(
+        state = importState,
+        onConfirm = { importVm.confirmImport() },
+        onDismiss = { importVm.dismiss() }
+    )
 
     if (showPublish) {
         LaunchedEffect(Unit) { publishVm.startPublish() }
@@ -272,6 +301,34 @@ fun SettingsScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text("Restore from published snapshot")
+            }
+
+            // ---- Local Backup / Restore (no GitHub account needed) ----
+            Spacer(Modifier.height(8.dp))
+            SectionHeader("Local Backup")
+
+            OutlinedButton(
+                onClick = { backupVm.startBackup() },
+                enabled = backupState !is BackupUiState.Loading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text(if (backupState is BackupUiState.Loading) "Backing up…" else "Backup")
+            }
+
+            OutlinedButton(
+                onClick = {
+                    importFilePicker.launch(
+                        arrayOf("application/json", "application/octet-stream", "*/*")
+                    )
+                },
+                enabled = importState is ImportUiState.Idle,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text("Restore from file")
             }
 
         }

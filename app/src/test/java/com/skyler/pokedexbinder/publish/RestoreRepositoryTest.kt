@@ -3,6 +3,8 @@ package com.skyler.pokedexbinder.publish
 import com.skyler.pokedexbinder.data.local.ConnectingArtSlot
 import com.skyler.pokedexbinder.data.local.MainBinderEntry
 import com.skyler.pokedexbinder.data.local.PersonalCollectionEntry
+import com.skyler.pokedexbinder.data.local.SecondaryBinderDao
+import com.skyler.pokedexbinder.data.local.SecondaryBinderEntry
 import com.skyler.pokedexbinder.data.local.UnownBinderEntry
 import com.skyler.pokedexbinder.publish.model.BinderSnapshot
 import com.skyler.pokedexbinder.publish.model.SnapshotBinder
@@ -33,6 +35,7 @@ class RestoreRepositoryTest {
     private val connectingArtRepository = mockk<ConnectingArtRepository>(relaxed = true)
     private val personalCollectionRepository = mockk<PersonalCollectionRepository>(relaxed = true)
     private val unownBinderRepository = mockk<UnownBinderRepository>(relaxed = true)
+    private val secondaryBinderDao = mockk<SecondaryBinderDao>(relaxed = true)
 
     private lateinit var repository: RestoreRepository
 
@@ -50,9 +53,11 @@ class RestoreRepositoryTest {
         coEvery { connectingArtRepository.getAllSlots() } returns emptyList()
         coEvery { personalCollectionRepository.getAllEntries() } returns emptyList()
         coEvery { unownBinderRepository.getAllEntries() } returns emptyList()
+        coEvery { secondaryBinderDao.getAll() } returns emptyList()
         repository = RestoreRepository(
             publishRepository, publishSettingsRepository, binderRepository,
-            connectingArtRepository, personalCollectionRepository, unownBinderRepository
+            connectingArtRepository, personalCollectionRepository, unownBinderRepository,
+            secondaryBinderDao
         )
     }
 
@@ -117,6 +122,11 @@ class RestoreRepositoryTest {
     private fun unownSnapshot(vararg slots: SnapshotSlot) = BinderSnapshot(
         publishedAt = "2026-07-10T12:00:00+08:00",
         binders = listOf(SnapshotBinder("unown", "Unown", listOf(SnapshotSection("Unown", slots.toList()))))
+    )
+
+    private fun cardHistorySnapshot(vararg slots: SnapshotSlot) = BinderSnapshot(
+        publishedAt = "2026-07-10T12:00:00+08:00",
+        binders = listOf(SnapshotBinder("cardHistory", "Card History", listOf(SnapshotSection("Card History", slots.toList()))))
     )
 
     private fun localUnownEntry(letterId: String, position: Int, cardId: String? = null) = UnownBinderEntry(
@@ -305,13 +315,146 @@ class RestoreRepositoryTest {
     }
 
     @Test
-    fun `non-pokedex binder in snapshot is ignored`() = runTest {
+    fun `cardHistory binder in snapshot is inserted, not ignored`() = runTest {
         val snapshot = BinderSnapshot(
             publishedAt = "2026-07-04T12:00:00+08:00",
             binders = listOf(
                 SnapshotBinder(
                     "cardHistory", "Card History",
-                    listOf(SnapshotSection("Card History", listOf(snapshotSlot("s1-1", cardId = "c1"))))
+                    listOf(SnapshotSection("Card History", listOf(snapshotSlot("s1-1", cardId = "c1", name = "Pikachu"))))
+                )
+            )
+        )
+        val localEntries = listOf(entry("s1", "S1", dex = 1, cardId = "old-card"))
+
+        coEvery { publishSettingsRepository.getConfig() } returns defaultConfig
+        coEvery { publishRepository.fetchBaselineSnapshot(any(), any()) } returns (snapshot to "sha-1")
+        coEvery { binderRepository.getAllEntries() } returns localEntries
+        val capturedSlot = slot<List<MainBinderEntry>>()
+        coEvery { binderRepository.seedFromJson(capture(capturedSlot)) } returns Unit
+        coEvery { secondaryBinderDao.getAll() } returns emptyList()
+
+        val result = repository.restore {}
+
+        assertTrue(result is RestoreResult.Success)
+        val success = result as RestoreResult.Success
+        assertEquals(1, success.restoredCount)
+        assertEquals(0, success.clearedCount)
+        assertEquals(0, success.skippedCount)
+        // pokedex binder in the snapshot is untouched — the inserted row is Card History only
+        assertEquals("old-card", capturedSlot.captured[0].assignedCardId)
+        coVerify {
+            secondaryBinderDao.insertAtEnd(
+                match { it.cardId == "c1" && it.pokemonId == "Pikachu" && it.pokemonName == "Pikachu" }
+            )
+        }
+    }
+
+    @Test
+    fun `cardHistory insert is skipped when the cardId already exists locally (idempotent restore)`() = runTest {
+        val snapshot = BinderSnapshot(
+            publishedAt = "2026-07-04T12:00:00+08:00",
+            binders = listOf(
+                SnapshotBinder(
+                    "cardHistory", "Card History",
+                    listOf(SnapshotSection("Card History", listOf(snapshotSlot("s1-1", cardId = "c1", name = "Pikachu"))))
+                )
+            )
+        )
+        val localEntries = listOf(entry("s1", "S1", dex = 1, cardId = null))
+
+        coEvery { publishSettingsRepository.getConfig() } returns defaultConfig
+        coEvery { publishRepository.fetchBaselineSnapshot(any(), any()) } returns (snapshot to "sha-1")
+        coEvery { binderRepository.getAllEntries() } returns localEntries
+        coEvery { binderRepository.seedFromJson(any()) } returns Unit
+        coEvery { secondaryBinderDao.getAll() } returns listOf(
+            SecondaryBinderEntry(pokemonId = "Pikachu", pokemonName = "Pikachu", cardId = "c1", cardImageUrl = "https://img/c1")
+        )
+
+        val result = repository.restore {}
+
+        assertTrue(result is RestoreResult.Success)
+        val success = result as RestoreResult.Success
+        assertEquals(0, success.restoredCount)
+        coVerify(exactly = 0) { secondaryBinderDao.insertAtEnd(any()) }
+    }
+
+    @Test
+    fun `cardHistory restores every copy of a duplicated cardId, not just the first`() = runTest {
+        // Owning two physical copies of one card is ordinary, and Card History's write paths
+        // (SecondaryBinderViewModel/ScannerViewModel) don't dedupe — so both rows are published,
+        // and AC1 ("all Card History entries come back") requires both to be restored.
+        val snapshot = cardHistorySnapshot(
+            snapshotSlot("s1-1", cardId = "c1", name = "Pikachu"),
+            snapshotSlot("s1-2", cardId = "c1", name = "Pikachu")
+        )
+        val localEntries = listOf(entry("s1", "S1", dex = 1, cardId = null))
+
+        coEvery { publishSettingsRepository.getConfig() } returns defaultConfig
+        coEvery { publishRepository.fetchBaselineSnapshot(any(), any()) } returns (snapshot to "sha-1")
+        coEvery { binderRepository.getAllEntries() } returns localEntries
+        coEvery { binderRepository.seedFromJson(any()) } returns Unit
+        coEvery { secondaryBinderDao.getAll() } returns emptyList()
+
+        val result = repository.restore {} as RestoreResult.Success
+
+        assertEquals(2, result.restoredCount)
+        coVerify(exactly = 2) { secondaryBinderDao.insertAtEnd(match { it.cardId == "c1" }) }
+    }
+
+    @Test
+    fun `cardHistory restore stays idempotent when the duplicates are already present locally`() = runTest {
+        val snapshot = cardHistorySnapshot(
+            snapshotSlot("s1-1", cardId = "c1", name = "Pikachu"),
+            snapshotSlot("s1-2", cardId = "c1", name = "Pikachu")
+        )
+        val localEntries = listOf(entry("s1", "S1", dex = 1, cardId = null))
+
+        coEvery { publishSettingsRepository.getConfig() } returns defaultConfig
+        coEvery { publishRepository.fetchBaselineSnapshot(any(), any()) } returns (snapshot to "sha-1")
+        coEvery { binderRepository.getAllEntries() } returns localEntries
+        coEvery { binderRepository.seedFromJson(any()) } returns Unit
+        coEvery { secondaryBinderDao.getAll() } returns listOf(
+            SecondaryBinderEntry(pokemonId = "Pikachu", pokemonName = "Pikachu", cardId = "c1", cardImageUrl = "https://img/c1"),
+            SecondaryBinderEntry(pokemonId = "Pikachu", pokemonName = "Pikachu", cardId = "c1", cardImageUrl = "https://img/c1")
+        )
+
+        val result = repository.restore {} as RestoreResult.Success
+
+        assertEquals(0, result.restoredCount)
+        coVerify(exactly = 0) { secondaryBinderDao.insertAtEnd(any()) }
+    }
+
+    @Test
+    fun `cardHistory inserts only the copies that are missing locally`() = runTest {
+        val snapshot = cardHistorySnapshot(
+            snapshotSlot("s1-1", cardId = "c1", name = "Pikachu"),
+            snapshotSlot("s1-2", cardId = "c1", name = "Pikachu")
+        )
+        val localEntries = listOf(entry("s1", "S1", dex = 1, cardId = null))
+
+        coEvery { publishSettingsRepository.getConfig() } returns defaultConfig
+        coEvery { publishRepository.fetchBaselineSnapshot(any(), any()) } returns (snapshot to "sha-1")
+        coEvery { binderRepository.getAllEntries() } returns localEntries
+        coEvery { binderRepository.seedFromJson(any()) } returns Unit
+        coEvery { secondaryBinderDao.getAll() } returns listOf(
+            SecondaryBinderEntry(pokemonId = "Pikachu", pokemonName = "Pikachu", cardId = "c1", cardImageUrl = "https://img/c1")
+        )
+
+        val result = repository.restore {} as RestoreResult.Success
+
+        assertEquals(1, result.restoredCount)
+        coVerify(exactly = 1) { secondaryBinderDao.insertAtEnd(match { it.cardId == "c1" }) }
+    }
+
+    @Test
+    fun `unrecognized binder id in snapshot is ignored`() = runTest {
+        val snapshot = BinderSnapshot(
+            publishedAt = "2026-07-04T12:00:00+08:00",
+            binders = listOf(
+                SnapshotBinder(
+                    "someFutureBinderType", "Future Binder",
+                    listOf(SnapshotSection("Section", listOf(snapshotSlot("s1-1", cardId = "c1"))))
                 )
             )
         )
@@ -332,6 +475,7 @@ class RestoreRepositoryTest {
         assertEquals(0, success.skippedCount)
         assertEquals("old-card", capturedSlot.captured[0].assignedCardId)
         assertFalse(capturedSlot.captured.any { it.pokemonId == "s1-1" })
+        coVerify(exactly = 0) { secondaryBinderDao.insertAtEnd(any()) }
     }
 
     @Test
@@ -675,5 +819,121 @@ class RestoreRepositoryTest {
         assertEquals("IT", written.language)
         assertEquals("signed", written.remarks)
         assertTrue(written.isLocked)
+    }
+
+    // --- Cloud-restore vs local-import parity (task 1's shared applySnapshot) ---
+
+    @Test
+    fun `restore and restoreFromSnapshot apply the identical snapshot identically across all five binders`() = runTest {
+        // Proves restore()'s cloud-fetch path and restoreFromSnapshot()'s local-import path both
+        // route through the same applySnapshot logic — same counts, same DB writes, given the
+        // same BinderSnapshot input. Exercised against two independently-wired mock sets since
+        // RestoreResult.Success also carries a timestamp-derived elapsedMs that isn't meaningful
+        // to compare directly. The snapshot deliberately carries every binder type: with the
+        // overlays split into five functions, "they share applySnapshot" is only worth as much as
+        // the number of binders actually compared.
+        val snapshot = BinderSnapshot(
+            publishedAt = "2026-07-10T12:00:00+08:00",
+            binders = listOf(
+                SnapshotBinder(
+                    "pokedex", "Pokédex",
+                    listOf(
+                        SnapshotSection(
+                            "Gen 1",
+                            listOf(
+                                snapshotSlot("s1", cardId = "c1-new", name = "S1"),
+                                snapshotSlot("s2", cardId = null, name = "S2")
+                            )
+                        )
+                    )
+                ),
+                SnapshotBinder(
+                    "connectingArt", "Connecting Art",
+                    listOf(SnapshotSection("Group A", listOf(snapshotSlot("ca-1-0", cardId = "ca-new"))))
+                ),
+                SnapshotBinder(
+                    "personalCollection", "Personal Collection",
+                    listOf(
+                        SnapshotSection(
+                            "Charizard",
+                            listOf(snapshotSlot("cardA", cardId = "cardA", owned = true, language = "FR"))
+                        )
+                    )
+                ),
+                SnapshotBinder(
+                    "unown", "Unown",
+                    listOf(SnapshotSection("Unown", listOf(snapshotSlot("unown-A", cardId = "u1", name = "Unown A"))))
+                ),
+                SnapshotBinder(
+                    "cardHistory", "Card History",
+                    listOf(SnapshotSection("Card History", listOf(snapshotSlot("h1", cardId = "ch1", name = "Pikachu"))))
+                )
+            )
+        )
+        val localEntries = listOf(
+            entry("s1", "S1", dex = 1, cardId = "c1-old"),
+            entry("s2", "S2", dex = 2, cardId = "c2-old")
+        )
+        val localCa = listOf(localCaSlot(groupId = 1, slotIndex = 0))
+        val localUnown = listOf(localUnownEntry("A", position = 0))
+
+        coEvery { publishSettingsRepository.getConfig() } returns defaultConfig
+        coEvery { publishRepository.fetchBaselineSnapshot(any(), any()) } returns (snapshot to "sha-1")
+        coEvery { binderRepository.getAllEntries() } returns localEntries
+        coEvery { connectingArtRepository.getAllSlots() } returns localCa
+        coEvery { unownBinderRepository.getAllEntries() } returns localUnown
+        val mainViaRestore = slot<List<MainBinderEntry>>()
+        val caViaRestore = slot<List<ConnectingArtSlot>>()
+        val unownViaRestore = slot<List<UnownBinderEntry>>()
+        val historyViaRestore = slot<SecondaryBinderEntry>()
+        coEvery { binderRepository.seedFromJson(capture(mainViaRestore)) } returns Unit
+        coEvery { connectingArtRepository.updateSlots(capture(caViaRestore)) } returns Unit
+        coEvery { unownBinderRepository.overwriteAll(capture(unownViaRestore)) } returns Unit
+        coEvery { secondaryBinderDao.insertAtEnd(capture(historyViaRestore)) } returns Unit
+
+        val cloudResult = repository.restore {} as RestoreResult.Success
+
+        val localBinderRepository = mockk<BinderRepository>()
+        val localConnectingArtRepository = mockk<ConnectingArtRepository>(relaxed = true)
+        val localPersonalCollectionRepository = mockk<PersonalCollectionRepository>(relaxed = true)
+        val localUnownBinderRepository = mockk<UnownBinderRepository>(relaxed = true)
+        val localSecondaryBinderDao = mockk<SecondaryBinderDao>(relaxed = true)
+        coEvery { localConnectingArtRepository.getAllSlots() } returns localCa
+        coEvery { localPersonalCollectionRepository.getAllEntries() } returns emptyList()
+        coEvery { localUnownBinderRepository.getAllEntries() } returns localUnown
+        coEvery { localSecondaryBinderDao.getAll() } returns emptyList()
+        coEvery { localBinderRepository.getAllEntries() } returns localEntries
+        val mainViaImport = slot<List<MainBinderEntry>>()
+        val caViaImport = slot<List<ConnectingArtSlot>>()
+        val unownViaImport = slot<List<UnownBinderEntry>>()
+        val historyViaImport = slot<SecondaryBinderEntry>()
+        coEvery { localBinderRepository.seedFromJson(capture(mainViaImport)) } returns Unit
+        coEvery { localConnectingArtRepository.updateSlots(capture(caViaImport)) } returns Unit
+        coEvery { localUnownBinderRepository.overwriteAll(capture(unownViaImport)) } returns Unit
+        coEvery { localSecondaryBinderDao.insertAtEnd(capture(historyViaImport)) } returns Unit
+
+        val localRepository = RestoreRepository(
+            publishRepository, publishSettingsRepository, localBinderRepository,
+            localConnectingArtRepository, localPersonalCollectionRepository, localUnownBinderRepository,
+            localSecondaryBinderDao
+        )
+        val localResult = localRepository.restoreFromSnapshot(snapshot) {} as RestoreResult.Success
+
+        assertEquals(cloudResult.restoredCount, localResult.restoredCount)
+        assertEquals(cloudResult.clearedCount, localResult.clearedCount)
+        assertEquals(cloudResult.skippedCount, localResult.skippedCount)
+        assertEquals(mainViaRestore.captured, mainViaImport.captured)
+        assertEquals(caViaRestore.captured, caViaImport.captured)
+        assertEquals(unownViaRestore.captured, unownViaImport.captured)
+        assertEquals(historyViaRestore.captured, historyViaImport.captured)
+        // Personal Collection writes through single-value calls rather than a captured list.
+        coVerify { personalCollectionRepository.setOwned("cardA", true) }
+        coVerify { localPersonalCollectionRepository.setOwned("cardA", true) }
+        coVerify {
+            personalCollectionRepository.updateLanguage("cardA", com.skyler.pokedexbinder.data.model.Language.FR)
+        }
+        coVerify {
+            localPersonalCollectionRepository.updateLanguage("cardA", com.skyler.pokedexbinder.data.model.Language.FR)
+        }
     }
 }

@@ -5,6 +5,8 @@ import androidx.annotation.VisibleForTesting
 import androidx.room.Room
 import com.skyler.pokedexbinder.data.local.*
 import com.skyler.pokedexbinder.data.local.backup.DatabaseBackupManager
+import com.skyler.pokedexbinder.data.local.backup.FrameworkSqliteVersionReader
+import com.skyler.pokedexbinder.data.local.backup.SqliteVersionReader
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,12 +18,10 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
-    private const val DB_FILE_NAME = "pokedex_binder.db"
-
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): PokedexDatabase =
-        buildDatabase(context, DB_FILE_NAME)
+        buildDatabase(context, PokedexDatabase.DB_FILE_NAME)
 
     /**
      * Extracted from [provideDatabase] so an instrumented test can exercise this exact production
@@ -48,6 +48,20 @@ object DatabaseModule {
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
     }
+
+    /**
+     * Interface binding rather than a constructor default, matching [com.skyler.pokedexbinder.di.NetworkModule]'s
+     * `@Provides`-per-interface convention — it gives tests a seam without leaving a reassignable
+     * field on a singleton that guards a destructive operation.
+     */
+    @Provides
+    @Singleton
+    fun provideSqliteVersionReader(): SqliteVersionReader = FrameworkSqliteVersionReader()
+
+    @Provides
+    @Singleton
+    fun provideDatabaseBackupManager(versionReader: SqliteVersionReader): DatabaseBackupManager =
+        DatabaseBackupManager(versionReader)
 
     @Provides
     fun provideMainBinderDao(db: PokedexDatabase): MainBinderDao = db.mainBinderDao()

@@ -37,18 +37,44 @@ class DatabaseBackupManager(
             if (MigrationPathResolver.hasPath(migrations, onDiskVersion, targetVersion)) return
 
             Log.w(TAG, "Destructive migration imminent (on-disk v$onDiskVersion -> target v$targetVersion, no path) — backing up first")
+            backupNow(context, dbFileName, reason = "v${onDiskVersion}to$targetVersion")
+        } catch (e: Exception) {
+            // Never let this check block app startup or the migration it's insuring against.
+            Log.e(TAG, "Pre-migration backup check failed — proceeding without it", e)
+        }
+    }
+
+    /**
+     * Unconditionally copies [dbFileName] + its `-wal`/`-shm` sidecars into
+     * `context.filesDir/db_backups/` under a [reason]-tagged name, then rotates old backups down to
+     * [maxBackups]. Returns true if a copy was made.
+     *
+     * Separate from [backupIfDestructiveMigrationImminent]'s gates so the destructive local `.db`
+     * import path can take a recovery copy before it overwrites the live database — that swap needs
+     * a backup precisely in the cases the migration check decides *not* to take one (a valid,
+     * migratable version). Best-effort: any failure is logged and swallowed, never thrown.
+     */
+    fun backupNow(context: Context, dbFileName: String, reason: String): Boolean {
+        return try {
+            val dbFile = context.getDatabasePath(dbFileName)
+            if (!dbFile.exists()) return false
+
             val backupDir = File(context.filesDir, BACKUP_DIR_NAME).apply { mkdirs() }
             val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            val baseName = "pokedex_binder_v${onDiskVersion}to${targetVersion}_$stamp"
+            // Derived from the file actually being backed up, not a hardcoded name — two different
+            // database files must not collide on one base name inside the shared rotation pool.
+            val baseName = "${dbFileName.removeSuffix(".db")}_${reason}_$stamp"
 
             copyIfExists(dbFile, File(backupDir, "$baseName.db"))
             copyIfExists(File(dbFile.path + "-wal"), File(backupDir, "$baseName.db-wal"))
             copyIfExists(File(dbFile.path + "-shm"), File(backupDir, "$baseName.db-shm"))
 
-            rotate(backupDir)
+            BackupRotation.keepNewest(backupDir, ".db", maxBackups, SIDECAR_SUFFIXES)
+            true
         } catch (e: Exception) {
-            // Never let a backup failure block app startup or the migration it's insuring against.
-            Log.e(TAG, "Pre-migration backup failed — proceeding without it", e)
+            // Never let a backup failure block app startup or the operation it's insuring against.
+            Log.e(TAG, "DB backup failed — proceeding without it", e)
+            false
         }
     }
 
@@ -56,21 +82,12 @@ class DatabaseBackupManager(
         if (source.exists()) source.copyTo(dest, overwrite = true)
     }
 
-    /** Keeps the newest [maxBackups] `.db` base names (by lastModified), deletes the rest + their sidecars. */
-    private fun rotate(backupDir: File) {
-        val dbFiles = backupDir.listFiles { f -> f.name.endsWith(".db") } ?: return
-        val stale = dbFiles.sortedByDescending { it.lastModified() }.drop(maxBackups)
-        for (old in stale) {
-            val base = old.name.removeSuffix(".db")
-            old.delete()
-            File(backupDir, "$base.db-wal").delete()
-            File(backupDir, "$base.db-shm").delete()
-        }
-    }
-
     companion object {
         private const val TAG = "DatabaseBackupManager"
         const val BACKUP_DIR_NAME = "db_backups"
         const val MAX_BACKUPS = 5
+
+        /** Suffixes SQLite keeps beside a `<base>.db` file; they must be rotated/copied with it. */
+        val SIDECAR_SUFFIXES = listOf(".db-wal", ".db-shm")
     }
 }

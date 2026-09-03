@@ -29,6 +29,10 @@ abstract class PokedexDatabase : RoomDatabase() {
         /** Single source of truth for the DB schema version — kept in sync with the [Database] annotation above. */
         const val SCHEMA_VERSION = 9
 
+        /** Single source of truth for the on-disk file name — read by [com.skyler.pokedexbinder.di.DatabaseModule]
+         *  and the local backup export/import path (`data/local/backup/BackupExporter`/`BackupImporter`). */
+        const val DB_FILE_NAME = "pokedex_binder.db"
+
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE secondary_binder ADD COLUMN position INTEGER NOT NULL DEFAULT 0")

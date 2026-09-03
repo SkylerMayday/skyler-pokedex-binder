@@ -32,6 +32,8 @@ class DatabaseBackupManagerTest {
 
     private class FakeVersionReader(private val version: Int?) : SqliteVersionReader {
         override fun readVersion(dbFile: File): Int? = version
+        // DatabaseBackupManager never inspects tables — only the import gate does.
+        override fun readTableNames(dbFile: File): Set<String>? = null
     }
 
     private val backupDir: File get() = File(filesDir, DatabaseBackupManager.BACKUP_DIR_NAME)
@@ -197,6 +199,31 @@ class DatabaseBackupManagerTest {
         assertTrue(remainingDbBases.contains("seeded_4"))
         assertTrue(remainingDbBases.contains("seeded_5"))
         assertTrue(remainingDbBases.contains("seeded_6"))
+    }
+
+    @Test
+    fun `backupNow copies unconditionally, including when a clean migration path exists`() {
+        // The .db import path needs a recovery copy exactly when the migration check declines to
+        // take one — the imported file is normally at a perfectly migratable version.
+        dbFile.writeText("pre-import content")
+        File(dbFile.path + "-wal").writeText("wal content")
+
+        val copied = manager(version = PokedexDatabase.SCHEMA_VERSION)
+            .backupNow(context, "pokedex_binder.db", reason = "preimport")
+
+        assertTrue(copied)
+        val backedUp = backupDir.listFiles().orEmpty().map { it.name }
+        assertEquals(2, backedUp.size)
+        assertTrue(backedUp.any { Regex("""pokedex_binder_preimport_\d{8}_\d{6}\.db""").matches(it) })
+        assertTrue(backedUp.any { it.endsWith(".db-wal") })
+    }
+
+    @Test
+    fun `backupNow with no database file on disk copies nothing`() {
+        val copied = manager(version = null).backupNow(context, "pokedex_binder.db", reason = "preimport")
+
+        assertFalse(copied)
+        assertFalse(backupDir.exists())
     }
 
     @Test
