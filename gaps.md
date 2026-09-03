@@ -8,10 +8,9 @@ actually fixed and verified, not when merely planned.
 ### Fixed this session
 
 - ~~**No Card History restore path; no local (GitHub-independent) backup/restore option.**~~
-  **Shipped 2026-09-03/04**, full `dev-team-pipeline` run, score history 54 → 83 → 90/100 (ship,
-  all 3 lenses). Full detail: `project-overview.md`'s new "Binder Backup" section,
-  `.pipeline/changes.md`, `.pipeline/review-verdict.md`. **Not yet committed** — sitting in the
-  working tree alongside this session's other uncommitted work; ask before committing/pushing.
+  **Shipped 2026-09-03/04, committed `eaed99a`.** Full `dev-team-pipeline` run, score history
+  54 → 83 → 90/100 (ship, all 3 lenses). Full detail: `project-overview.md`'s new "Binder Backup"
+  section, `.pipeline_archive/2026-09-04-binder-backup/`. Not yet pushed to `origin`.
 
 ### Open, newly logged this session
 
