@@ -63,6 +63,18 @@ android {
 // Android Studio Narwhal (AI-253 / Kotlin plugin 2.2.x) requests this task during project sync
 tasks.register("prepareKotlinBuildScriptModel")
 
+// androidx.graphics:graphics-path resolves to 1.0.1 transitively via composeBom 2026.06.00's own
+// androidx.compose.ui:ui-graphics entry, which hasn't bumped its own floor yet — one of the 3
+// natives originally flagged by the 16KB page-size warning (see gaps.md, 2026-08-28 entry).
+// Force the latest stable release directly; verify this actually clears the warning (1.1.0's own
+// changelog doesn't call out 16KB alignment explicitly, so don't assume it's fixed without
+// rechecking the build output).
+configurations.all {
+    resolutionStrategy {
+        force("androidx.graphics:graphics-path:1.1.0")
+    }
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
