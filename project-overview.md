@@ -158,6 +158,174 @@ no users beyond himself.
   — if `compileDebugAndroidTestKotlin` ever breaks again in this file, check these two classes of
   issue first.
 
+## Native Dependencies & Version Alignment (2026-08-22, 16KB page-size fix)
+
+Bumped for Google Play's 16KB memory-page-size compliance and to fix a real "not 16KB
+compatible" warning on debuggable builds. **These specific versions were chosen deliberately,
+not just "latest" — do not casually bump further without re-checking:**
+
+- `camerax = "1.6.1"` — 16KB fix landed in CameraX 1.4.0; 1.6.1 is current stable, no known
+  regressions. AAR metadata hard-requires `agp >= 8.9.1` (forced the AGP bump below).
+- `datastore = "1.1.7"` — **deliberately NOT the "latest stable" (1.2.x).** `androidx.datastore`
+  1.2.0+ re-broke 16KB alignment for `libdatastore_shared_counter.so` (confirmed via
+  `flutter/flutter#182898`, still unresolved as of the 1.2.1 stable release). 1.1.7 is the last
+  version confirmed 16KB-compatible with no other known issues.
+- `composeBom = "2026.06.00"` — an 18-month jump from `2024.12.01`. This repo already has one
+  cautionary tale about BOM bumps: commit `28aa261` bumped a smaller composeBom jump *and*
+  Kotlin/KSP in lockstep, guessed a KSP version suffix that didn't exist on Maven Central, and
+  had to be reverted same-day (`e1a628a`). **Lesson applied and confirmed correct this time:**
+  since Kotlin 2.0+, the Compose Compiler Gradle plugin decouples compiler version from Kotlin
+  language version — `kotlin`/`ksp` were deliberately left untouched at `2.1.20`/`2.1.20-1.0.32`,
+  verified build-error-driven (no metadata-mismatch error occurred).
+- `agp = "8.9.1"` — forced by `camerax 1.6.1`'s AAR metadata floor, not chosen speculatively.
+- **`androidx.graphics:graphics-path` still resolves to `1.0.1`, not the hoped `1.1.0+`**,
+  transitively via `composeBom 2026.06.00`'s own `androidx.compose.ui:ui-graphics`. Means
+  `libandroidx.graphics.path.so` (1 of the 3 originally-flagged natives) may still show the
+  16KB warning. Not force-overridden against what the BOM itself resolves — open, low-priority.
+- **A BOM bump verified only against `compileDebugKotlin` (main sources) is not fully verified.**
+  This exact composeBom bump compiled main sources cleanly, but broke `compileDebugAndroidTestKotlin`
+  weeks later — `assertDoesNotExist()` moved from a top-level Compose UI test extension function
+  to an instance member of `SemanticsNodeInteraction` between the old and new Compose UI versions.
+  Nobody caught it because no androidTest Compose UI code existed yet to exercise it. **When
+  bumping a BOM/umbrella version, compile every source set it can reach** (`compileDebugKotlin`,
+  `compileDebugUnitTestKotlin`, `compileDebugAndroidTestKotlin`), not just main.
+
+## Scanner Camera Architecture (2026-08-26/27, 4 real fix attempts, same session)
+
+`ui/scanner/ScannerScreen.kt`'s `CameraPreview` had a real, multi-layered bug family — each fix
+attempt below addressed a genuinely different root cause, not the same bug guessed at repeatedly:
+
+1. **No focus triggering at all** (`d6d5a1e`) — `bindToLifecycle(...)`'s returned `Camera` object
+   was discarded, so nothing could ever call `cameraControl.startFocusAndMetering()`. Fixed:
+   `requestFocusAndMetering` helper, initial focus on bind + edge-triggered refocus on card
+   detection + tap-to-focus fallback.
+2. **Auto-capture raced ahead of focus convergence** (`3e427e4`) — the fix above's completion
+   future was discarded, so the pre-existing 1500ms auto-capture timer wasn't gated on focus
+   actually locking. Fixed: gate `onCardPresenceChanged(true)` on the focus-metering future
+   settling, via a monotonic `focusRequestId` token guarding against stale-request races.
+3. **False-positive instant capture** (`1a44acb`) — attempt #2 speculatively added
+   `FocusMeteringAction.FLAG_AE` alongside `FLAG_AF`; triggering auto-exposure on bind shifted
+   brightness right as the crude contrast-based card detector (`detectCardInFrame`) was sampling,
+   tripping false "card detected" on the empty background. Fixed: `FLAG_AF` only (AE was never
+   needed), plus an unconditional `POST_BIND_DETECTION_DELAY_MS = 2000L` grace period as
+   independent defense-in-depth.
+4. **Guide frame forced too-close positioning** (`20c74f3`) — the REAL root cause behind
+   persistent real-device blur reports, confirmed via 4 convergent signals: the phone's main
+   lens has an 18cm documented minimum focus distance (see
+   `../Digital Brain/wiki/lifestyle/tech/skyler-phone-specs.md`), the old 75%-width guide frame
+   geometrically required ~5-10cm to fill, Skyler's own real-device testing confirmed the
+   in-app failure threshold at ~15-20cm, and a calibration photo pinned the correct new ratio.
+   Fixed: `GUIDE_FRAME_WIDTH_RATIO = 0.32f` (was a hardcoded `0.75f` duplicated in two places —
+   now one shared constant), plus explicit on-screen distance-guidance text as the
+   precision-independent primary fix.
+
+**Still pending real-device confirmation as of 2026-08-28.** If the blur persists after fix #4,
+the next step is checking actual hardware AF capability or reworking `detectCardInFrame`'s crude
+contrast heuristic — not a 5th blind software patch. Full diagnostic history in `gaps.md`.
+
+**Diagnostic-only logging exists in `ScannerScreen.kt`** (`4bd8bac`) — `Log.i("ScannerFocus", ...)`
+per focus request (elapsed time + `isFocusSuccessful`) and a one-time camera AF-capability log at
+bind (`LENS_INFO_MINIMUM_FOCUS_DISTANCE`, `CONTROL_AF_AVAILABLE_MODES`). Filter with
+`adb logcat -s ScannerFocus:*` when diagnosing further.
+
+## Publish Diff Semantics (2026-08-22, `9768632`)
+
+`PublishRepository.computeDiff()` now keys ADDED/REMOVED/REPLACED off `SnapshotSlot.owned`
+transitions uniformly across all 5 binder types, not raw `cardId` nullness. Previously, Personal
+Collection and Connecting Art — both of which can have `cardId != null` while genuinely unowned
+by design (Personal Collection publishes its *entire* search cache, owned and unowned, dimmed if
+unowned) — got every cache-refresh-surfaced unowned card reported as "ADDED" to Discord/the
+changelog. **If touching `computeDiff` or any `SnapshotSlot` construction site again: `owned`
+must be the single source of truth for "counts as filled," set correctly per binder type
+(`assignedCardId != null` for Pokédex/Card History/Unown, the real toggle for CA/PC) — do not
+revert to checking `cardId` nullness directly.**
+
+## Binder Backup: Card History Restore Gap + Local Export/Import (2026-09-03/04, shipped uncommitted)
+
+Full `dev-team-pipeline` run (Planner→Coder→Tester→Debugger→re-Tester→3-lens Reviewer, 2 score-loop
+iterations) against `docs/specs/2026-08-09-binder-backup-export-import.md`. Score history:
+54 → 83 → **90/100, ship** (all three lenses — correctness 94, security 94, maintainability 90).
+Full detail: `.pipeline/changes.md`, `.pipeline/review-verdict.md`.
+
+- **Part A**: `RestoreRepository.restore()` refactored to extract a shared `applySnapshot()`
+  (decomposed into per-binder `applyPokedex`/`applyConnectingArt`/`applyPersonalCollection`/
+  `applyUnown`/`applyCardHistory` functions), now used by both cloud Restore and a new
+  `restoreFromSnapshot()` local-import entry point. Card History restore was previously silently
+  dropped entirely — now inserts by `cardId`-not-already-present (append-only, idempotent), the
+  correct semantics for an entity with no stable per-device ID to overwrite-match against.
+- **Part B**: new "Local Backup" Settings section — `BackupExporter`/`BackupImporter`
+  (`data/local/backup/`), `BackupEnvelope` (`publish/model/`), `BackupViewModel`/`ImportViewModel`
+  + extracted `BackupDialogs.kt` (`ui/settings/`), a new `FileProvider`
+  (`exported="false"`, narrow `files-path` scope) + `provider_paths.xml`. Export produces a JSON
+  envelope (reuses `PublishRepository.buildSnapshot`) + a raw `.db` copy, shared via
+  `ACTION_SEND_MULTIPLE`. Import accepts either format: JSON runs through the same
+  `applySnapshot()` cloud Restore uses; `.db` does a WAL-checkpointed, table-identity-gated,
+  lower-bound-schema-gated, **atomic** swap (`.importing` temp + `ATOMIC_MOVE`) with a
+  `DatabaseBackupManager.backupNow` pre-swap safety copy, then forces the same process-restart
+  path on both success AND failure (Room's own contract: no supported reopen after a manual
+  `close()` — a failed swap used to leave the shared singleton DB permanently closed with no
+  recovery; fixed in the final loop iteration by routing every post-close exit through
+  `restartProcess()`, persisting the failure message via a new `PendingImportError`
+  `SharedPreferences` object for `MainActivity.onCreate` to surface via `Toast` after the forced
+  cold restart).
+- New shared `BackupRotation.keepNewest` — reused by both `db_backups/` (pre-migration safety
+  copies) and the new `exports/` directory, which also gained an Auto Backup domain exclusion.
+- **A real, separate pre-existing bug found and deliberately NOT fixed** (out of scope for this
+  pipeline run, flagged not folded in): `DatabaseModule.kt`'s
+  `.fallbackToDestructiveMigration()` + `.fallbackToDestructiveMigrationOnDowngrade()` combination
+  — per Room 2.6.1's own source, the second call sets `requireMigration = true`, cancelling the
+  graceful-recreate behavior the first call is supposed to provide. Live-reproduced: an on-disk
+  unmigrable-version database crashes the app on every cold start (`IllegalStateException: A
+  migration from 3 to 9 was required but not found`) instead of recreating tables. This makes the
+  new `.db` import's lower-bound gate the only thing standing between a mis-picked file and a
+  bricked install. Tracked in `gaps.md`, not fixed here.
+- **Residual, non-blocking items from the final review pass** (all P2-P4, explicitly not treated
+  as blockers by the lenses that found them): a flaky first-run `NoClassDefFoundError` on this
+  iteration's two new regression tests (`[Likely]` a Windows KSP-regeneration race, passes on
+  re-run, production path independently proven live); `PendingImportError` uses raw
+  `SharedPreferences` rather than this codebase's `@Singleton`/DataStore convention for persisted
+  state (technically correct choice — DataStore has no synchronous write and would race the
+  process kill — but undocumented at the point of deviation); the new `SharedPreferences` file
+  isn't excluded from Android's Auto Backup domain. Full detail in `gaps.md`.
+- **`connectedDebugAndroidTest` cannot run in this dev sandbox at all** — confirmed via a
+  throwaway worktree at `HEAD` (`92c5ef9`, containing none of this feature's code):
+  `hiltJavaCompileDebugAndroidTest` dies on `IllegalStateException: Unable to read Kotlin metadata
+  due to unsupported metadata version`. Pre-existing infra issue, not caused by this feature —
+  every claim in this pipeline that needed real-device proof used direct `adb`/live-emulator
+  verification instead (device-fixture manipulation, `pidof` process-kill proof, byte-level cache
+  diffing), not the instrumented test harness.
+
+## Cross-Source Card Dedup (2026-08-27, `9aefc38`)
+
+`CardSearchRepository.mergeResults()` (used by `searchByName`, called by Personal Collection,
+Manual Search, and QuickScan) now dedupes cross-source (pokemontcg.io/TCGdex) results via the
+existing `isSameCard()` matcher (name+number, setName-agnostic) instead of an exact
+`name|number|setName` string key — the two sources format set names differently for the same
+physical card, so the old key let real duplicates through, most visibly in Personal Collection's
+permanently-cached list. `isSameCard` was already the correct pattern (built for the identical
+bug class on the TCGCSV merge path) — reused, not reinvented.
+
+## Test Infrastructure (2026-08-28)
+
+- **First Hilt-instrumented test added** (`AppNavigationScreenTest.kt`, `92c5ef9`) — required
+  `CustomTestRunner.kt` (swaps in `HiltTestApplication` via `AndroidJUnitRunner`) and the
+  `hilt-android-testing` dependency. **Any future Hilt-instrumented test that touches Room must
+  use `di/FakeDatabaseModule.kt`'s pattern** (`@TestInstallIn(replaces = [DatabaseModule::class])`,
+  in-memory Room DB, all 5 real DAOs mirrored) — a real prior mistake here (caught by review, not
+  shipped) had an instrumented test running against the actual on-device `pokedex_binder.db` file,
+  which two other files in this codebase (`DatabaseModule.kt`, `DatabaseModuleWiringTest.kt`)
+  already explicitly say is unacceptable.
+- **Screens whose ViewModel eagerly fetches over the network on `init` need their cache
+  pre-seeded in a Hilt-instrumented test's `@Before`**, or the test risks a real network call and
+  a Compose-idle-sync hang on an indefinite loading spinner (found via review: Personal
+  Collection's `refreshAll()`-on-empty-cache path). Seed via the real DAO, not a mock.
+- **A local Android emulator now exists in the dev sandbox** — AVD name `pokedex_test`, Android 36
+  Google Play x86_64, WHPX-hardware-accelerated (~15s cold boot). Confirmed working end-to-end
+  (build → install → launch → logcat crash-check) 2026-08-27. **Cannot help verify real camera/AF
+  behavior** — no real autofocus hardware in an emulated camera backend — but closes the standing
+  "everything is compile-level only" gap for everything else (crash checks, UI flow verification,
+  running instrumented tests that don't need real camera hardware).
+
 ## Conventions
 
 - Gradle needs explicit env vars in the dev sandbox:
@@ -165,11 +333,39 @@ no users beyond himself.
   fails at daemon startup with a misleading `Unable to establish loopback connection` error that
   looks like a sandbox/JVM restriction but isn't — always set these before concluding a build
   command is broken.
+- **First-time dependency fetches may fail with a `PKIX path validation failed` TLS error** —
+  this machine's antivirus/security software does TLS inspection and installs its interception
+  root CA into Windows' trust store but not the JDK's own `cacerts`. Workaround (session-only,
+  no repo/JDK files touched): `$env:GRADLE_OPTS = "-Djavax.net.ssl.trustStoreType=WINDOWS-ROOT"`.
+  Recurs on every new not-yet-cached dependency; consider fixing at the machine level (import the
+  real interception cert into the JDK's `cacerts`, or make the `GRADLE_OPTS` permanent) if it
+  keeps resurfacing.
+- **No dedicated PowerShell tool exists in this harness** — only Bash (Git Bash). To run
+  `gradlew.bat`: write a real `.ps1` script file (setting `$env:JAVA_HOME`/`$env:TEMP`/`$env:TMP`
+  inside it) and invoke via Bash with `powershell.exe -NoProfile -ExecutionPolicy Bypass -File
+  "<path>.ps1"`. **Prefer a real `.ps1` file over an inline `-Command "..."` string** — inline
+  `$env:VAR` assignments get mangled through Bash's own `$`-expansion before reaching PowerShell.
+- **When re-verifying another stage's/agent's build claim, force `--rerun-tasks`** — a bare
+  `UP-TO-DATE` result only proves someone built it successfully at some earlier point (possibly
+  the very claim under review), not that this verification pass actually executed anything.
+- **When a self-reported test count looks suspicious, delete
+  `app/build/test-results/testDebugUnitTest/` before re-running**, don't trust `--rerun-tasks`
+  alone to invalidate a stale/partial read from an earlier interrupted invocation in the same
+  session — count directly from the freshly-regenerated XML, not the runner's own summary.
+- **For "is this symbol a top-level extension function or an instance member" questions**
+  (matters for whether an import is valid), a `-sources.jar` alone can't answer it — extract the
+  compiled AAR/`classes.jar` and run `javap -p <Class>.class`. Kotlin extension functions compile
+  into a synthetic `<File>Kt` class, invisible to a text read of the `.kt` source alone.
 - Full reinstall required after any code change — Android Studio's "Apply Changes" (hot-swap)
   silently skips new composables/nav routes/DB migrations. This caused multiple "my fix isn't
   showing up" false alarms this session.
 - Feature work goes through `dev-team-pipeline` (Planner→Coder→Tester→Reviewer,
   `.pipeline/` handoff files) for anything multi-file/architectural. Contained single-file UI
   fixes and urgent live-debugging are done directly. Archive `.pipeline/` outputs to
-  `.pipeline-archive/<date>-<slug>/` before starting a new, unrelated pipeline run.
+  `.pipeline_archive/<date>-<slug>/` before starting a new, unrelated pipeline run.
+- **This repo's `origin/HEAD` points at a stale, near-empty `main` branch** — all real work lives
+  on `master`. `EnterWorktree`'s default `baseRef: fresh` branches from `origin/<default-branch>`,
+  which resolves to the broken `main`, landing on a first-commit-only checkout. Skip worktree
+  isolation for pipeline runs in this repo; branch directly off `master` in the real checkout
+  instead.
 - No git remote until 2026-07-12 — `github.com/SkylerMayday/skyler-pokedex-binder`, private.

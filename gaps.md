@@ -3,6 +3,87 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
+## Refreshed — 2026-09-04 (session 8, cont'd)
+
+### Fixed this session
+
+- ~~**No Card History restore path; no local (GitHub-independent) backup/restore option.**~~
+  **Shipped 2026-09-03/04**, full `dev-team-pipeline` run, score history 54 → 83 → 90/100 (ship,
+  all 3 lenses). Full detail: `project-overview.md`'s new "Binder Backup" section,
+  `.pipeline/changes.md`, `.pipeline/review-verdict.md`. **Not yet committed** — sitting in the
+  working tree alongside this session's other uncommitted work; ask before committing/pushing.
+
+### Open, newly logged this session
+
+- **`DatabaseModule.kt`'s `.fallbackToDestructiveMigration()` + `.fallbackToDestructiveMigrationOnDowngrade()`
+  combination cancels the graceful-recreate behavior the first call is supposed to provide** — found
+  and live-reproduced by the Binder Backup pipeline's Coder/Tester stages while building the `.db`
+  import path, deliberately left unfixed (out of scope for that pipeline run). Per Room 2.6.1's own
+  source, `fallbackToDestructiveMigrationOnDowngrade()` sets `requireMigration = true`, which
+  overrides the first call's intent. Live consequence: an on-disk database at an unmigrable version
+  crashes the app on **every** cold start (`IllegalStateException: A migration from 3 to 9 was
+  required but not found`) instead of recreating tables as the `fallbackToDestructiveMigration()`
+  call alone would do. Makes the new `.db` import feature's lower-bound schema gate the only thing
+  standing between a mis-picked file and a bricked install. One-line fix (remove or reorder the
+  conflicting call) — separate from the Binder Backup feature, not folded in per "surgical changes
+  only."
+- **Binder Backup's new regression tests for the DB-closed-before-restart fix failed on a clean
+  first `--rerun-tasks` run** (`NoClassDefFoundError: Hilt_MainActivity`), passed on immediate
+  re-run, `[Likely]` a Windows KSP-regeneration race rather than a real test-logic bug (the
+  production path was independently proven correct live on-device, separate from this test). The
+  regression guard for this specific fix can go red for reasons unrelated to the code — if
+  `BackupImporterTest`'s two newest cases (the ones asserting `Process.killProcess`/`startActivity`
+  after a simulated swap failure) ever fail again, re-run clean before assuming a real regression.
+- **`PendingImportError` (new, `BackupImporter.kt`) uses raw `SharedPreferences` rather than this
+  codebase's `@Singleton`/DataStore convention for persisted state** (`SettingsRepository.kt`,
+  `PublishSettingsRepository.kt`). The technical choice is correct — DataStore has no synchronous
+  write and would race the forced `Process.killProcess()` — but the deviation isn't documented at
+  the point it diverges, unlike a precedented similar deviation already in
+  `PublishSettingsRepository.kt`. Low priority, cosmetic/consistency only.
+- **The new `shared_prefs/backup_import_state.xml` (`PendingImportError`'s backing file) isn't
+  excluded from Android's Auto Backup domain** — `data_extraction_rules.xml`/`full_backup_content.xml`
+  only exclude the `exports/` directory. An unconsumed pending-error message could theoretically
+  ride a cloud backup or device-transfer onto a fresh install and show a stale Toast there. Low
+  severity (no data exposure, just a confusing one-shot message), two-line fix when picked up.
+- **`connectedDebugAndroidTest` confirmed still unable to run in this dev sandbox** —
+  `hiltJavaCompileDebugAndroidTest` dies on `IllegalStateException: Unable to read Kotlin metadata
+  due to unsupported metadata version`. Re-confirmed via a throwaway worktree at `HEAD` (`92c5ef9`,
+  no Binder Backup code) during this session, so it's a standing environment issue, not something
+  any recent change caused. Same standing constraint noted for `AppNavigationScreenTest.kt` in
+  earlier sessions — still applies.
+
+## Refreshed — 2026-08-29 (session 7)
+
+### Open, newly logged this session — PARKED, do not start without explicit go-ahead
+
+- **Scanner still misreads cards on real hardware ("keeps giving the wrong card"), root cause
+  traced past fix #4's blur patch to a distance/resolution trade-off it introduced.** Skyler's
+  report: OCR/capture fires, but at the distance the app now demands, it reads the wrong card.
+  Diagnosis (not yet coded): `GUIDE_FRAME_WIDTH_RATIO = 0.32f` (fix #4, `20c74f3`) fixed blur by
+  pushing the working distance out to ~23cm — past the S26 Ultra main lens's 18cm minimum focus
+  floor — but the captured frame sent to `GeminiCardScanner.scan()`/`PerceptualHasher` is NOT
+  cropped to the guide frame, so shrinking the guide box's fill ratio also shrank the card's actual
+  footprint (and thus detail) inside the image both matchers work from. The fix that made focus
+  work made recognition worse — same file, two competing constraints, not yet reconciled.
+  **Real fix, per Skyler's direct instruction:** don't push the user farther back — make the app
+  focus at close range the way the phone's own stock camera app does (physical/logical
+  multi-camera lens switching to the ultrawide's shorter minimum focus distance, not just the main
+  lens's default AF). This is the exact open question already researched (not built) in
+  `docs/specs/2026-08-27-card-grading-estimate.md`, Open Question #4 ("ultrawide auto-switch
+  mechanism via Camera2 `Camera2CameraFilter` physical-lens selection").
+  **Scope confirmed with Skyler (2026-08-29, AskUserQuestion):**
+  1. Fix applies **scanner-wide** (QuickScan/Pokédex capture, manual capture) — not gated behind
+     the still-parked grading feature. Both consumers share `ScannerScreen.kt`'s camera path.
+  2. Once close focus actually works, **re-tune `GUIDE_FRAME_WIDTH_RATIO` back up** toward the old
+     0.75 fill (re-derive properly for the new working distance, don't just revert the constant) —
+     more of the frame filled with card = more detail for Gemini/perceptual-hash to read.
+  **Explicitly parked — do not start `planning`/`dev-team-pipeline` on this without a fresh
+  go-ahead.** This would be the 5th change to the scanner camera path this bug family (attempts
+  #1-4 all in `project-overview.md`'s "Scanner Camera Architecture" section) — per the debugging
+  skill's own 3+-fixes-question-the-architecture signal, this one needs a real `planning` pass
+  (physical-camera-selection feasibility on this exact hardware, not another patch) rather than a
+  direct code change, when picked back up.
+
 ## Refreshed — 2026-08-28 (session 6, cont'd)
 
 ### Fixed this session
@@ -80,6 +161,37 @@ actually fixed and verified, not when merely planned.
   **Still needs real-device confirmation — same standing constraint as every scanner fix this
   session.** If blur persists, Reviewer's suggested next move: lower toward 0.30/0.24 (already
   computed bounds) before re-deriving from scratch.
+
+### Open, newly logged this audit pass
+
+- ~~**`androidx.graphics:graphics-path` still resolves to `1.0.1`, not the 16KB-compliant
+  1.1.0+.**~~ **Fixed 2026-09-02.** Added `configurations.all { resolutionStrategy {
+  force("androidx.graphics:graphics-path:1.1.0") } }` to `app/build.gradle.kts` (1.1.0 confirmed to
+  actually exist as the latest stable release via Google's Maven metadata before pinning — not
+  guessed, per this project's own KSP-version-guess lesson). First-time fetch of the new version
+  hit the known TLS-interception `PKIX path validation failed` error (project-overview.md's
+  Conventions) — resolved with the documented `$env:GRADLE_OPTS =
+  "-Djavax.net.ssl.trustStoreType=WINDOWS-ROOT"` workaround, same as always.
+  **Verified at the actual binary level, not just log text**: extracted
+  `libandroidx.graphics.path.so` from the built debug APK for all 4 ABIs (arm64-v8a, armeabi-v7a,
+  x86, x86_64) and parsed each ELF's `PT_LOAD` program headers directly — every one now reports
+  `p_align = 0x4000` (16384), confirming real 16KB alignment. (1.1.0's own changelog doesn't call
+  this out in prose, so the ELF check was the only way to actually confirm the fix works rather
+  than assume it from the version bump alone.) Also checked the other 3 originally-flagged libs
+  (`libdatastore_shared_counter.so`, `libimage_processing_util_jni.so`,
+  `libsurface_util_jni.so`) the same way — all already 16KB-aligned across all 4 ABIs, confirming
+  the earlier `datastore`/`camerax` version bumps held. The `stripDebugDebugSymbols` task's
+  "Unable to strip the following libraries" build-log message still names all 4 libs — confirmed
+  this is an unrelated debug-symbol-stripping notice, not a page-size-alignment warning; don't
+  mistake it for the 16KB warning returning.
+  226/226 unit tests pass (fresh XML count, not the runner's own summary), `lintDebug` 0 errors /
+  75 warnings (baseline, no new warnings from the pin). **Not yet committed** — sitting in the
+  working tree alongside this session's other uncommitted changes.
+- **`skylermayday-site`'s "Other" nav tile possibly swallows Personal Collection/Connecting
+  Art/Unown** — noticed in passing during this session's live-site check, not investigated.
+  Different repo, out of this project's scope to fix; tracked here only per this file's existing
+  cross-repo-contract precedent (see `binder.json` entry below) so the observation isn't lost.
+  Action, if any, belongs in a `skylermayday-site` session, not this one.
 
 ## Refreshed — 2026-08-22 (session 5)
 
