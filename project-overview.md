@@ -325,6 +325,22 @@ bug class on the TCGCSV merge path) — reused, not reinvented.
   behavior** — no real autofocus hardware in an emulated camera backend — but closes the standing
   "everything is compile-level only" gap for everything else (crash checks, UI flow verification,
   running instrumented tests that don't need real camera hardware).
+- **`connectedDebugAndroidTest` fully works now (2026-09-04)** — the standing "can't run
+  instrumented tests in this sandbox" limitation is gone. Root cause was never the
+  emulator/hardware: `hiltJavaCompileDebugAndroidTest` died because Dagger 2.51.1's bundled
+  Kotlin-metadata reader couldn't parse Kotlin 2.1.20's metadata format
+  (`IllegalStateException: Unable to read Kotlin metadata due to unsupported metadata version`).
+  Fixed by bumping `hilt` to `2.57` (`gradle/libs.versions.toml`) — Dagger's own changelog confirms
+  2.57 "unshades the Kotlinx Metadata to support Kotlin 2.2.0." Deliberately not bumped to latest
+  stable (2.60.1 at the time) — that jump drops multidex support and raises min SDK, real
+  unrelated risk this project's own BOM-bump history says to avoid; 2.57's only breaking change
+  (generated `Factory`/`MembersInjector` constructors going private) is harmless here. Verified in
+  an isolated git worktree before touching the real checkout, then confirmed live on the real
+  `pokedex_test` AVD: `AppNavigationScreenTest` and `DatabaseModuleWiringTest` executed and passed
+  for the first time ever. **Gradle's own task-level pass/fail is separately unreliable** in this
+  sandbox (`"Failed to receive the UTP test results"`, a UTP↔Gradle IPC glitch, reproduced twice) —
+  read `app/build/outputs/androidTest-results/connected/debug/.../test-result.textproto` directly
+  to check real per-test results, don't trust Gradle's exit code alone. Full detail: `gaps.md`.
 
 ## Conventions
 

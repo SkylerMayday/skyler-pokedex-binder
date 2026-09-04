@@ -12,20 +12,49 @@ actually fixed and verified, not when merely planned.
   54 → 83 → 90/100 (ship, all 3 lenses). Full detail: `project-overview.md`'s new "Binder Backup"
   section, `.pipeline_archive/2026-09-04-binder-backup/`. Not yet pushed to `origin`.
 
-### Open, newly logged this session
+### Fixed this session (cont'd)
 
-- **`DatabaseModule.kt`'s `.fallbackToDestructiveMigration()` + `.fallbackToDestructiveMigrationOnDowngrade()`
-  combination cancels the graceful-recreate behavior the first call is supposed to provide** — found
-  and live-reproduced by the Binder Backup pipeline's Coder/Tester stages while building the `.db`
-  import path, deliberately left unfixed (out of scope for that pipeline run). Per Room 2.6.1's own
-  source, `fallbackToDestructiveMigrationOnDowngrade()` sets `requireMigration = true`, which
-  overrides the first call's intent. Live consequence: an on-disk database at an unmigrable version
-  crashes the app on **every** cold start (`IllegalStateException: A migration from 3 to 9 was
-  required but not found`) instead of recreating tables as the `fallbackToDestructiveMigration()`
-  call alone would do. Makes the new `.db` import feature's lower-bound schema gate the only thing
-  standing between a mis-picked file and a bricked install. One-line fix (remove or reorder the
-  conflicting call) — separate from the Binder Backup feature, not folded in per "surgical changes
-  only."
+- ~~**`DatabaseModule.kt`'s `.fallbackToDestructiveMigration()` + `.fallbackToDestructiveMigrationOnDowngrade()`
+  combination cancels the graceful-recreate behavior the first call is supposed to provide.**~~
+  **Fixed 2026-09-04.** Root-caused directly against Room 2.6.1's actual source
+  (`RoomDatabase.kt:1110-1126`, extracted from the real `room-runtime-2.6.1-sources.jar` in the
+  Gradle cache, not guessed): `fallbackToDestructiveMigration()` alone already sets BOTH
+  `requireMigration = false` (upgrades) AND `allowDestructiveMigrationOnDowngrade = true`
+  (downgrades) — it covers both directions by itself. `fallbackToDestructiveMigrationOnDowngrade()`
+  unconditionally resets `requireMigration = true`, clobbering the first call's intent.
+  `DatabaseConfiguration.isMigrationRequired()` (`DatabaseConfiguration.kt:666-679`) confirms the
+  exact failure path: for an upgrade (`fromVersion < toVersion`), the downgrade short-circuit never
+  fires, so it falls straight to `return requireMigration && ...` — `true` after both calls run in
+  sequence, exactly reproducing the reported crash. Fix: removed the redundant/conflicting second
+  call ([DatabaseModule.kt](app/src/main/java/com/skyler/pokedexbinder/di/DatabaseModule.kt) —
+  `.fallbackToDestructiveMigration()` alone now, with a comment explaining why the second call must
+  never be re-added). **Verified live on-device**, not just compiled: the pre-existing
+  (never-before-run) `DatabaseModuleWiringTest.buildDatabase_backsUpBeforeDestructiveRebuild_whenNoMigrationPathExists`
+  test — seeds a v3 on-disk DB with no migration path to v9, the exact reported scenario — now
+  passes on the real emulator; logcat shows `DatabaseBackupManager: Destructive migration imminent
+  (on-disk v3 -> target v9, no path) — backing up first` firing cleanly with no crash. 264/264 JVM
+  unit tests still pass (fresh XML count).
+- ~~**`connectedDebugAndroidTest` confirmed still unable to run in this dev sandbox.**~~
+  **Fixed 2026-09-04.** Root cause was never the emulator/hardware — `hiltJavaCompileDebugAndroidTest`
+  died because Dagger 2.51.1's bundled Kotlin-metadata reader
+  (`dagger.internal.codegen.kotlin.KotlinMetadata`) can't parse the metadata format Kotlin 2.1.20
+  emits (`IllegalStateException: Unable to read Kotlin metadata due to unsupported metadata
+  version`, reproduced directly via `hiltJavaCompileDebugAndroidTest --stacktrace`). Confirmed via
+  Dagger's own GitHub release notes (not guessed): 2.53/2.53.1 bumped the bundled
+  `kotlinx-metadata-jvm` for Kotlin 2.0 support, and 2.57 explicitly "unshades the Kotlinx Metadata
+  to support Kotlin 2.2.0" — comfortably past our Kotlin 2.1.20, with its only breaking change
+  (generated `Factory`/`MembersInjector` constructors going public→private) harmless since this
+  codebase never calls Dagger's generated classes directly. Chose 2.57 over latest stable (2.60.1)
+  deliberately — 2.60 drops multidex support and bumps min SDK, real unrelated risk for a 9-version
+  jump this project's own BOM-bump history says to avoid. **Tested in an isolated git worktree
+  before touching the real checkout** (`hilt = "2.57"` in `gradle/libs.versions.toml`), confirmed
+  `hiltJavaCompileDebugAndroidTest`/`compileDebugKotlin`/`testDebugUnitTest` all pass there, then
+  applied to the real tree. **Verified live**: ran the actual `pokedex_test` AVD end-to-end —
+  `AppNavigationScreenTest` (all 7 cases) and `DatabaseModuleWiringTest` (both cases) now execute
+  and pass for the first time ever in this project's history (previously compile-only, per session
+  6/8 notes). A full unfiltered `connectedDebugAndroidTest` run also surfaced 2 genuine pre-existing
+  test bugs, both newly-discovered because this task type could never execute before — see below,
+  not fixed here (out of scope for this fix, flagged not folded in).
 - **Binder Backup's new regression tests for the DB-closed-before-restart fix failed on a clean
   first `--rerun-tasks` run** (`NoClassDefFoundError: Hilt_MainActivity`), passed on immediate
   re-run, `[Likely]` a Windows KSP-regeneration race rather than a real test-logic bug (the
@@ -44,12 +73,29 @@ actually fixed and verified, not when merely planned.
   only exclude the `exports/` directory. An unconsumed pending-error message could theoretically
   ride a cloud backup or device-transfer onto a fresh install and show a stale Toast there. Low
   severity (no data exposure, just a confusing one-shot message), two-line fix when picked up.
-- **`connectedDebugAndroidTest` confirmed still unable to run in this dev sandbox** —
-  `hiltJavaCompileDebugAndroidTest` dies on `IllegalStateException: Unable to read Kotlin metadata
-  due to unsupported metadata version`. Re-confirmed via a throwaway worktree at `HEAD` (`92c5ef9`,
-  no Binder Backup code) during this session, so it's a standing environment issue, not something
-  any recent change caused. Same standing constraint noted for `AppNavigationScreenTest.kt` in
-  earlier sessions — still applies.
+### Open, newly discovered this session (2026-09-04, cont'd) — surfaced only now that `connectedDebugAndroidTest` can finally execute
+
+- **`PokedexDatabaseTest.secondaryBinderOrdersByIdDesc` fails live**: `expected:<card-[2]> but
+  was:<card-[1]>`. Never caught before because this instrumented test has never actually run in
+  this sandbox until the Dagger 2.57 fix above unblocked `connectedDebugAndroidTest` entirely.
+  `[Guessing]` — not investigated this session (out of scope for the Dagger/DB-migration fix that
+  surfaced it) — likely a test-data-setup ordering assumption (insertion order vs. expected
+  desc-by-id order) rather than a real production bug, but genuinely unconfirmed. Needs its own
+  debugging pass.
+- **`Migration6to7Test.migration6to7SqlIsValidAgainstV6ShapeAndPreservesExistingData` fails live**:
+  asserts the post-migration column list is `[id, groupId, slotIndex, cardId, cardName,
+  cardImageUrl, owned]`, actual is `[..., owned, language]`. `[Likely]` stale — the 2026-07-15
+  language/lock/remarks feature added a `language` column that this test's hardcoded expected list
+  predates, and like the item above, this test has never executed live before now so the drift was
+  never caught. Straightforward fix (add `language` to the expected list) once picked up, but not
+  fixed here — out of scope for this session's task.
+- **Gradle's own `connectedDebugAndroidTest` task-level pass/fail is unreliable in this sandbox,
+  separate from whether tests actually pass** — `"Failed to receive the UTP test results"` (a UTP↔
+  Gradle IPC glitch) makes the Gradle task report `FAILED` even on a run where every single test in
+  the JUnit XML/textproto output shows `PASSED` (reproduced twice this session: identical 9/9-pass
+  textproto both times, Gradle task FAILED both times). **When verifying a `connectedDebugAndroidTest`
+  claim in this sandbox, read `app/build/outputs/androidTest-results/connected/debug/.../test-result.textproto`
+  directly — don't trust Gradle's own exit code/summary alone.**
 
 ## Refreshed — 2026-08-29 (session 7)
 

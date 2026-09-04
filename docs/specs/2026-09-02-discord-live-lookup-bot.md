@@ -28,8 +28,12 @@ readings of the original "Discord Binder Sync" name.
   (`BINDER_JSON_PATH = "binder.json"`, `publicUrl` builder, `PublishRepository.kt:44`/`92-94`).
   The actual `githubOwner`/`githubRepo` values are stored in the Android app's local Settings
   (encrypted `SharedPreferences`, per `androidx.security.crypto` in `build.gradle.kts`) — not
-  recorded anywhere in this repo's source, so still needs Skyler to supply the literal values
-  before implementation, but the URL *shape* is no longer a guess.
+  recorded anywhere in this repo's source.
+  **Literal values confirmed 2026-09-04 (Skyler):** repo `https://github.com/SkylerMayday/binders-pokedex-binder`
+  → `githubOwner = "SkylerMayday"`, `githubRepo = "binders-pokedex-binder"`. Derived `binder.json`
+  URL: `https://skylermayday.github.io/binders-pokedex-binder/binder.json` (GitHub Pages lowercases
+  the owner segment in the `github.io` hostname; the repo path segment keeps its exact case) —
+  **verified live this session** (`curl -o /dev/null -w "%{http_code}"` → `200`).
 
 ## Goals
 
@@ -97,7 +101,7 @@ Discord's API) — new one-time setup, not reusing SkeelerMeidai's existing Disc
 
 | # | Task | Repo/File(s) | Type | Size | Depends on |
 |---|---|---|---|---|---|
-| 1 | Get the literal `githubOwner`/`githubRepo` values from Skyler (URL *shape* already confirmed: `https://<owner>.github.io/<repo>/binder.json`, `PublishRepository.kt`) | — (one question, not code) | INFRA | S | — |
+| ~~1~~ | ~~Get the literal `githubOwner`/`githubRepo` values from Skyler~~ **Done 2026-09-04**: `SkylerMayday`/`binders-pokedex-binder`, URL verified live (200) | — | INFRA | S | — |
 | 2 | Register a new Discord application (bot token, interactions public key), register the `/card` slash command via Discord's REST API | New repo/project | INFRA | S | — |
 | 3 | Serverless function: verify interaction signature, fetch + parse `binder.json`, match by card name, build reply payload | New repo, e.g. `discord-binder-lookup/` | CORE | M | 1, 2 |
 | 4 | Deploy to chosen serverless host (Cloudflare Workers recommended — free tier fits this workload) | New repo | INFRA | S | 3 |
@@ -110,8 +114,7 @@ reads a file that repo already publishes.
 
 ## Open Questions
 
-- Literal `githubOwner`/`githubRepo` values for the URL — not yet confirmed (task 1 above); URL
-  shape itself is confirmed from source.
+- ~~Literal `githubOwner`/`githubRepo` values for the URL~~ — resolved 2026-09-04, see Grounding.
 - Which Discord server(s) get this command — Skyler's own, a future community server, or both?
 - Serverless host choice — Cloudflare Workers recommended (free tier, no cold-start-sensitive
   gateway connection needed) but not yet confirmed against Skyler's existing hosting setup

@@ -1,3 +1,38 @@
+# Handoff — Session 8 (2026-09-02 → 2026-09-04), cont'd 2026-09-04
+
+## 0. This continuation (same day, mobile-initiated)
+
+Picked up from the session-8 handoff below via a mobile message: "work on the remaining items
+except card grading." Scanner macro-focus and Discord Binder Sync were both hard-blocked on things
+only Skyler could provide (his real phone in hand; his public site URL) — asked via
+`AskUserQuestion` rather than guessing. Skyler answered: fix the `DatabaseModule.kt` bug, and
+investigate whether `connectedDebugAndroidTest`'s sandbox breakage is actually fixable rather than
+a hard wall; also supplied the Discord site URL.
+
+- **`DatabaseModule.kt` migration-fallback bug — fixed and verified live.** Full detail: `gaps.md`'s
+  2026-09-04 "Fixed this session (cont'd)" section.
+- **`connectedDebugAndroidTest` — fixed.** Root cause was Dagger 2.51.1's Kotlin-metadata reader,
+  not the emulator/hardware. Bumped `hilt` to `2.57` (tested in an isolated worktree first). This is
+  a genuinely big unlock: `AppNavigationScreenTest` and `DatabaseModuleWiringTest` both executed
+  live for the first time in this project's history and passed. A full unfiltered run also
+  surfaced 2 real pre-existing test bugs (never caught before because this task type never ran) —
+  flagged in `gaps.md`, deliberately not fixed (out of scope for this task). Also found: Gradle's
+  own `connectedDebugAndroidTest` task-level pass/fail is unreliable in this sandbox
+  (`"Failed to receive the UTP test results"`) — the `test-result.textproto` file is the source of
+  truth, not Gradle's exit code.
+- **Discord Binder Sync spec updated** with confirmed `githubOwner`/`githubRepo`
+  (`SkylerMayday`/`binders-pokedex-binder`) and a live-verified `binder.json` URL (HTTP 200). Spec
+  is otherwise still parked — no go-ahead given to start `dev-team-pipeline` on it.
+- **Not touched, still hard-blocked**: Scanner macro-focus (Task 0 spike needs Skyler's real
+  phone), Discord Binder Sync implementation (needs go-ahead), scanner real-device confirmation
+  (needs Skyler's real phone), card-grading spec (explicitly excluded from this pass).
+- **Uncommitted at time of writing**: `DatabaseModule.kt`, `DatabaseModuleWiringTest.kt`,
+  `gradle/libs.versions.toml` (hilt 2.51.1 → 2.57), `docs/specs/2026-09-02-discord-live-lookup-bot.md`,
+  plus `gaps.md`/`handoff.md`/`project-overview.md` doc updates. Ask before committing if picking
+  this up fresh — not yet confirmed with Skyler this session.
+
+---
+
 # Handoff — Session 8 (2026-09-02 → 2026-09-04)
 
 ## 1. Goals
