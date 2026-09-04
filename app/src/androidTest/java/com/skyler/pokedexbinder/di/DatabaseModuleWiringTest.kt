@@ -95,7 +95,11 @@ class DatabaseModuleWiringTest {
             }
 
             // The database Room actually returns is a working, fully-migrated instance at the
-            // target schema version, despite the destructive rebuild that just happened.
+            // target schema version, despite the destructive rebuild that just happened. Room
+            // opens its underlying connection lazily (RoomDatabase.isOpen reads mDatabase?.isOpen,
+            // and mDatabase stays null until something actually touches the DB) — drive a real
+            // query first, or isOpen reads false on a perfectly healthy instance.
+            assertEquals(PokedexDatabase.SCHEMA_VERSION, db.openHelper.writableDatabase.version)
             assertTrue(db.isOpen)
         } finally {
             db.close()

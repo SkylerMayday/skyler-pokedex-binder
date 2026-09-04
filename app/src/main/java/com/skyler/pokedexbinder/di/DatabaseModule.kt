@@ -42,10 +42,17 @@ object DatabaseModule {
             targetVersion = PokedexDatabase.SCHEMA_VERSION,
             migrations = PokedexDatabase.ALL_MIGRATIONS
         )
+        // fallbackToDestructiveMigration() alone already covers BOTH directions: it sets
+        // requireMigration = false (upgrades) AND allowDestructiveMigrationOnDowngrade = true
+        // (downgrades) — see Room 2.6.1's RoomDatabase.Builder.fallbackToDestructiveMigration().
+        // Do NOT also call fallbackToDestructiveMigrationOnDowngrade(): that method unconditionally
+        // resets requireMigration back to true, cancelling the upgrade-side fallback above and
+        // crashing every cold start on an unmigrable on-disk version
+        // ("IllegalStateException: A migration from X to Y was required but not found") instead of
+        // destructively recreating tables as intended.
         return Room.databaseBuilder(context, PokedexDatabase::class.java, dbFileName)
             .addMigrations(*PokedexDatabase.ALL_MIGRATIONS)
             .fallbackToDestructiveMigration()
-            .fallbackToDestructiveMigrationOnDowngrade()
             .build()
     }
 
