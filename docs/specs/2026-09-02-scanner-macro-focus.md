@@ -153,12 +153,26 @@ against. 6 last.
 
 ## Open Questions (blocking `dev-team-pipeline` start)
 
-- **Whether physical-camera selection works on this device at all** (new, 2026-09-02) — Samsung's
-  `LIMITED` Camera2 hardware level may restrict third-party ultrawide access; genuinely unconfirmed
-  for the S26 Ultra, contradictory even in the general-pattern research. Task 0's spike answers
-  this before anything else in the breakdown is built.
-- Ultrawide minimum focus distance in cm — unconfirmed, needs a real-device calibration photo
-  (same method used for fix #4's 23cm derivation).
+- ~~**Whether physical-camera selection works on this device at all**~~ — **resolved 2026-09-04,
+  Task 0 spike run on Skyler's real S26 Ultra (`adb logcat -s ScannerFocus:*`).**
+  `isLogicalMultiCameraSupported()=true`, 4 physical cameras enumerated via `getPhysicalCameraInfos()`
+  + `Camera2CameraInfo.from()`: id=2 (2.2mm focal length, `LENS_INFO_MINIMUM_FOCUS_DISTANCE`=20
+  diopters → **5cm** min focus — the ultrawide), id=5 (6.5mm, 10 diopters → 10cm), id=6 (7.0mm, 2.5
+  diopters → 40cm), id=7 (18.6mm, 1.25 diopters → 80cm — periscope tele). The Samsung `LIMITED`
+  hardware-level restriction theory from the general research was **wrong for this device** —
+  third-party physical-camera selection works cleanly. Task 0's own diagnostic code is now shippable
+  as-is or removable once Task 1-3 supersede it — Coder's call.
+- ~~Ultrawide minimum focus distance in cm~~ — **resolved 2026-09-04**: 5cm (see above), from a real
+  `LENS_INFO_MINIMUM_FOCUS_DISTANCE` read, not a calibration photo — more precise than the method
+  originally planned here. Still worth a real calibration photo at that distance before finalizing
+  `GUIDE_FRAME_WIDTH_RATIO`'s re-derivation (Task 5) — a hardware-reported minimum isn't automatically
+  the same as the phone's actual sharp-focus working distance.
+- **New: the currently-shipped `requestFocusAndMetering()` throws on this exact device** — found as
+  a side effect of the Task 0 spike run, not something the spike was looking for. Full detail:
+  `gaps.md`, 2026-09-04 entry. Not blocking — the existing `runCatching`/`onSettled()` path already
+  tolerates it (a second attempt succeeds ~430ms later) — but worth Task 2/3's Coder being aware a
+  bound logical camera can throw `IllegalArgumentException` on `startFocusAndMetering`, in case the
+  ultrawide physical-camera bind hits the same failure mode.
 - Ultrawide resolution/noise trade-off — does the lower-megapixel sensor hurt Gemini/
   perceptual-hash accuracy enough to offset the focus win? Needs a real side-by-side comparison,
   not assumed acceptable.

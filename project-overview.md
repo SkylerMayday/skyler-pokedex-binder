@@ -219,9 +219,80 @@ attempt below addressed a genuinely different root cause, not the same bug guess
    now one shared constant), plus explicit on-screen distance-guidance text as the
    precision-independent primary fix.
 
-**Still pending real-device confirmation as of 2026-08-28.** If the blur persists after fix #4,
-the next step is checking actual hardware AF capability or reworking `detectCardInFrame`'s crude
-contrast heuristic — not a 5th blind software patch. Full diagnostic history in `gaps.md`.
+5. **Failed metering future defeated the real-focus-convergence gate near-instantly after bind**
+   (`2026-09-04`, found as a side effect of the Task 0 macro-focus feasibility spike's diagnostic
+   logging, then root-caused via `debugging` skill after Skyler reported live auto-capture on an
+   empty frame and 7 consecutive wrong-card scans in the same session). Real logcat evidence on
+   Skyler's S26 Ultra: every post-bind `startFocusAndMetering()` call's first attempt throws
+   `IllegalArgumentException: None of the specified AF/AE/AWB MeteringPoints is supported on this
+   camera`, resolving in ~10-20ms; a second attempt at the identical point succeeds normally
+   ~430-440ms later. `requestFocusAndMetering()`'s `onSettled()` callback (sets `focusLocked =
+   true`) fired identically whether the future succeeded or threw — correct for attempt #2's
+   original intent (a genuine hardware AF attempt completing with `isFocusSuccessful=false` must
+   still unblock capture) but wrong for a THROWN future, which means metering never actually ran
+   at all. `focusLocked` flipped true within milliseconds of every bind regardless of real focus
+   state, defeating attempt #2's entire gating mechanism. Fixed: distinguish thrown-future from
+   completed-future in the settle callback; retry the metering request up to
+   `MAX_METERING_RETRIES = 2` times (150ms apart) before falling back to the original
+   never-block-forever behavior. Full detail: `gaps.md`, 2026-09-04. **Confirmed working on real
+   hardware same-session**: fresh logcat shows the retry path firing and correctly resolving.
+
+**Attempt #5 closed a real bug but did not resolve the wrong-card symptom** — 2 more scans after
+deploy still returned wrong matches. This is not attempt #4/#5's gating mechanism failing again; the
+debugging pass traced it to the already-diagnosed, still-parked gap in
+`docs/specs/2026-09-02-scanner-macro-focus.md` (captured frame not cropped to the guide frame, plus
+a working-distance assumption today's spike disproved). That spec was blocked only on the
+feasibility question attempt #5's session already answered (ultrawide physical-lens selection
+confirmed working).
+
+6. **Physical ultrawide lens selection + guide-frame crop** (`2026-09-04/08`, full `dev-team-pipeline`
+   run against `docs/specs/2026-09-02-scanner-macro-focus.md`'s Tasks 1-6; Task 0's spike and
+   attempt #5 are separate, already-shipped prior work in the same session). Score history across
+   3 review iterations (the pipeline's cap): **34 → 72 → 84/100**, aggregate stuck 1 point under the
+   85 ship threshold at the cap with **no remaining P0 in any of the 3 lenses** — two small
+   non-behavioral diagnostic-accuracy items were applied directly by the orchestrator rather than
+   spending a 4th (uncapped) automated loop. Full history: `.pipeline/specs.md`,
+   `.pipeline/changes.md`, `.pipeline/review-verdict.md` (to be archived to
+   `.pipeline_archive/2026-09-08-scanner-macro-focus/`).
+   - **Lens selection**: `selectUltrawidePhysicalCameraId` discovers a physical camera under 20mm
+     focal length via `getPhysicalCameraInfos()`; binds it via `Camera2Interop.Extender(builder)
+     .setPhysicalCameraId(id)` applied to all three use-case builders (`Preview`/`ImageCapture`/
+     `ImageAnalysis`), guarded `Build.VERSION.SDK_INT >= 28` (module `minSdk 26`). **Real, live
+     defect found and fixed mid-pipeline**: the first attempt used
+     `CameraSelector.Builder().setPhysicalCameraId()`, which two review lenses independently proved
+     (by reading the real CameraX 1.6.1 source, one disassembling a library AAR with no available
+     sources for the final link) is a **silent no-op** for the `bindToLifecycle` overload this
+     project calls — the bind always succeeded on the main lens while the diagnostic log asserted
+     success. Fixed by moving the physical id to the use-case builders instead (the mechanism
+     CameraX actually honors for a single, non-concurrent bind).
+   - **Crop before matching**: new `guideFrameImageRect`/`ImageRect` (shared geometry, `ImageProxyExt.kt`'s
+     `ImageProxy.toCroppedBitmap()`) crops the captured bitmap to the guide-frame rect before
+     `GeminiCardScanner`/`PerceptualHasher` see it — the second gap `docs/specs/2026-09-02-scanner-macro-focus.md`
+     diagnosed back in session 7. **A second, independent live defect found and fixed mid-pipeline**:
+     the crop's own implementation accidentally un-shadowed this project's dead, hand-rolled 3-plane
+     NV21 decode (dead since the 2026-08-09 CameraX 1.3.4→1.6.1 bump added a same-named
+     `ImageProxy.toBitmap()` member Kotlin always resolves over a same-named extension) — every real
+     capture would have thrown `ArrayIndexOutOfBoundsException` on `planes[2]` against the
+     single-plane JPEG CameraX actually delivers. Fixed by deleting the dead decode entirely and
+     delegating to CameraX's own JPEG-safe member, cropping as a separate step afterward — makes the
+     whole shadowing bug class structurally impossible to repeat, not just avoided this once.
+   - **Task 5 (real calibration) explicitly NOT attempted** — human-in-the-loop by the spec's own
+     design; `GUIDE_FRAME_WIDTH_RATIO` (`0.32f`) and the on-screen "~9 in (23 cm)" text are untouched,
+     pending Skyler's real-device calibration photo once this lands.
+   - **Known, deliberately deferred, confirmed untouched across all 3 review iterations**: the crop
+     rect is ~1.4x larger (by area, ~1.9x) than the guide box `CardFrameOverlay` draws (a
+     `PreviewView` `FILL_CENTER`-scaling mismatch between image-space and view-space ratios — not a
+     positional error, just admits more background than intended; fold into Task 5's re-derivation),
+     a 1px rounding shift on mirrored rotation axes (90/180/270), the `88f/63f` card-aspect literal
+     still triplicated, a `20f` focal-length threshold still shadowing its own named constant in one
+     diagnostic log, ~120 lines of `sun.misc.Unsafe` reflection test fixture duplicated across two
+     files. None of these are believed to affect real-device behavior; all are cheap follow-ups.
+
+**Status as of 2026-09-08: no known P0. Needs Skyler's real S26 Ultra** — build+install, then
+`adb logcat -s ScannerFocus:*` while scanning, checking `camera id=`, `boundVia=`,
+`requestedPhysicalId=`/`requestedPhysicalMinFocusDistance=` on the same log line. This is the only
+thing left that can't be settled from this dev sandbox (no real multi-camera hardware in the JVM/
+emulator). Full diagnostic history in `gaps.md`.
 
 **Diagnostic-only logging exists in `ScannerScreen.kt`** (`4bd8bac`) — `Log.i("ScannerFocus", ...)`
 per focus request (elapsed time + `isFocusSuccessful`) and a one-time camera AF-capability log at

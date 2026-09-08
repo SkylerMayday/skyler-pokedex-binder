@@ -73,6 +73,83 @@ actually fixed and verified, not when merely planned.
   only exclude the `exports/` directory. An unconsumed pending-error message could theoretically
   ride a cloud backup or device-transfer onto a fresh install and show a stale Toast there. Low
   severity (no data exposure, just a confusing one-shot message), two-line fix when picked up.
+- ~~**Scanner's `requestFocusAndMetering()` treated a THROWN metering future identically to a
+  completed-but-unsuccessful one, defeating the real-focus-convergence gate near-instantly after
+  bind.**~~ **Fixed 2026-09-04, found via the Task 0 feasibility spike's diagnostic logging
+  (unrelated purpose — a side effect, not what the spike was looking for) then confirmed as the
+  root cause of two real-device symptoms Skyler reported live in this same session: auto-capture
+  firing with no card in frame ("it just says card detected and takes the photo"), and wrong-card
+  results on the 7 scans immediately preceding the fix.** Real logcat evidence
+  (`adb logcat -s ScannerFocus:*`, Skyler's S26 Ultra, model SM-S948B): the first
+  `startFocusAndMetering()` call after every camera bind throws
+  `IllegalArgumentException: None of the specified AF/AE/AWB MeteringPoints is supported on this
+  camera`, with the future resolving (failing) in ~10-20ms — a second attempt at the identical
+  point then succeeds normally ~430-440ms later. Root cause traced directly in
+  `requestFocusAndMetering()`'s `future.addListener` callback: `onSettled()` (which sets
+  `focusLocked = true`) fired unconditionally whether `future.get()` succeeded OR threw — by
+  original design (attempt #2, `3e427e4`: "a completed-but-unsuccessful result must still unblock
+  capture"), intended for a genuine hardware AF attempt that completes with
+  `isFocusSuccessful=false`. A THROWN future is categorically different — metering never actually
+  ran — but the code didn't distinguish the two cases, so `focusLocked` flipped `true` within
+  milliseconds of every bind, regardless of whether real focus ever converged. Combined with
+  `detectCardInFrame`'s crude contrast-only heuristic (no real card-shape validation, by its own
+  code comment) being able to trip on background/ambient conditions once
+  `POST_BIND_DETECTION_DELAY_MS` (2000ms) elapses, this explains both reported symptoms: capture
+  firing on an empty frame, and — since a capture that fires this way has no real focus lock
+  regardless of whether a card is present — every subsequent legitimate scan also being
+  effectively unfocused. Fixed: `requestFocusAndMetering()` now distinguishes a thrown future from
+  a completed one — on throw, retries the same metering request up to `MAX_METERING_RETRIES = 2`
+  times (150ms apart, `METERING_RETRY_DELAY_MS`) before falling back to `onSettled()`, preserving
+  the original "never block capture forever" invariant while no longer treating an instant hard
+  failure as equivalent to a real settled attempt. `assembleDebug --rerun-tasks` and
+  `lintDebug --rerun-tasks` both clean (0 new warnings, 0 findings on the file) —
+  **Confirmed working on real hardware, same session, immediately after deploy**: fresh logcat
+  shows the retry path firing correctly (`future failed, retrying (attempt N/2)`, then either a
+  real success shortly after or a clean `giving up after 2 retries` fallback) — the exception-
+  defeats-the-gate bug is genuinely closed. **However, the wrong-card symptom persisted across 2
+  further scans after this fix deployed** — confirms this was a real, necessary fix but not the
+  (or not the only) cause of the wrong-card matching problem. Root cause for the remaining symptom
+  is not new — it's the already-diagnosed gap in
+  `docs/specs/2026-09-02-scanner-macro-focus.md` (2026-08-29 finding, predates this session): the
+  captured photo handed to the card matcher is not cropped to the guide frame, and the guide frame
+  itself is sized for a working distance derived from a since-disproven 18cm min-focus assumption
+  (today's spike measured 10cm on the actual bound sensor). That fix was parked pending exactly the
+  feasibility question this session's Task 0 spike answered. **Not treated as a 6th blind patch to
+  this same gating mechanism — a spec-level gap, per the debugging skill's own guidance to name
+  that explicitly rather than force another code-level fix onto it.**
+- **New, secondary finding (2026-09-04, same logcat)**: repeated
+  `CameraControl$OperationCanceledException: Cancelled by another startFocusAndMetering()` —
+  multiple `triggerFocus()` calls firing in quick succession (likely edge-triggered refocus and/or
+  tap-to-focus overlapping a retry from the fix above) cancel each other's in-flight metering
+  requests. Every observed sequence in the log still eventually reaches a real
+  `isFocusSuccessful=true`, so this is **not** currently believed to be blocking focus lock
+  outright — flagged for awareness, not treated as the primary suspect for the wrong-card symptom.
+  Worth a closer look if the macro-focus pipeline's own focus-request logic (which will replace
+  large parts of this function) doesn't incidentally resolve it.
+- ~~**`ImageProxyExt.kt`'s own hand-rolled `ImageProxy.toBitmap()` extension silently went dead,
+  then silently un-shadowed itself, with zero compiler warning either time.**~~ **Found and fixed
+  2026-09-04, via a 3-lens Opus review pass (`.pipeline/review-verdict.md`, P0-2).** Symptom: the
+  extension read a 3-plane NV21 buffer (`planes[2]`), but every capture callback this project uses
+  actually delivers single-plane JPEG (CameraX's own `ImageCapture.OnImageCapturedCallback`
+  javadoc) — so any code path reaching the NV21 decode throws `ArrayIndexOutOfBoundsException` on
+  every real capture. Why it's invisible: CameraX 1.6.1 added its own zero-arg default
+  `ImageProxy.toBitmap(): Bitmap` member sometime after this project's same-named extension was
+  first written (confirmed via `git log -L` on `libs.versions.toml`: the extension predates the
+  1.6.1 bump). Kotlin always resolves a member over a same-named extension, so the extension went
+  dead silently the moment the library added its own — no warning, no error, just quietly-dead
+  code. A later diff (`ScannerViewModel.processImage`, the guide-frame crop feature) called
+  `.toBitmap(cropToGuideFrame = true)` — a named argument only the extension's signature has —
+  which forced Kotlin back onto the extension, reviving the dead NV21 path with no compiler signal
+  that anything had changed. Confirmed reproducible: re-ran the exact pre-fix code against a
+  realistic single-plane JPEG-shaped `ImageProxy` mock and it threw
+  `ArrayIndexOutOfBoundsException` as predicted (see `.pipeline/changes.md` for the run). Structural
+  fix applied this same pass: renamed the extension to `toCroppedBitmap` (a name that can't collide
+  with any current or future CameraX member) and split it into two steps — decode via CameraX's own
+  proven `ImageProxy.toBitmap()` member, crop separately via `Bitmap.createBitmap` — so this
+  member-shadowing failure mode can't recur under this name. New regression test
+  (`ImageProxyExtTest.kt`) uses a single-plane JPEG-shaped mock, not the 3-plane YUV mock every
+  test in this area used before this fix (which could never have caught this class of bug).
+
 ### Open, newly discovered this session (2026-09-04, cont'd) — surfaced only now that `connectedDebugAndroidTest` can finally execute
 
 - **`PokedexDatabaseTest.secondaryBinderOrdersByIdDesc` fails live**: `expected:<card-[2]> but

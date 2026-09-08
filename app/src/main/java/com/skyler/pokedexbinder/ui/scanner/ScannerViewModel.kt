@@ -66,7 +66,7 @@ class ScannerViewModel @Inject constructor(
                     _state.value = ScannerState.NoApiKey
                     return@launch
                 }
-                val bitmap = imageProxy.toBitmap()
+                val bitmap = imageProxy.toCroppedBitmap()
                 capturedBitmap = bitmap
 
                 val parsed = geminiCardScanner.scan(bitmap, apiKey)
