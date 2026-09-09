@@ -167,7 +167,7 @@ class Migration6to7Test {
             "INSERT INTO connecting_art_group (id, name, rows, cols, position) VALUES (1, 'Eeveelutions', 2, 4, 0)"
         )
         supportDb.execSQL(
-            "INSERT INTO connecting_art_slot (id, groupId, slotIndex, owned) VALUES (1, 1, 0, 0)"
+            "INSERT INTO connecting_art_slot (id, groupId, slotIndex, owned, language) VALUES (1, 1, 0, 0, 'EN')"
         )
         supportDb.query("SELECT COUNT(*) FROM connecting_art_slot WHERE groupId = 1").use {
             assertTrue(it.moveToFirst())

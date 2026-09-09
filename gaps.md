@@ -3,6 +3,48 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
+## Refreshed — 2026-09-09 (session 11)
+
+### Fixed this session (build-confirmed, not just code-reviewed)
+
+- ~~**Session 10's Gradle loopback wall blocked all compilation/test execution.**~~ **Resolved —
+  gone this session, no fix needed.** `testDebugUnitTest --rerun-tasks` ran clean first try. Not
+  investigated further since it self-resolved; flag for awareness if it recurs.
+- ~~**All 6 of session 10's fixes (2 DB tests + 4 scanner cleanups) were code-reviewed/hand-verified
+  only, never actually compiled or run.**~~ **Now build-confirmed.** `testDebugUnitTest
+  --rerun-tasks`: 286/286, 0 failures (fresh XML count). `connectedDebugAndroidTest --rerun-tasks`
+  on the real `pokedex_test` AVD: 20/20, 0 failures (fresh `test-result.textproto`, not Gradle's own
+  unreliable task exit code).
+- **New (found this session): `ScannerScreenTest`'s degenerate-aspect-ratio test (added session 10,
+  never actually executed until now) had a wrong assertion** — expected `rect.bottom == 49` for a
+  50px-tall degenerate crop, but `ImageRect.bottom` is documented as an exclusive bound matching
+  `Bitmap.createBitmap`'s `(left, top, width, height)` contract, so `50` is correct and maximal, not
+  off-by-one. Test-only bug, not a production bug — the implementation was right. Fixed the
+  assertions to match the documented contract
+  ([ScannerScreenTest.kt:216-221](app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreenTest.kt:216)).
+- **New (found this session): `Migration6to7Test`'s raw `INSERT INTO connecting_art_slot` predated
+  the `language` NOT NULL column** (2026-07-15 feature) and threw `SQLITE_CONSTRAINT_NOTNULL` the
+  first time this specific test method ever actually ran (its own header comment already admitted
+  it had never executed live). `ConnectingArtSlot.kt:28`'s `val language: String = "EN"` is a
+  Kotlin-side default only — no `@ColumnInfo(defaultValue=...)`, so there's no SQL-level default to
+  fall back on. Fixed by adding `language` to the insert
+  ([Migration6to7Test.kt:169](app/src/androidTest/java/com/skyler/pokedexbinder/data/local/Migration6to7Test.kt:169)).
+  Audited every other raw `INSERT`/`execSQL` in `androidTest/` for the same stale-pre-column-add
+  pattern (`Migration5to6Test`, `Migration8to9Test`, `DatabaseModuleWiringTest`,
+  `DatabaseBackupManagerInstrumentedTest`) — all pass, this was isolated, not systemic.
+- **New environment fix (not a codebase gap): the `pokedex_test` AVD hung indefinitely on launch**
+  (near-zero CPU, no adb/console port ever bound). Root cause in the emulator's own stdout log:
+  host-OpenGL GPU init failed to load `opengl32sw`, fell back to software GL, which hung the QEMU
+  main loop behind a crash-consent dialog no headless launch can ever click. Fixed by launching with
+  `-gpu swiftshader_indirect -no-window` instead of the bare `-avd pokedex_test -no-snapshot-load`
+  used in every prior session — boots clean in ~15-20s. **The plain launch command that worked in
+  earlier sessions is no longer reliable in this sandbox; use the swiftshader flags going forward.**
+- **Confirmed, not fixed (not a bug): `connectedDebugAndroidTest`'s own Gradle task-level result is
+  still unreliable.** Reproduced the documented `"Failed to receive the UTP test results"` UTP↔
+  Gradle IPC glitch a 3rd time this session (task reports FAILED, real textproto shows 0 failures).
+  This project's existing gaps.md/project-overview.md guidance — read the textproto directly, don't
+  trust Gradle's exit code — is confirmed still correct, not stale advice.
+
 ## Skills applicable to open gaps (audited 2026-09-09, none run here yet)
 
 - **`security-review`** — no security-focused skill pass has ever run here, despite a public web-shareable snapshot feature (`binder.json` export) existing. The one concrete data-exposure item found in this file (Personal Collection publishing the full search cache) is confirmed intentional, not a bug — this is a precautionary first pass, not gap-driven.
@@ -27,7 +69,7 @@ actually fixed and verified, not when merely planned.
 
 ### Environment note (not a codebase gap — a tooling limitation, recorded here so it isn't rediscovered from scratch)
 
-- **Every Gradle task — including plain compilation, not just test execution — failed in this session's sandbox with `java.io.IOException: Unable to establish loopback connection`.** Isolated across 3 invocation paths (PowerShell tool direct, `.ps1` via `powershell.exe -File`, with/without `--daemon`/`--no-daemon`) and confirmed the failure is specific to Gradle's cross-process daemon/worker socket handshake — a same-process loopback `ServerSocket`/`TcpListener` round trip (tested directly, both in a standalone Java program and via .NET) works fine. `gradlew.bat --version` succeeded (doesn't need the full daemon protocol); every real task since has failed identically. This did not happen in prior sessions per this file's own history (226/226, 286/286 unit-test runs recorded above) — worth checking at the start of the next session whether it's still present before assuming any build/test claim in this environment.
+- ~~**Every Gradle task — including plain compilation, not just test execution — failed in this session's sandbox with `java.io.IOException: Unable to establish loopback connection`.**~~ **Gone as of session 11 (2026-09-09).** `testDebugUnitTest --rerun-tasks` ran clean on the first try; every fix this wall had blocked is now build-confirmed (see session 11 entry above). Not root-caused why it cleared — not investigated further since it stopped reproducing. Worth a fast sanity check (`gradlew.bat testDebugUnitTest --rerun-tasks`) at the start of any future session before assuming either state.
 
 ## Refreshed — 2026-09-09 (session 9, cont'd)
 

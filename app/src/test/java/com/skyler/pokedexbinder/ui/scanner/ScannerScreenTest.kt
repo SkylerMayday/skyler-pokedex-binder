@@ -212,12 +212,16 @@ class ScannerScreenTest {
         // forcing dTop negative pre-coercion — confirms coerceIn clamps rather than returning
         // out-of-range coordinates (the zero/negative-size *fallback* itself is ImageProxyExt's
         // job, tested separately in ImageProxyExtTest).
+        // top/left clamp to [0, dim-1] (inclusive pixel index); right/bottom clamp to [0, dim]
+        // (exclusive bound, matching Bitmap.createBitmap's (left, top, width, height) contract —
+        // see ImageRect's own doc comment). bottom == rawHeight here is correct and maximal, not
+        // off-by-one: it means the crop legitimately reaches the image's last valid row.
         val rect = guideFrameImageRect(rawWidth = 2000, rawHeight = 50, rotationDegrees = 0)
         assertTrue(rect.left in 0..1999)
-        assertTrue(rect.right in 0..1999)
+        assertTrue(rect.right in 0..2000)
         assertTrue(rect.top in 0..49)
-        assertTrue(rect.bottom in 0..49)
+        assertTrue(rect.bottom in 0..50)
         assertEquals(0, rect.top)
-        assertEquals(49, rect.bottom)
+        assertEquals(50, rect.bottom)
     }
 }
