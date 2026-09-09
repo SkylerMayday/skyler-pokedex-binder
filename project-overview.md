@@ -303,12 +303,29 @@ confirmed working).
    before the function's own graceful-fallback guard runs — contained by an outer `catch`, see
    `gaps.md`.
 
-**Status as of 2026-09-09: no known P0. Needs Skyler's real S26 Ultra** — build+install, then
-`adb logcat -s ScannerFocus:*` while scanning, checking `camera id=`, `boundVia=`,
-`requestedPhysicalId=`/`requestedPhysicalMinFocusDistance=` on the same log line, AND this
-session's fix should now be visually confirmable too (the crop should match the on-screen guide
-box, not admit extra background). This is the only thing left that can't be settled from this dev
-sandbox (no real multi-camera hardware in the JVM/emulator). Full diagnostic history in `gaps.md`.
+8. **Confidence-check regression fixed** (`ff0134c`, 2026-09-10) — the "wrong card" symptom that
+   attempts #5/#6 never fully resolved turned out to have a genuinely different, previously-
+   undiagnosed cause: `SmartThresholdUseCase.evaluate()` was being called with the perceptual
+   hasher's own already-chosen candidate's fields (`best.name`/`best.number`) instead of Gemini's
+   own OCR'd values (`parsed.cardName`/`parsed.cardNumber`) — a real regression from `498d035`
+   (2026-05-20), confirmed via git archaeology, live-reproduced on real hardware. Since `best` is
+   always a member of the candidate list, the number-match check was trivially self-referential,
+   so the confidence gate rubber-stamped whatever the hasher guessed regardless of correctness.
+   Fixed via a new pure `confidenceCheckInputs()` function. Full detail: `gaps.md`.
+9. **`GUIDE_FRAME_WIDTH_RATIO` recalibrated for the lens actually in use** (`643978c`,
+   2026-09-10). The 0.32 ratio (attempt #4/#7's own history) was calibrated for the MAIN lens's
+   18cm floor — stale since attempt #6 switched to the physical ultrawide lens, whose real minimum
+   focus distance is 5cm (confirmed live via the same diagnostic logging, converted correctly from
+   Android's diopter-based `LENS_INFO_MINIMUM_FOCUS_DISTANCE` per the actual API docs). Bumped to
+   0.5 (~15cm target). First live-tested value, not final — explicitly re-tunable.
+
+**Status as of 2026-09-10: no known P0.** Items 1-9 above are all live-hardware-confirmed as of
+tonight's session (real S26 Ultra, `adb logcat -s ScannerFocus:* ScannerMatch:*`) — the crop now
+visually matches the guide box, and the confidence-check regression (items 5/6's real remaining
+"wrong card" cause) is fixed and verified. `GUIDE_FRAME_WIDTH_RATIO=0.5` (item 9) is a first
+live-tested value, not final calibration — re-tune from there if needed. One real open item from
+tonight, not a code bug: `GeminiCardScanner.kt` has zero retry on a transient 5xx/timeout,
+surfaced live tonight as two failed scans in a row — see `gaps.md`, not fixed this session.
 
 **Diagnostic-only logging exists in `ScannerScreen.kt`** (`4bd8bac`) — `Log.i("ScannerFocus", ...)`
 per focus request (elapsed time + `isFocusSuccessful`) and a one-time camera AF-capability log at

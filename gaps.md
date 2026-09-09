@@ -3,6 +3,56 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
+## Refreshed — 2026-09-10 (session 12, live-device debugging after the crop fix shipped)
+
+### Fixed this session — found live on Skyler's real S26 Ultra, not guessed
+
+- ~~**`SmartThresholdUseCase.evaluate()`'s confidence check validated the perceptual hasher's own
+  pick against itself, never against what Gemini actually read off the card.**~~ **Fixed
+  (`ff0134c`).** `ScannerViewModel.processImage()` called `evaluate(candidates, best.name,
+  best.number)` — `best` is the hasher's ALREADY-CHOSEN candidate, always a member of
+  `candidates`, so the number-match check was trivially self-referential and `isHighConfidence`
+  was always `true` whenever there was more than one candidate. Confirmed via git archaeology:
+  correct at `455178a` (original implementation, passed `parsed.cardName`/`parsed.cardNumber`),
+  silently broken by `498d035` (2026-05-20, introduced the perceptual hasher in the same diff that
+  swapped the call's arguments). Live-reproduced: real Castform scan, Gemini correctly read
+  `name=Castform number=62`, app confidently returned a different print ("Castform Sunny Form
+  #20") because #62 was never compared against anything. Explains the accuracy drop Skyler
+  reported since switching phones — the bug's been live since May, exposure depends on how often
+  the hasher's own guess happens to be wrong, which a different camera pipeline changes. Fixed via
+  a new pure `confidenceCheckInputs(parsed, best)` (always surfaces Gemini's own
+  `parsed.cardNumber`, including `null` when Gemini didn't read one — which correctly produces low
+  confidence instead of a rubber-stamped guess). 3 new regression tests,
+  `testDebugUnitTest --rerun-tasks`: 292/292 pass.
+- ~~**`GUIDE_FRAME_WIDTH_RATIO` (0.32) was calibrated for the MAIN lens's 18cm floor, stale since
+  the scanner switched to the physical ultrawide lens.**~~ **Bumped to 0.5 (`643978c`), first
+  live-tested value, not a final calibration.** The ultrawide lens actually bound (since
+  2026-09-08) reports a real minimum focus distance of 5cm (`requestedPhysicalMinFocusDistance=
+  20.0` diopters, confirmed live tonight and against the real Android API docs — distance_m =
+  1/diopters), nowhere near the 18cm the old ratio assumed. Skyler's own demo photo (card filling
+  most of frame, sharp, number trivially legible) plus the live symptom (Gemini reading the
+  species fine but too often failing to read the small printed card number, forcing manual-pick
+  fallback) both confirmed the card was needlessly small in frame. New target ~15cm, still 3x the
+  lens's real floor for margin. **Re-tune from here if it's still not landing well** — flagged as
+  re-tunable in the constant's own comment, exactly like the ratio it replaced.
+
+### New this session, not fixed — flagged, deferred to next session
+
+- **`GeminiCardScanner.kt`'s `scan()` has zero retry on a transient failure.** Found live tonight:
+  two scans in a row (Castform, Furfrou) hit Gemini API 503s and a timeout, each surfacing
+  immediately as a user-visible `ScannerState.Error` with no retry attempt. Confirmed this is
+  external Gemini flakiness, not caused by the same-session ratio bump — the image sent is capped
+  at 1024px longest side either way (`scaleBitmap(bitmap, maxDim=1024)`), so a bigger source crop
+  doesn't mean a bigger upload. Real, cheap fix when picked up: retry once (maybe twice, with a
+  short backoff) on a 5xx response or a client-side timeout before surfacing an Error — the
+  existing 429-specific `RateLimitException` path already shows the pattern to extend.
+- **`ScannerViewModel.kt` had zero logging on the match pipeline before tonight** (Gemini's parsed
+  read, candidate count, perceptual hasher's pick, final confidence) — added a `ScannerMatch` log
+  tag this session (diagnostic-only, no behavior change) specifically because this made the
+  confidence-check bug above impossible to root-cause past "something in here is wrong." Worth
+  keeping permanently, not just for this investigation — this file previously had the exact same
+  standing gap `ScannerScreen.kt`'s `ScannerFocus` tag already existed to close on the focus side.
+
 ## Refreshed — 2026-09-09 (session 12, mid-session — full wrapcon pending)
 
 ### Fixed this session (build-confirmed via `dev-team-pipeline`, ship at 94/100)
