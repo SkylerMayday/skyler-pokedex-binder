@@ -100,8 +100,14 @@ Continued from session 8's two parked items, both unblocked this session:
 
 ## 6. Next Steps
 
-1. **Discord Sync**: confirm `/card <name>` works live in Skyler's Lounge once the Railway deploy
-   from `61cae7b`'s push completes.
+1. **Discord Sync — investigated further, real findings, still not fully confirmed working.**
+   Railway's GitHub connection had silently broken (pushes weren't deploying at all) — Skyler
+   reconnected it; `!card` now confirmed working live, but `/card` (slash) still isn't as of this
+   writing — leading hypothesis is a missing `SERVER_ID` env var in Railway causing global instead
+   of guild-scoped command registration (~1hr propagation). Also found and traced (not a code bug):
+   a false "Owned" report on `/card` came from `binder.json` being 16 days stale — needs a fresh
+   Publish from this app, not a code fix. Full detail: `DiscordBot/handoff.md`,
+   `DiscordBot/gaps.md`, this project's own `gaps.md` (new staleness-indicator gap logged).
 2. **Scanner attempt #6**: build+install to the real S26 Ultra, then while scanning a card:
    ```powershell
    & "C:\Users\SkylerMayday\AppData\Local\Android\Sdk\platform-tools\adb.exe" logcat -s ScannerFocus:*
