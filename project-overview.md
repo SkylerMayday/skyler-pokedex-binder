@@ -288,11 +288,27 @@ confirmed working).
      diagnostic log, ~120 lines of `sun.misc.Unsafe` reflection test fixture duplicated across two
      files. None of these are believed to affect real-device behavior; all are cheap follow-ups.
 
-**Status as of 2026-09-08: no known P0. Needs Skyler's real S26 Ultra** — build+install, then
+7. **Crop rect now matches the guide box** (`fe3e89d`, 2026-09-09) — closes the item 6 left
+   deliberately deferred. Root cause confirmed via decompiled CameraX 1.6.1 bytecode/sources
+   (javap on the real `.aar`s, not guessed): the bind used the plain vararg `bindToLifecycle`
+   overload with no `UseCaseGroup`/`ViewPort`, so nothing constrained Preview/ImageCapture/
+   ImageAnalysis to a shared field of view — `PreviewView`'s default `FILL_CENTER` scaling
+   center-crops what's displayed independently of what the capture stream delivers, while
+   `guideFrameImageRect` computed the crop fraction against the captured JPEG's FULL raw
+   dimensions. Fixed: `bindPreviewCaptureAnalysis` (`ScannerScreen.kt`) builds a `UseCaseGroup`
+   with `previewView.viewPort` as the shared `ViewPort` (falls back to the old vararg bind when
+   `viewPort` is null), and `ImageProxyExt.kt`'s `toCroppedBitmap()` crops against
+   `ImageProxy.cropRect` (now ViewPort-aligned) instead of the full frame. `dev-team-pipeline`
+   run, ship at 94/100. One P2 left open (deferred by Reviewer): a degenerate `cropRect` can throw
+   before the function's own graceful-fallback guard runs — contained by an outer `catch`, see
+   `gaps.md`.
+
+**Status as of 2026-09-09: no known P0. Needs Skyler's real S26 Ultra** — build+install, then
 `adb logcat -s ScannerFocus:*` while scanning, checking `camera id=`, `boundVia=`,
-`requestedPhysicalId=`/`requestedPhysicalMinFocusDistance=` on the same log line. This is the only
-thing left that can't be settled from this dev sandbox (no real multi-camera hardware in the JVM/
-emulator). Full diagnostic history in `gaps.md`.
+`requestedPhysicalId=`/`requestedPhysicalMinFocusDistance=` on the same log line, AND this
+session's fix should now be visually confirmable too (the crop should match the on-screen guide
+box, not admit extra background). This is the only thing left that can't be settled from this dev
+sandbox (no real multi-camera hardware in the JVM/emulator). Full diagnostic history in `gaps.md`.
 
 **Diagnostic-only logging exists in `ScannerScreen.kt`** (`4bd8bac`) — `Log.i("ScannerFocus", ...)`
 per focus request (elapsed time + `isFocusSuccessful`) and a one-time camera AF-capability log at
