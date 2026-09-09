@@ -34,6 +34,18 @@ fun ImageProxy.toCroppedBitmap(): Bitmap {
     val crop = cropRect
     val cropWidth = crop.right - crop.left
     val cropHeight = crop.bottom - crop.top
+    if (cropWidth <= 0 || cropHeight <= 0) {
+        // [gaps.md P2, 2026-09-09] A zero/negative cropWidth or cropHeight makes
+        // guideFrameImageRect's own coerceIn(0, rawWidth - 1) throw (rawWidth - 1 becomes -1,
+        // an empty range) before it ever reaches this function's uncropped-fallback guard below.
+        // Field access only (cropWidth/cropHeight), no Rect.toString() — unmocked in this
+        // project's non-Robolectric unit-test stub jar (see the field-arithmetic note above).
+        Log.w(
+            "ScannerFocus",
+            "degenerate cropRect (${cropWidth}x$cropHeight) for ${width}x$height, using uncropped"
+        )
+        return decoded
+    }
     val rect = guideFrameImageRect(cropWidth, cropHeight, imageInfo.rotationDegrees)
         .offsetBy(crop.left, crop.top)
 

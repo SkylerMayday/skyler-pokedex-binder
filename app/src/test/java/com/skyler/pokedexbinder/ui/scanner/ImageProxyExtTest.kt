@@ -92,6 +92,23 @@ class ImageProxyExtTest {
         assertSame(decodedBitmap, result)
     }
 
+    // [gaps.md P2, 2026-09-09] A zero-width cropRect used to reach guideFrameImageRect's own
+    // coerceIn(0, rawWidth - 1) — rawWidth - 1 becomes -1, an empty range, throwing
+    // IllegalArgumentException before this function's own uncropped-fallback guard ever ran.
+    // Distinct from the case above: here the INPUT cropRect is degenerate, not just the computed
+    // guide rect.
+    @Test
+    fun `degenerate cropRect falls back to uncropped decoded bitmap without throwing`() {
+        val result = jpegImageProxy(
+            width = 1000,
+            height = 2000,
+            rotationDegrees = 0,
+            cropRect = testRect(100, 200, 100, 2200) // right == left -> cropWidth = 0
+        ).toCroppedBitmap()
+
+        assertSame(decodedBitmap, result)
+    }
+
     // ViewPort-constrained case: cropRect is smaller than and offset within the full frame
     // (1200x2400 full frame, 1000x2000 crop at origin (100,200)). Expected rect is
     // guideFrameImageRect(1000, 2000, 0) — left=250 top=651 width=500 height=698 at
