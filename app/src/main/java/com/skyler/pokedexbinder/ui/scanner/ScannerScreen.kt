@@ -50,14 +50,21 @@ import java.util.concurrent.TimeUnit
 
 // ------- Card detection -------------------------------------------------------
 
-// Guide frame width as a fraction of display-space width. Sized so that "card fills the
-// frame" corresponds to holding the card ~23cm (~9in) back — safely past the S26 Ultra's
-// documented 18cm minimum focus distance and Skyler's observed ~15-20cm real-device focus
-// failure threshold. Derived from a calibration photo (card ≈ 40-45% of frame width at
-// ~15-20cm) scaled to the 23cm target: 0.425 × (17.5 / 23) ≈ 0.32. Shared by
-// detectCardInFrame's analysis-space sampling and CardFrameOverlay's drawn UI geometry so
-// the two can never drift apart.
-private const val GUIDE_FRAME_WIDTH_RATIO = 0.32f
+// Guide frame width as a fraction of display-space width. The 0.32 value below (kept in this
+// comment's history, not live) was calibrated for the MAIN lens's documented 18cm minimum focus
+// distance — stale since 2026-09-08's fix (this file's own "Scanner Camera Architecture" history)
+// switched the scanner to bind the PHYSICAL ULTRAWIDE lens instead, whose real minimum focus
+// distance is dramatically closer. Confirmed 2026-09-10 via this file's own live
+// requestedPhysicalMinFocusDistance diagnostic (logged in diopters, per Android's actual
+// CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE contract — distance_m = 1 / diopters,
+// verified against the real API docs, not assumed): 20.0 diopters → 1/20.0 = 0.05m = 5cm, vs. the
+// 18cm figure this ratio was built around. Bumped to 0.5 (card fills half the frame width instead
+// of a third) — targets a working distance of roughly 0.425 × (17.5 / 15) ≈ 0.5, i.e. ~15cm, still
+// 3x the lens's actual 5cm floor for real margin. First live-tested value, not yet a final
+// calibration — re-tune from here based on Skyler's actual scan results, same as before. Shared by
+// detectCardInFrame's analysis-space sampling and CardFrameOverlay's drawn UI geometry so the two
+// can never drift apart.
+private const val GUIDE_FRAME_WIDTH_RATIO = 0.5f
 
 // Standard Pokémon TCG card aspect ratio (88mm x 63mm), portrait. Single source for the value
 // previously triplicated across detectCardInFrame, guideFrameImageRect, and CardFrameOverlay —
@@ -273,7 +280,7 @@ private fun CardFrameOverlay(cardDetected: Boolean, modifier: Modifier = Modifie
                 // in spirit — update both together if the ratio/target distance ever changes.
                 if (!cardDetected) {
                     Text(
-                        text = "Hold card ~9 in (23 cm) back",
+                        text = "Hold card ~6 in (15 cm) back",
                         color = Color.White,
                         style = MaterialTheme.typography.bodySmall,
                         textAlign = TextAlign.Center

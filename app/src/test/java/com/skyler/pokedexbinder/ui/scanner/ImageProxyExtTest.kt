@@ -70,12 +70,12 @@ class ImageProxyExtTest {
         return proxy
     }
 
-    // width/height/rotation chosen to match ScannerScreenTest's hand-computed rotation-0 case:
-    // guideFrameImageRect(1000, 2000, 0) == left=340 top=777 width=320 height=446.
+    // width/height/rotation match guideFrameImageRect(1000, 2000, 0) at
+    // GUIDE_FRAME_WIDTH_RATIO=0.5 (bumped 2026-09-10): left=250 top=651 width=500 height=698.
     @Test
     fun `valid rect crops the decoded bitmap via Bitmap createBitmap`() {
         val cropped = mockk<Bitmap>()
-        every { Bitmap.createBitmap(decodedBitmap, 340, 777, 320, 446) } returns cropped
+        every { Bitmap.createBitmap(decodedBitmap, 250, 651, 500, 698) } returns cropped
 
         val result = jpegImageProxy(width = 1000, height = 2000, rotationDegrees = 0)
             .toCroppedBitmap()
@@ -94,13 +94,13 @@ class ImageProxyExtTest {
 
     // ViewPort-constrained case: cropRect is smaller than and offset within the full frame
     // (1200x2400 full frame, 1000x2000 crop at origin (100,200)). Expected rect is
-    // guideFrameImageRect(1000, 2000, 0) — left=340 top=777 width=320 height=446, per
-    // ScannerScreenTest's own hand-computed rotation-0 case — shifted by (100,200):
-    // left=440 top=977 width=320 height=446 (offsetBy leaves width/height unchanged).
+    // guideFrameImageRect(1000, 2000, 0) — left=250 top=651 width=500 height=698 at
+    // GUIDE_FRAME_WIDTH_RATIO=0.5 (bumped 2026-09-10) — shifted by (100,200): left=350 top=851
+    // width=500 height=698 (offsetBy leaves width/height unchanged).
     @Test
     fun `nonzero cropRect offset shifts guideFrameImageRect by cropRect origin`() {
         val cropped = mockk<Bitmap>()
-        every { Bitmap.createBitmap(decodedBitmap, 440, 977, 320, 446) } returns cropped
+        every { Bitmap.createBitmap(decodedBitmap, 350, 851, 500, 698) } returns cropped
 
         val result = jpegImageProxy(
             width = 1200,
