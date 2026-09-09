@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.skyler.pokedexbinder.domain.GeminiCardScannerTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-09-09T17:40:51" hostname="DESKTOP-2G0T4AM" time="8.422">
+  <properties/>
+  <testcase name="scan throws RateLimitException on 429" classname="com.skyler.pokedexbinder.domain.GeminiCardScannerTest" time="4.528"/>
+  <testcase name="scan retries once on 503 then succeeds" classname="com.skyler.pokedexbinder.domain.GeminiCardScannerTest" time="0.52"/>
+  <testcase name="scan retries once on timeout then succeeds" classname="com.skyler.pokedexbinder.domain.GeminiCardScannerTest" time="0.715"/>
+  <testcase name="scan throws IOException on 500" classname="com.skyler.pokedexbinder.domain.GeminiCardScannerTest" time="1.02"/>
+  <testcase name="scan returns nulls for missing fields" classname="com.skyler.pokedexbinder.domain.GeminiCardScannerTest" time="0.011"/>
+  <testcase name="scan rethrows original timeout after retries exhausted" classname="com.skyler.pokedexbinder.domain.GeminiCardScannerTest" time="1.615"/>
+  <testcase name="scan returns ParsedCardInfo on success" classname="com.skyler.pokedexbinder.domain.GeminiCardScannerTest" time="0.012"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Sep 10, 2026 1:40:57 AM okhttp3.mockwebserver.MockWebServer$SocketHandler handle
+WARNING: MockWebServer[56526] connection from /127.0.0.1 didn't make a request
+Sep 10, 2026 1:40:58 AM okhttp3.mockwebserver.MockWebServer$SocketHandler handle
+WARNING: MockWebServer[56533] connection from /127.0.0.1 didn't make a request
+Sep 10, 2026 1:40:59 AM okhttp3.mockwebserver.MockWebServer$SocketHandler handle
+WARNING: MockWebServer[56533] connection from /127.0.0.1 didn't make a request
+Sep 10, 2026 1:41:00 AM okhttp3.mockwebserver.MockWebServer$SocketHandler handle
+WARNING: MockWebServer[56533] connection from /127.0.0.1 didn't make a request
+]]></system-err>
+</testsuite>

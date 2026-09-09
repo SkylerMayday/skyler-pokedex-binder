@@ -3,6 +3,50 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
+## Refreshed — 2026-09-10 (session 13)
+
+**Audit scope note**: this session touched exactly two files (`GeminiCardScanner.kt`,
+`ImageProxyExt.kt`) plus their tests — a scoped grep for `TODO`/`FIXME`/`XXX` in the touched files
+found nothing new. Not a full codebase re-audit; the prior sessions' entries below are already
+comprehensive and current as of session 12's own full pass. See session 12/9's own entries above
+for the two items fixed this session (marked with strikethrough in place, not duplicated here).
+
+### Fixed this session
+
+- Both carried over from session 12/9: the Gemini retry gap (`c70d8b6`) and the degenerate-`cropRect`
+  P2 (`806242d`). Struck through in their original entries below rather than re-stated here.
+
+### New this session, not fixed
+
+- **`GeminiCardScanner.kt`'s unchanged 400/401/403/404 path has no dedicated test.** Surfaced by
+  both the orchestrator's own acceptance-criteria trace and the Reviewer, independently, during the
+  retry-logic pipeline run. The code path itself (`if (!response.isSuccessful) throw
+  IOException("Gemini error: $code")`) is byte-for-byte unchanged from before this session and
+  correct by inspection — not a behavior regression — but no test (old or new) exercises it
+  specifically, so a future change to this function could silently break it with nothing to catch
+  it. Cheap fix when picked up: one `MockResponse().setResponseCode(404)` test asserting immediate
+  `IOException` and `requestCount == 1`.
+- **Subagent spawns can die silently mid-task on the account's session rate limit, with zero
+  partial output written.** The `pipeline-tester` subagent hit this mid-run this session — no
+  `.pipeline/test-results.md`, no partial file, just a `failed` task notification. Not a codebase
+  gap (infra/quota, not app code) but a real process gap worth naming: any pipeline run assuming a
+  subagent's output file exists after a "completed" or even "failed" status should still check the
+  filesystem before trusting either state. The orchestrator compensated by doing that stage's work
+  directly this time; a future session hitting this earlier in a longer pipeline (e.g. Stage 1)
+  would need the same fallback.
+- **New data point on the intermittent Gradle `Unable to establish loopback connection` wall**
+  (open since session 10, never root-caused, previously just "self-resolves"): this session it did
+  **not** self-resolve for a subagent despite 6 workaround attempts, while clearing immediately for
+  direct orchestrator-run commands — consistent with, and reinforcing, the session 10-12 data point
+  that this fires more reliably for Tester/Coder-stage subagents than orchestrator-run commands in
+  the same session, same repo state. New this session: the stack trace consistently bottoms out at
+  `sun.nio.ch.WEPollSelectorImpl` → `UnixDomainSockets.connect0` → `SocketException: Invalid
+  argument: connect` — points at the JDK's Windows AF_UNIX-socket-based NIO selector self-pipe
+  specifically, not a literal TCP loopback failure (a plain TCP loopback self-test on the same
+  machine works fine, checked this session). Not yet tried: forcing the classic
+  (non-AF_UNIX-based) Windows selector, e.g. `-Djdk.net.usePlainSocketImpl=true` as a Gradle JVM
+  arg. Worth an actual attempt next time this recurs, rather than another round of retries.
+
 ## Refreshed — 2026-09-10 (session 12, live-device debugging after the crop fix shipped)
 
 ### Fixed this session — found live on Skyler's real S26 Ultra, not guessed
@@ -38,14 +82,15 @@ actually fixed and verified, not when merely planned.
 
 ### New this session, not fixed — flagged, deferred to next session
 
-- **`GeminiCardScanner.kt`'s `scan()` has zero retry on a transient failure.** Found live tonight:
-  two scans in a row (Castform, Furfrou) hit Gemini API 503s and a timeout, each surfacing
-  immediately as a user-visible `ScannerState.Error` with no retry attempt. Confirmed this is
-  external Gemini flakiness, not caused by the same-session ratio bump — the image sent is capped
-  at 1024px longest side either way (`scaleBitmap(bitmap, maxDim=1024)`), so a bigger source crop
-  doesn't mean a bigger upload. Real, cheap fix when picked up: retry once (maybe twice, with a
-  short backoff) on a 5xx response or a client-side timeout before surfacing an Error — the
-  existing 429-specific `RateLimitException` path already shows the pattern to extend.
+- ~~**`GeminiCardScanner.kt`'s `scan()` has zero retry on a transient failure.**~~ **Fixed session 13
+  (`c70d8b6`).** New `executeWithRetry()` extends the existing 429/`RateLimitException` pattern:
+  retries on a 5xx response or `SocketTimeoutException` only, up to `MAX_SCAN_RETRIES = 2`
+  additional attempts (3 total), fixed `SCAN_RETRY_DELAY_MS = 500L` delay. 429/other-4xx unchanged.
+  Failed 5xx response bodies closed before retry (leak prevention). Full `dev-team-pipeline` run,
+  ship at 97/100. Both constants are first-pass values, retunable like `GUIDE_FRAME_WIDTH_RATIO`.
+  One minor gap surfaced by both the orchestrator's own trace and the Reviewer: the unchanged
+  400/401/403/404 path still has no dedicated test (code untouched by this diff, correct by
+  inspection) — see new entry below, not blocking.
 - **`ScannerViewModel.kt` had zero logging on the match pipeline before tonight** (Gemini's parsed
   read, candidate count, perceptual hasher's pick, final confidence) — added a `ScannerMatch` log
   tag this session (diagnostic-only, no behavior change) specifically because this made the
@@ -79,18 +124,17 @@ actually fixed and verified, not when merely planned.
 
 ### New, found during this session's Reviewer pass (P2, not fixed — deferred by Reviewer's own call)
 
-- **`ImageProxyExt.kt`'s `toCroppedBitmap()` can throw `IllegalArgumentException` on a degenerate
-  (zero-width/height) `cropRect`, bypassing the function's own graceful-fallback guard.** New
-  failure surface introduced by the crop-rect fix above: `guideFrameImageRect(cropWidth, cropHeight,
-  ...)` is called outside the `runCatching` block, and `ScannerScreen.kt`'s internal
-  `coerceIn(0, rawWidth - 1)` throws if `cropWidth == 0` (`rawWidth - 1` becomes `-1`,
-  `coerceIn(0, -1)` is an empty range). Pre-fix this was unreachable (`ImageProxy.width`/`.height`
-  are never zero for a real frame); a `ViewPort`-derived `cropRect` is structurally new input.
-  Contained — `ScannerViewModel.kt:90`'s outer `catch(Exception)` prevents a crash, just surfaces a
-  confusing `ScannerState.Error` instead of the intended uncropped-fallback behavior. Likelihood
-  low (a real `ViewPort` on a laid-out `PreviewView` shouldn't compute a zero-area `cropRect` under
-  normal CameraX operation) — Reviewer's own call was ship-as-is, defer. Cheap fix when picked up:
-  early-return before calling `guideFrameImageRect` if `cropWidth <= 0 || cropHeight <= 0`.
+- ~~**`ImageProxyExt.kt`'s `toCroppedBitmap()` can throw `IllegalArgumentException` on a degenerate
+  (zero-width/height) `cropRect`, bypassing the function's own graceful-fallback guard.**~~ **Fixed
+  session 13 (`806242d`).** Early-return guard added before the `guideFrameImageRect` call, exactly
+  the cheap fix this entry originally proposed. New regression test caught a real bug in the fix's
+  own first draft before it shipped: the log line's string template called `Rect.toString()`
+  implicitly, which throws `RuntimeException: Method toString in android.graphics.Rect not mocked`
+  under this project's non-Robolectric unit-test stub jar (same class of gotcha as the existing
+  field-access-only convention documented in this file's `toCroppedBitmap()` code comments) — fixed
+  by logging `cropWidth`/`cropHeight` fields directly instead of the `Rect` object.
+  `testDebugUnitTest --rerun-tasks`: 293/293 pass at the time (fresh XML), 296/296 in the final
+  combined state with item 2's changes.
 
 ### Recurred this session (same signature as session 10/11, still not root-caused, still
 self-resolving — now with one added data point)

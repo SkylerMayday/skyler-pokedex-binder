@@ -319,13 +319,29 @@ confirmed working).
    Android's diopter-based `LENS_INFO_MINIMUM_FOCUS_DISTANCE` per the actual API docs). Bumped to
    0.5 (~15cm target). First live-tested value, not final — explicitly re-tunable.
 
-**Status as of 2026-09-10: no known P0.** Items 1-9 above are all live-hardware-confirmed as of
-tonight's session (real S26 Ultra, `adb logcat -s ScannerFocus:* ScannerMatch:*`) — the crop now
-visually matches the guide box, and the confidence-check regression (items 5/6's real remaining
-"wrong card" cause) is fixed and verified. `GUIDE_FRAME_WIDTH_RATIO=0.5` (item 9) is a first
-live-tested value, not final calibration — re-tune from there if needed. One real open item from
-tonight, not a code bug: `GeminiCardScanner.kt` has zero retry on a transient 5xx/timeout,
-surfaced live tonight as two failed scans in a row — see `gaps.md`, not fixed this session.
+10. **Gemini API retry on transient failure** (`c70d8b6`, 2026-09-10, session 13). Closes the one
+    real open item session 12 left: `GeminiCardScanner.scan()` had zero retry, surfaced live that
+    session as two dead-end scans in a row (Castform 503, Furfrou timeout). New private
+    `executeWithRetry()` extends the existing 429/`RateLimitException` branch pattern — retries on
+    a 5xx response or `SocketTimeoutException` only, up to `MAX_SCAN_RETRIES = 2` additional
+    attempts (3 total), fixed `SCAN_RETRY_DELAY_MS = 500L` delay; 429/other-4xx unchanged, fail
+    immediately. Failed 5xx response bodies closed before retry (connection-leak prevention). Full
+    `dev-team-pipeline` run, ship at 97/100 — Tester subagent hit the account's session rate limit
+    mid-run with zero output; orchestrator substituted directly (fresh test run + acceptance-
+    criteria trace), disclosed as a deviation rather than absorbed silently, and the Reviewer
+    independently re-verified from raw JUnit XML rather than trusting that secondhand. Both retry
+    constants are first-pass values, retunable like `GUIDE_FRAME_WIDTH_RATIO`.
+11. **Degenerate-`cropRect` P2 closed** (`806242d`, 2026-09-10, session 13) — the one deferred item
+    from attempt #7's Reviewer pass. `toCroppedBitmap()` now early-returns (uncropped fallback)
+    before calling `guideFrameImageRect` if `cropWidth <= 0 || cropHeight <= 0`, instead of letting
+    that call's internal `coerceIn(0, rawWidth - 1)` throw on a degenerate input.
+
+**Status as of 2026-09-10 (end of session 13): no known P0.** Items 1-11 above are all shipped and
+test-verified. Items 1-9 were live-hardware-confirmed in session 12 (real S26 Ultra, `adb logcat -s
+ScannerFocus:* ScannerMatch:*`); items 10-11 are unit-test-verified only as of this session — **not
+yet live-device-confirmed**. `GUIDE_FRAME_WIDTH_RATIO=0.5` (item 9) is still a first live-tested
+value, not final calibration. Skyler's own next step: live-test items 10 (retry) and 9 (ratio)
+together on the real S26 Ultra — see `handoff.md`.
 
 **Diagnostic-only logging exists in `ScannerScreen.kt`** (`4bd8bac`) — `Log.i("ScannerFocus", ...)`
 per focus request (elapsed time + `isFocusSuccessful`) and a one-time camera AF-capability log at
@@ -453,6 +469,16 @@ bug class on the TCGCSV merge path) — reused, not reinvented.
   fails at daemon startup with a misleading `Unable to establish loopback connection` error that
   looks like a sandbox/JVM restriction but isn't — always set these before concluding a build
   command is broken.
+- **The same `Unable to establish loopback connection` error can also recur even with the env vars
+  set correctly** — intermittent, never root-caused, sessions 10-13. Fires far more reliably for
+  Tester/Coder-stage subagents than for direct orchestrator-run commands in the same session, same
+  repo state (session 13: 6/6 subagent attempts failed, cleared immediately for the orchestrator's
+  own direct run). If a subagent reports this wall, try the same command directly as the
+  orchestrator before concluding the build is actually broken. Stack trace bottoms out at
+  `sun.nio.ch.WEPollSelectorImpl` → `UnixDomainSockets.connect0` → `SocketException: Invalid
+  argument: connect` — the JDK's Windows AF_UNIX-socket-based NIO selector self-pipe specifically,
+  not a literal TCP loopback problem. Not yet tried: `-Djdk.net.usePlainSocketImpl=true` (or
+  otherwise forcing the classic Windows selector) as a Gradle JVM arg.
 - **First-time dependency fetches may fail with a `PKIX path validation failed` TLS error** —
   this machine's antivirus/security software does TLS inspection and installs its interception
   root CA into Windows' trust store but not the JDK's own `cacerts`. Workaround (session-only,
