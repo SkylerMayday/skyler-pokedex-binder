@@ -8,6 +8,22 @@ actually fixed and verified, not when merely planned.
 - **`security-review`** — no security-focused skill pass has ever run here, despite a public web-shareable snapshot feature (`binder.json` export) existing. The one concrete data-exposure item found in this file (Personal Collection publishing the full search cache) is confirmed intentional, not a bug — this is a precautionary first pass, not gap-driven.
 - **`dependency-management`** — Room/Hilt/Compose versions have no audit cadence on record (unlike MobileStream, which has one).
 
+## Refreshed — 2026-09-09 (session 9, cont'd)
+
+### Found this session, no code fix — a workflow/UX gap, not a bug
+
+- **Nothing warns Skyler (in-app or otherwise) when `binder.json` has gone stale.** Found via the
+  new `/card` Discord command reporting a card as "Owned" that isn't — traced to `binder.json`
+  being 16 days old (`publishedAt: 2026-08-24`, confirmed by fetching the live file). The publish
+  logic itself is correct — `PublishRepository.kt`'s `toSnapshotSlot()` computes `cardId` and
+  `owned` from the identical `assignedCardId` expression, so they can't diverge from a fresh
+  publish; this was stale data from before the app was next used to publish, not a live bug.
+  But there's no mechanism — a "last published N days ago" indicator in Settings, a reminder, an
+  automatic republish trigger — telling Skyler the public site/Discord bot are answering from old
+  data. Every consumer of `binder.json` (the public website, now also the Discord `/card` command)
+  inherits this same staleness contract silently. Cheap fix if picked up: surface the app's already-
+  stored last-publish timestamp somewhere Skyler actually looks (Settings screen, most likely).
+
 ## Refreshed — 2026-09-09 (session 9)
 
 ### Fixed this session
