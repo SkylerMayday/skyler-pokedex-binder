@@ -55,13 +55,21 @@ class PokedexDatabaseTest {
     }
 
     @Test
-    fun secondaryBinderOrdersByIdDesc() = runTest {
-        secondaryDao.insert(SecondaryBinderEntry(pokemonId = "bulbasaur", pokemonName = "Bulbasaur", cardId = "card-1", cardImageUrl = "url1"))
-        secondaryDao.insert(SecondaryBinderEntry(pokemonId = "bulbasaur", pokemonName = "Bulbasaur", cardId = "card-2", cardImageUrl = "url2"))
+    fun secondaryBinderOrdersByPositionThenInsertionOrder() = runTest {
+        // Root cause of this test's previous failure: it called the raw insert() DAO method
+        // directly (leaving position at the entity default, 0, for both rows) and asserted
+        // "newest first" — a design SecondaryBinderDao never implements. The real, only
+        // production caller (SecondaryBinderViewModel.addCard) always goes through
+        // insertAtEnd(), which assigns each new row the next position — new cards are appended
+        // to the end (oldest first), matching Card History's actual drag-to-reorder grid
+        // (SecondaryBinderScreen.kt) where users manually place cards, not a recency feed.
+        secondaryDao.insertAtEnd(SecondaryBinderEntry(pokemonId = "bulbasaur", pokemonName = "Bulbasaur", cardId = "card-1", cardImageUrl = "url1"))
+        secondaryDao.insertAtEnd(SecondaryBinderEntry(pokemonId = "bulbasaur", pokemonName = "Bulbasaur", cardId = "card-2", cardImageUrl = "url2"))
         secondaryDao.observeAll().test {
             val items = awaitItem()
             assertEquals(2, items.size)
-            assertEquals("card-2", items[0].cardId) // newest first
+            assertEquals("card-1", items[0].cardId) // appended first -> lowest position -> first
+            assertEquals("card-2", items[1].cardId)
             cancelAndIgnoreRemainingEvents()
         }
     }

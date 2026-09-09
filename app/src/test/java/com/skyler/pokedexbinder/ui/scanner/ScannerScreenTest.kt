@@ -24,43 +24,10 @@ class ScannerScreenTest {
 
     private lateinit var provider: ProcessCameraProvider
 
-    // android.hardware.camera2.CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS is a real
-    // Android SDK static field that the Android-unit-test stub jar leaves null (a genuine,
-    // well-known Android-testing limitation — it is never actually null on a real device, only
-    // in this JVM test environment). Production code (selectUltrawidePhysicalCameraId) passes it
-    // directly into Camera2CameraInfo.getCameraCharacteristic(key: CameraCharacteristics.Key<T>),
-    // a Kotlin-declared non-null parameter — Kotlin's compiler inserts a null-check at that call
-    // site regardless of mocking, so no every{}/matcher configuration on the (mocked)
-    // Camera2CameraInfo receiver can prevent the NPE by itself. Reflectively overwriting the
-    // static field with a mock Key for the test's duration is what actually makes the "happy
-    // path" (a qualifying candidate) reachable at all. Field.setAccessible alone isn't enough to
-    // write a `static final` field on JDK 12+ (the old "strip the modifiers field" trick no
-    // longer works — Field no longer exposes its own modifiers reflectively), so this goes
-    // through sun.misc.Unsafe's direct static-field write instead, which isn't gated by the
-    // FINAL modifier at all. Looked up purely by name (Class.forName/reflection), not a direct
-    // `sun.misc.Unsafe` source reference, since that internal package isn't on this module's
-    // Kotlin compile classpath (Android projects deliberately don't expose it — it doesn't exist
-    // on-device either) even though it's present at JVM unit-test runtime.
-    private val focalLengthsKeyField = CameraCharacteristics::class.java
-        .getField("LENS_INFO_AVAILABLE_FOCAL_LENGTHS")
-        .apply { isAccessible = true }
-    private val unsafeClass = Class.forName("sun.misc.Unsafe")
-    private val unsafe: Any = requireNotNull(
-        unsafeClass.getDeclaredField("theUnsafe").apply { isAccessible = true }.get(null)
-    )
-    private val staticFieldBase = unsafeClass.getMethod("staticFieldBase", java.lang.reflect.Field::class.java)
-    private val staticFieldOffset = unsafeClass.getMethod("staticFieldOffset", java.lang.reflect.Field::class.java)
-    private val putObject = unsafeClass.getMethod(
-        "putObject", Any::class.java, Long::class.javaPrimitiveType, Any::class.java
-    )
-
+    // Reflective static-field override needed to make selectUltrawidePhysicalCameraId's happy
+    // path reachable under the Android unit-test stub jar — see FocalLengthsKeyTestFixture's own
+    // doc comment for why.
     private lateinit var focalLengthsKey: CameraCharacteristics.Key<FloatArray>
-
-    private fun setFocalLengthsKeyField(value: CameraCharacteristics.Key<FloatArray>?) {
-        val base = staticFieldBase.invoke(unsafe, focalLengthsKeyField)
-        val offset = staticFieldOffset.invoke(unsafe, focalLengthsKeyField) as Long
-        putObject.invoke(unsafe, base, offset, value)
-    }
 
     @Before
     fun setUp() {
@@ -76,12 +43,12 @@ class ScannerScreenTest {
         every { Log.w(any(), any<String>(), any()) } returns 0
 
         focalLengthsKey = mockk()
-        setFocalLengthsKeyField(focalLengthsKey)
+        FocalLengthsKeyTestFixture.set(focalLengthsKey)
     }
 
     @After
     fun tearDown() {
-        setFocalLengthsKeyField(null)
+        FocalLengthsKeyTestFixture.set(null)
         unmockkObject(Camera2CameraInfo.Companion)
         unmockkStatic(Log::class)
     }
@@ -212,27 +179,31 @@ class ScannerScreenTest {
     fun `guideFrameImageRect rotation 90 axis-swaps via 4-corner remap, not a naive swap`() {
         val rect = guideFrameImageRect(rawWidth = 1000, rawHeight = 2000, rotationDegrees = 90)
         assertEquals(53, rect.left)
-        assertEquals(679, rect.top)
-        assertEquals(946, rect.right)
-        assertEquals(1319, rect.bottom)
-    }
-
-    @Test
-    fun `guideFrameImageRect rotation 270 axis-swaps the opposite direction from 90`() {
-        val rect = guideFrameImageRect(rawWidth = 1000, rawHeight = 2000, rotationDegrees = 270)
-        assertEquals(53, rect.left)
         assertEquals(680, rect.top)
         assertEquals(946, rect.right)
         assertEquals(1320, rect.bottom)
     }
 
     @Test
-    fun `guideFrameImageRect rotation 180 mirrors both axes`() {
+    fun `guideFrameImageRect rotation 270 axis-swaps the opposite direction from 90`() {
+        val rect = guideFrameImageRect(rawWidth = 1000, rawHeight = 2000, rotationDegrees = 270)
+        assertEquals(54, rect.left)
+        assertEquals(680, rect.top)
+        assertEquals(947, rect.right)
+        assertEquals(1320, rect.bottom)
+    }
+
+    @Test
+    fun `guideFrameImageRect rotation 180 mirrors both axes back onto the centered rect exactly`() {
+        // The guide box is centered, so a true (bug-free) 180-degree rotation must map it onto
+        // itself exactly — same left/top/right/bottom as rotation 0. Before the exclusive-bound
+        // fix, this came out 1px off on every axis (339/776/659/1222) because the rotation math
+        // treated the exclusive right/bottom bounds as literal pixel coordinates.
         val rect = guideFrameImageRect(rawWidth = 1000, rawHeight = 2000, rotationDegrees = 180)
-        assertEquals(339, rect.left)
-        assertEquals(776, rect.top)
-        assertEquals(659, rect.right)
-        assertEquals(1222, rect.bottom)
+        assertEquals(340, rect.left)
+        assertEquals(777, rect.top)
+        assertEquals(660, rect.right)
+        assertEquals(1223, rect.bottom)
     }
 
     @Test

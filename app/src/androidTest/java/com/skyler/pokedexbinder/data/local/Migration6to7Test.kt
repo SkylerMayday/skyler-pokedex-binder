@@ -130,8 +130,16 @@ class Migration6to7Test {
             listOf("id", "name", "rows", "cols", "position"),
             columnsOf("connecting_art_group")
         )
+        // connecting_art_slot/personal_collection_entry both gained a `language` column from the
+        // 2026-07-15 language/lock/remarks feature, added after this test was first written — this
+        // assertion runs against the CURRENT schema (db.openHelper.writableDatabase already built
+        // it via ConnectingArtSlot/PersonalCollectionEntry's real @Entity definitions in setUp();
+        // the CREATE TABLE IF NOT EXISTS calls above are no-ops against those pre-existing tables),
+        // not just MIGRATION_6_7's own added columns, so it must track the entities' real current
+        // shape. connecting_art_group/personal_collection_cache are unaffected — neither entity
+        // ever gained a language field.
         assertEquals(
-            listOf("id", "groupId", "slotIndex", "cardId", "cardName", "cardImageUrl", "owned"),
+            listOf("id", "groupId", "slotIndex", "cardId", "cardName", "cardImageUrl", "owned", "language"),
             columnsOf("connecting_art_slot")
         )
         assertEquals(
@@ -139,7 +147,7 @@ class Migration6to7Test {
             columnsOf("personal_collection_cache")
         )
         assertEquals(
-            listOf("cardId", "owned"),
+            listOf("cardId", "owned", "language"),
             columnsOf("personal_collection_entry")
         )
 

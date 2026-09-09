@@ -36,27 +36,9 @@ class ScannerFocusIndependentVerificationTest {
     // ---- selectUltrawidePhysicalCameraId fixtures (same reflective-Unsafe technique as
     // ScannerScreenTest.kt is required here too -- CameraCharacteristics.Key statics are null
     // under the Android unit-test stub jar, and Kotlin inserts a non-null check at the call site
-    // regardless of mocking) ----
+    // regardless of mocking -- see FocalLengthsKeyTestFixture) ----
 
-    private val focalLengthsKeyField = CameraCharacteristics::class.java
-        .getField("LENS_INFO_AVAILABLE_FOCAL_LENGTHS")
-        .apply { isAccessible = true }
-    private val unsafeClass = Class.forName("sun.misc.Unsafe")
-    private val unsafe: Any = requireNotNull(
-        unsafeClass.getDeclaredField("theUnsafe").apply { isAccessible = true }.get(null)
-    )
-    private val staticFieldBase = unsafeClass.getMethod("staticFieldBase", java.lang.reflect.Field::class.java)
-    private val staticFieldOffset = unsafeClass.getMethod("staticFieldOffset", java.lang.reflect.Field::class.java)
-    private val putObject = unsafeClass.getMethod(
-        "putObject", Any::class.java, Long::class.javaPrimitiveType, Any::class.java
-    )
     private lateinit var focalLengthsKey: CameraCharacteristics.Key<FloatArray>
-
-    private fun setFocalLengthsKeyField(value: CameraCharacteristics.Key<FloatArray>?) {
-        val base = staticFieldBase.invoke(unsafe, focalLengthsKeyField)
-        val offset = staticFieldOffset.invoke(unsafe, focalLengthsKeyField) as Long
-        putObject.invoke(unsafe, base, offset, value)
-    }
 
     private lateinit var provider: ProcessCameraProvider
 
@@ -69,12 +51,12 @@ class ScannerFocusIndependentVerificationTest {
         every { Log.w(any(), any<String>()) } returns 0
         every { Log.w(any(), any<String>(), any()) } returns 0
         focalLengthsKey = mockk()
-        setFocalLengthsKeyField(focalLengthsKey)
+        FocalLengthsKeyTestFixture.set(focalLengthsKey)
     }
 
     @After
     fun tearDown() {
-        setFocalLengthsKeyField(null)
+        FocalLengthsKeyTestFixture.set(null)
         unmockkObject(Camera2CameraInfo.Companion)
         unmockkStatic(Log::class)
     }

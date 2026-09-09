@@ -59,6 +59,12 @@ import java.util.concurrent.TimeUnit
 // the two can never drift apart.
 private const val GUIDE_FRAME_WIDTH_RATIO = 0.32f
 
+// Standard Pokémon TCG card aspect ratio (88mm x 63mm), portrait. Single source for the value
+// previously triplicated across detectCardInFrame, guideFrameImageRect, and CardFrameOverlay —
+// this file's own header comment on GUIDE_FRAME_WIDTH_RATIO claimed that class of drift was
+// eliminated; it was, for the width ratio, not for this one.
+private const val CARD_ASPECT_RATIO = 88f / 63f
+
 private fun detectCardInFrame(imageProxy: ImageProxy): Boolean {
     val iw = imageProxy.width
     val ih = imageProxy.height
@@ -73,7 +79,7 @@ private fun detectCardInFrame(imageProxy: ImageProxy): Boolean {
 
     // Guide frame in display space (portrait card ratio 63:88)
     val guideW = (dispW * GUIDE_FRAME_WIDTH_RATIO).toInt()
-    val guideH = (guideW * 88f / 63f).toInt()
+    val guideH = (guideW * CARD_ASPECT_RATIO).toInt()
     if (guideH >= dispH) return false
 
     val dLeft  = (dispW - guideW) / 2
@@ -129,7 +135,10 @@ private fun detectCardInFrame(imageProxy: ImageProxy): Boolean {
 }
 
 // Plain rect in raw image-space (pre-rotation) pixel coordinates — right/bottom exclusive,
-// matching Bitmap.createBitmap's (left, top, width, height) convention.
+// matching Bitmap.createBitmap's (left, top, width, height) convention. guideFrameImageRect
+// converts to inclusive coordinates before rotating and back to exclusive after (see its own
+// comment) specifically so this exclusive-bound convention holds for all 4 rotation cases, not
+// just rotationDegrees == 0.
 internal data class ImageRect(val left: Int, val top: Int, val right: Int, val bottom: Int) {
     val width: Int get() = right - left
     val height: Int get() = bottom - top
@@ -148,7 +157,7 @@ internal fun guideFrameImageRect(rawWidth: Int, rawHeight: Int, rotationDegrees:
     val dispH = if (isRotated) rawWidth else rawHeight
 
     val guideW = (dispW * GUIDE_FRAME_WIDTH_RATIO).toInt()
-    val guideH = (guideW * 88f / 63f).toInt()
+    val guideH = (guideW * CARD_ASPECT_RATIO).toInt()
     val dLeft = (dispW - guideW) / 2
     val dTop = (dispH - guideH) / 2
     val dRight = dLeft + guideW
@@ -164,13 +173,24 @@ internal fun guideFrameImageRect(rawWidth: Int, rawHeight: Int, rotationDegrees:
     // Map all 4 corners, not just top-left/bottom-right — a 90/270 rotation swaps which raw-image
     // axis corresponds to display-width vs -height, so the mapped rect must be re-normalized
     // (min/max over all 4 mapped corners) rather than assuming corner order survives the rotation.
+    //
+    // dRight/dBot are EXCLUSIVE bounds (one past the last valid pixel) but toImage's rotation
+    // formulas are point transforms meant for actual pixel coordinates — passing an exclusive
+    // bound straight in silently mistranslates it as a real pixel, shifting the mapped rect by
+    // 1px on any axis that gets flipped (90/180/270 all flip at least one axis; 0 flips none,
+    // which is why this only ever showed up on 3 of the 4 cases). Fixed by converting the
+    // exclusive corners to their last-inclusive-pixel equivalent (-1) before mapping, then
+    // converting the mapped result back to exclusive (+1) once min/max is taken.
+    val dRightIncl = dRight - 1
+    val dBotIncl = dBot - 1
     val corners = listOf(
-        toImage(dLeft, dTop), toImage(dRight, dTop), toImage(dLeft, dBot), toImage(dRight, dBot)
+        toImage(dLeft, dTop), toImage(dRightIncl, dTop),
+        toImage(dLeft, dBotIncl), toImage(dRightIncl, dBotIncl)
     )
     val left = corners.minOf { it.first }.coerceIn(0, rawWidth - 1)
     val top = corners.minOf { it.second }.coerceIn(0, rawHeight - 1)
-    val right = corners.maxOf { it.first }.coerceIn(0, rawWidth - 1)
-    val bottom = corners.maxOf { it.second }.coerceIn(0, rawHeight - 1)
+    val right = (corners.maxOf { it.first } + 1).coerceIn(0, rawWidth)
+    val bottom = (corners.maxOf { it.second } + 1).coerceIn(0, rawHeight)
     return ImageRect(left, top, right, bottom)
 }
 
@@ -187,7 +207,7 @@ private fun CardFrameOverlay(cardDetected: Boolean, modifier: Modifier = Modifie
     Box(modifier = modifier) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val guideW = size.width * GUIDE_FRAME_WIDTH_RATIO
-            val guideH = guideW * 88f / 63f
+            val guideH = guideW * CARD_ASPECT_RATIO
             val left = (size.width - guideW) / 2f
             val top = (size.height - guideH) / 2f
 
@@ -420,12 +440,14 @@ private fun logUltrawideFeasibility(camera: Camera) {
                 val minFocusDistance = camera2Info.getCameraCharacteristic(
                     android.hardware.camera2.CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE
                 )
-                val isUltrawideCandidate = focalLengths?.any { it < 20f } == true
+                val isUltrawideCandidate =
+                    focalLengths?.any { it < ULTRAWIDE_FOCAL_LENGTH_THRESHOLD_MM } == true
                 Log.i(
                     "ScannerFocus",
                     "feasibility spike: physical camera id=${camera2Info.cameraId} " +
                         "focalLengths=${focalLengths?.toList()} minFocusDistance=$minFocusDistance " +
-                        "(<20mm focal length = ultrawide candidate: $isUltrawideCandidate)"
+                        "(<${ULTRAWIDE_FOCAL_LENGTH_THRESHOLD_MM}mm focal length = ultrawide candidate: " +
+                        "$isUltrawideCandidate)"
                 )
             }.onFailure {
                 Log.w(
