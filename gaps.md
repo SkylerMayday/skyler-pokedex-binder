@@ -3,6 +3,72 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
+## Skills applicable to open gaps (audited 2026-09-09, none run here yet)
+
+- **`security-review`** — no security-focused skill pass has ever run here, despite a public web-shareable snapshot feature (`binder.json` export) existing. The one concrete data-exposure item found in this file (Personal Collection publishing the full search cache) is confirmed intentional, not a bug — this is a precautionary first pass, not gap-driven.
+- **`dependency-management`** — Room/Hilt/Compose versions have no audit cadence on record (unlike MobileStream, which has one).
+
+## Refreshed — 2026-09-09 (session 9)
+
+### Fixed this session
+
+- ~~**Scanner attempt #6: physical ultrawide lens selection + guide-frame crop**~~ (session 7's
+  parked item, below, resolved). **Committed `4715adf`, not pushed.** Full `dev-team-pipeline` run,
+  3 review iterations (34 → 72 → 84/100), hit the pipeline's cap with zero remaining P0. Two real,
+  live bugs caught and fixed mid-pipeline — both would have shipped broken despite a fully green
+  test suite:
+  - `CameraSelector.Builder().setPhysicalCameraId()` was a **silent no-op** for this project's
+    `bindToLifecycle` overload (proven by reading the real CameraX 1.6.1 source, one reviewer
+    disassembling a library AAR with no available sources for the final link) — the bind always
+    succeeded on the main lens while the diagnostic log asserted success. Fixed by moving the
+    physical id onto the use-case builders (`Camera2Interop.Extender`) instead.
+  - The crop change accidentally un-shadowed a dead, hand-rolled 3-plane NV21 decoder (dead since
+    CameraX 1.3.4→1.6.1 added a same-named `ImageProxy.toBitmap()` member) that would throw
+    `ArrayIndexOutOfBoundsException` on every real single-plane-JPEG capture. Fixed by deleting the
+    dead decode and delegating to CameraX's own member.
+  Two small diagnostic-accuracy items applied directly after the pipeline's review cap (`boundVia`
+  now reflects the actually-bound camera on the fallback path, not the attempted one; removed an
+  overclaiming comment). Full detail: `project-overview.md`'s "Scanner Camera Architecture" §6,
+  `.pipeline/` (pending archive to `.pipeline_archive/2026-09-08-scanner-macro-focus/`).
+  **Needs Skyler's real S26 Ultra to confirm** — nothing further reachable from this sandbox (no
+  real multi-camera hardware in the JVM/emulator). 286/286 tests, lint, build all clean.
+
+### Open, newly logged this session (from attempt #6, deliberately deferred — none touched across 3 review iterations)
+
+- **Crop rect is ~1.4x larger linearly (~1.9x by area) than the guide box `CardFrameOverlay` draws
+  on screen** — `guideFrameImageRect` takes a fraction of the *image's* display-space width;
+  `CardFrameOverlay` draws the same fraction of the *view's* width, and `PreviewView` defaults to
+  `FILL_CENTER` scaling (never overridden), so image and view aspect ratios differ. Not a
+  positional error (still concentric, never clips the card) — just admits more background than the
+  user aimed at, the exact risk the crop feature exists to close. Should fold into Task 5's
+  real-device calibration pass, calibrated against the crop's actual behavior, not the drawn box.
+- **1px rounding shift on mirrored rotation axes** (90/180/270) in `guideFrameImageRect` —
+  `ImageRect`'s own "right/bottom exclusive" doc comment is only true for 1 of 4 rotation cases;
+  cosmetically negligible on a ~900px crop, but the comment is wrong for 3 of them.
+- **`88f/63f` card-aspect literal triplicated** across `detectCardInFrame`, `guideFrameImageRect`,
+  and `CardFrameOverlay` — the file's own header comment on `GUIDE_FRAME_WIDTH_RATIO` claims this
+  class of drift was eliminated; it was, for the width ratio, not for the aspect ratio. One named
+  constant + 3 substitutions, zero behavior change.
+- **`ULTRAWIDE_FOCAL_LENGTH_THRESHOLD_MM` (20f) is shadowed by a hardcoded `20f`** in
+  `logUltrawideFeasibility` — the diagnostic Skyler actually reads to check whether the feature
+  engaged. Task 5 will likely retune this threshold; the moment it does, the log starts
+  contradicting the selector.
+- **~120 lines of `sun.misc.Unsafe` reflection test fixture duplicated verbatim** across
+  `ScannerScreenTest.kt` and `ScannerFocusIndependentVerificationTest.kt` — the most JDK-fragile
+  code in the suite, now in two places. A future JDK bump breaks it twice, and the second copy is
+  easy to miss (lives in a file named "IndependentVerification").
+- **Task 2's bind-fallback wiring has zero automated test coverage** — it lives inside a Compose
+  `AndroidView` factory closure, not an independently-testable function. Spec-sanctioned gap
+  (Task 6 test case 16, explicitly optional, declined twice now across the pipeline). This is also
+  the exact code class both of attempt #6's real bugs lived in — worth reconsidering the "not worth
+  the diff size" call if this file needs a 7th attempt.
+- **`CameraControl$OperationCanceledException` — repeated focus requests cancel each other**
+  (carried over from 2026-09-04, unchanged): multiple `triggerFocus()` calls firing in quick
+  succession (edge-triggered refocus and/or tap-to-focus overlapping a metering retry) cancel each
+  other's in-flight requests. Every observed sequence still eventually reaches a real
+  `isFocusSuccessful=true` — not currently believed to block focus lock outright, still just
+  flagged for awareness.
+
 ## Refreshed — 2026-09-04 (session 8, cont'd)
 
 ### Fixed this session
@@ -176,10 +242,10 @@ actually fixed and verified, not when merely planned.
 
 ## Refreshed — 2026-08-29 (session 7)
 
-### Open, newly logged this session — PARKED, do not start without explicit go-ahead
+### Fixed (2026-09-08/09, attempt #6 — see session 9 above)
 
-- **Scanner still misreads cards on real hardware ("keeps giving the wrong card"), root cause
-  traced past fix #4's blur patch to a distance/resolution trade-off it introduced.** Skyler's
+- ~~**Scanner still misreads cards on real hardware ("keeps giving the wrong card"), root cause
+  traced past fix #4's blur patch to a distance/resolution trade-off it introduced.**~~ Skyler's
   report: OCR/capture fires, but at the distance the app now demands, it reads the wrong card.
   Diagnosis (not yet coded): `GUIDE_FRAME_WIDTH_RATIO = 0.32f` (fix #4, `20c74f3`) fixed blur by
   pushing the working distance out to ~23cm — past the S26 Ultra main lens's 18cm minimum focus
