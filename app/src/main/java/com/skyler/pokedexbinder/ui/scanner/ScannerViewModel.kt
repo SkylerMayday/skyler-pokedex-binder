@@ -10,6 +10,7 @@ import com.skyler.pokedexbinder.data.local.SecondaryBinderEntry
 import com.skyler.pokedexbinder.data.model.TcgCard
 import com.skyler.pokedexbinder.domain.AssignCardUseCase
 import com.skyler.pokedexbinder.domain.GeminiCardScanner
+import com.skyler.pokedexbinder.domain.ParsedCardInfo
 import com.skyler.pokedexbinder.domain.PerceptualHasher
 import com.skyler.pokedexbinder.domain.RateLimitException
 import com.skyler.pokedexbinder.domain.SmartThresholdUseCase
@@ -68,9 +69,21 @@ class ScannerViewModel @Inject constructor(
                 }
                 val bitmap = imageProxy.toCroppedBitmap()
                 capturedBitmap = bitmap
+                // Diagnostic-only, mirrors ScannerScreen.kt's existing "ScannerFocus" logging
+                // convention — this file had zero visibility into the match pipeline before this,
+                // making the wrong-card symptom (2026-09 sessions, survived 2 prior real
+                // architectural fixes) impossible to root-cause past "something in here is wrong."
+                // Own tag ("ScannerMatch") since this is a genuinely different concern than focus.
+                android.util.Log.i("ScannerMatch", "cropped bitmap ${bitmap.width}x${bitmap.height}")
 
                 val parsed = geminiCardScanner.scan(bitmap, apiKey)
+                android.util.Log.i(
+                    "ScannerMatch",
+                    "gemini parsed: name=${parsed.cardName} number=${parsed.cardNumber} " +
+                        "setTotal=${parsed.setTotal} dexNumber=${parsed.dexNumber}"
+                )
                 val candidates = cardSearchRepository.searchByParsedInfo(parsed)
+                android.util.Log.i("ScannerMatch", "search candidates=${candidates.size}")
 
                 if (candidates.isEmpty()) {
                     _state.value = ScannerState.LowConfidence(emptyList())
@@ -78,7 +91,16 @@ class ScannerViewModel @Inject constructor(
                 }
 
                 val best = perceptualHasher.findBestMatch(candidates, bitmap) ?: candidates.first()
-                val confidence = smartThresholdUseCase.evaluate(candidates, best.name, best.number)
+                android.util.Log.i(
+                    "ScannerMatch",
+                    "perceptualHasher best=${best.name} #${best.number} (from ${candidates.size} candidates)"
+                )
+                val (checkName, checkNumber) = confidenceCheckInputs(parsed, best)
+                val confidence = smartThresholdUseCase.evaluate(candidates, checkName, checkNumber)
+                android.util.Log.i(
+                    "ScannerMatch",
+                    "confidence isHigh=${confidence.isHighConfidence} topCard=${confidence.topCard?.name} #${confidence.topCard?.number}"
+                )
                 _state.value = if (confidence.isHighConfidence && confidence.topCard != null) {
                     ScannerState.HighConfidence(confidence.topCard)
                 } else {
@@ -149,3 +171,23 @@ class ScannerViewModel @Inject constructor(
         _state.value = ScannerState.Error(message)
     }
 }
+
+// Determines the (name, number) pair passed to SmartThresholdUseCase.evaluate() to disambiguate
+// same-name candidates. MUST use Gemini's own OCR'd values (parsed.cardName/cardNumber), never
+// the perceptual hasher's already-chosen `best` candidate's own fields for the NUMBER — best is
+// always a member of `candidates`, so passing best.number makes evaluate()'s number-match check
+// trivially self-referential (it always finds `best` itself), silently defeating the entire
+// "only high-confidence when the OCR'd number actually pins down the printing" design SmartThreshold
+// UseCase's own doc comment describes. best.name is still an acceptable fallback for the (unused
+// by evaluate() today, but semantically-correct-to-pass) name slot when Gemini didn't read one.
+//
+// Real regression, confirmed via git archaeology, not guessed: 455178a (original implementation)
+// correctly passed parsed.cardName/parsed.cardNumber. 498d035 ("upgrade ScannerViewModel to use
+// Gemini + slot assignment", 2026-05-20) introduced perceptualHasher.findBestMatch and, in the
+// same diff, silently swapped the call to best.name/best.number -- live-reproduced 2026-09-10 via
+// adb logcat: Gemini correctly read "Castform" #62, but the confidence check rubber-stamped the
+// perceptual hasher's own pick ("Castform Sunny Form #20", a different print) as high-confidence
+// solely because #20 trivially matched itself, not because #62 or #20 were ever actually compared
+// against what Gemini read off the card.
+internal fun confidenceCheckInputs(parsed: ParsedCardInfo, best: TcgCard): Pair<String, String?> =
+    (parsed.cardName ?: best.name) to parsed.cardNumber
