@@ -1,130 +1,104 @@
-# Handoff — Session 9 (2026-09-04 → 2026-09-09)
+# Handoff — Session 10 (2026-09-09, continuation of session 9)
 
 ## 1. Goals
 
-Continued from session 8's two parked items, both unblocked this session:
-
-1. Discord Binder Sync — build and ship the `/card` lookup command (architecture reversed
-   mid-session: fold into the existing SkeelerMeidai bot instead of standing up a new serverless
-   repo, once Skyler confirmed that bot is live in an active server).
-2. Scanner macro-focus — Task 0's feasibility spike (real S26 Ultra), then the real fix: physical
-   ultrawide lens selection + guide-frame crop (attempt #6 in this file's camera-path bug family).
-3. A separate, real-device-reported bug surfaced mid-session (attempt #5) and got fixed first,
-   since it was actively breaking every scan.
-4. Wrapcon.
+Session 9 ended with a two-item ask carried into a fresh context: push the parked scanner commit,
+then fix two named batches of cheap, already-diagnosed debt from `gaps.md` — the two failing DB
+tests, and the 5-item scanner cleanup list from attempt #6.
 
 ## 2. Current State
 
-- **Discord Sync — shipped, committed, pushed.** `D:\Claude Projects\DiscordBot`, commit `61cae7b`,
-  pushed to `origin/master` (triggers Railway auto-deploy). Full `dev-team-pipeline` run —
-  Planner→Coder→Tester→Reviewer, one auto-loop iteration to close a real finding (thumbnail-URL
-  validation crash), score 83→96/100, ship. 402 tests passing.
-  **Architecture reversed mid-session**, documented in the spec's own Revision History: the
-  original plan (new serverless repo, Cloudflare Workers) assumed SkeelerMeidai's server was
-  retired. It isn't — TAIOH! was renamed to Skyler's Lounge, same bot, still running there. Folded
-  `/card` into that existing bot instead — zero new repo, zero new hosting, zero new Discord
-  application.
-  **Needs Skyler to confirm `/card <name>` actually works live** in Skyler's Lounge once Railway's
-  deploy from the push completes.
-
-- **Scanner attempt #5 (metering-retry gate defeat) — fixed, confirmed on real hardware.** Found as
-  a side effect of Task 0's diagnostic spike, root-caused via the `debugging` skill after Skyler
-  reported live auto-capture on an empty frame + 7 wrong-card scans in a row. `gaps.md` has full
-  detail. Real logcat confirmed the fix engaging correctly before moving on.
-
-- **Scanner attempt #6 (physical ultrawide lens + guide-frame crop) — done, not yet confirmed on
-  real hardware.** `D:\Claude Projects\PokedexBinderV2`, commit `4715adf`, **not pushed**. Full
-  `dev-team-pipeline` run against `docs/specs/2026-09-02-scanner-macro-focus.md`'s Tasks 1-6 — 3
-  review iterations, score 34 → 72 → 84/100, hit the pipeline's cap with zero remaining P0. Two
-  real, live bugs caught and fixed mid-pipeline that would have shipped broken despite 285-287
-  green tests the whole way (both found by reviewers reading the actual CameraX 1.6.1 library
-  source, not trusting the Coder's or each other's citations):
-  1. The first lens-selection mechanism (`CameraSelector.Builder().setPhysicalCameraId()`) was a
-     **silent no-op** — never consumed by the `bindToLifecycle` overload this project calls. Fixed
-     by moving the physical id onto the use-case builders (`Camera2Interop.Extender`) instead.
-  2. The crop step accidentally revived a **dead, hand-rolled 3-plane NV21 decoder** (dead since a
-     CameraX version bump added a same-named `ImageProxy.toBitmap()` member) that would throw on
-     every real capture. Fixed by deleting it and delegating to CameraX's own JPEG-safe decode.
-  Two more small diagnostic-accuracy fixes applied directly by the orchestrator once the pipeline's
-  3-evaluation cap was hit at 84/100 (one point under ship, zero remaining P0): `boundVia` now
-  reflects the actually-bound camera on the fallback path instead of the attempted one; removed a
-  comment overclaiming what the physical-lens focus-distance log proves.
-  **Task 5 (real calibration) intentionally not attempted** — needs Skyler's real phone.
-  **Needs Skyler's real S26 Ultra to confirm the fix actually engages** — see Next Steps for the
-  exact command.
-
-- `gaps.md` and `project-overview.md` refreshed this session (see below). `handoff.md` is this file.
+- **`4715adf` (session 9's scanner fix) pushed to `origin/master`.** Was sitting local-only since
+  session 9; no decision needed, Skyler said push.
+- **Two DB tests root-caused and fixed, committed `ea2b6f3`, pushed.**
+  - `Migration6to7Test`: both `connecting_art_slot` and `personal_collection_entry`'s expected
+    column lists were stale (missing `language`, added by the 2026-07-15 language/lock/remarks
+    feature). Real root cause: `Room.inMemoryDatabaseBuilder(...).build()` in `setUp()` already
+    creates every table at the CURRENT entity schema, so the test's `CREATE TABLE IF NOT EXISTS`
+    calls are no-ops — the assertion was always reading live entity shape, not migration-6-7 output
+    in isolation. Checked the other two migration tests for the same pattern: not systemic —
+    `Migration8to9Test` correctly suffixes every table (`_v8_shape`) to avoid this exact collision.
+  - `PokedexDatabaseTest.secondaryBinderOrdersByIdDesc`: the test itself was wrong, not the DAO.
+    It called the raw `insert()` method (bypassing `insertAtEnd()`), leaving `position` at the
+    entity default for both rows, then asserted "newest first" — a behavior `SecondaryBinderDao`
+    was never designed to produce. Traced the DAO's only real caller
+    (`SecondaryBinderViewModel.addCard`) to confirm actual intended behavior: append-to-end
+    (oldest-first), matching the drag-to-reorder Card History grid. Rewrote to exercise
+    `insertAtEnd()` and assert the real order.
+- **4 of the 5 scanner gap-list items fixed, same commit.**
+  - `88f/63f` card-aspect literal triplication → `CARD_ASPECT_RATIO` constant.
+  - `ULTRAWIDE_FOCAL_LENGTH_THRESHOLD_MM` shadowed by a hardcoded `20f` in
+    `logUltrawideFeasibility` → now reads the constant.
+  - ~120 duplicated lines of `sun.misc.Unsafe` reflection fixture (2 test files) → extracted to
+    new `FocalLengthsKeyTestFixture.kt`.
+  - The "1px rounding shift" item turned out to be a **real bug**, not a stale comment:
+    `guideFrameImageRect`'s rotation corner-map treated exclusive `right`/`bottom` bounds as
+    literal pixel coordinates, shifting the mapped crop rect by 1px on any flipped axis
+    (90/180/270). Verified by hand: a guide box centered in frame must map onto itself exactly
+    under 180° rotation — it didn't, before this fix. Fixed by converting to inclusive coordinates
+    before mapping, back to exclusive after. `ScannerScreenTest`'s 3 rotation assertions updated to
+    the hand-derived correct values.
+  - 5th item (crop-rect-vs-guide-box size mismatch from `FILL_CENTER` scaling) deliberately
+    **not** touched — real geometry fix, not cheap, needs real-device calibration data per its own
+    gaps.md note. Still open.
+- **Nothing this session was compiled or test-executed.** Every Gradle task in this sandbox —
+  including plain `compileDebugUnitTestKotlin`, not just test runs — failed with
+  `java.io.IOException: Unable to establish loopback connection`. Isolated it (see Failed Attempts)
+  to Gradle's cross-process daemon/worker socket handshake specifically; same-process loopback
+  sockets work fine. This is new — `gaps.md`'s own history has this exact project's tests running
+  clean in prior sessions. **All fixes above are code-reviewed and, for the rounding bug,
+  hand-verified by arithmetic — not build-confirmed.**
 
 ## 3. Active Files
 
-**`D:\Claude Projects\DiscordBot`** (separate repo):
-- `src/modules/binder.js`, `src/utils/binder.js` (new) — the `/card` command.
-- `__tests__/binder.test.js`, `__tests__/binder-module.test.js` (new) — 44 tests.
-- `src/utils/categories.js` (edited) — `/help` wiring.
-
-**`D:\Claude Projects\PokedexBinderV2`** (this repo):
-- `app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreen.kt` — attempt #5's
-  metering-retry fix + attempt #6's `selectUltrawidePhysicalCameraId`/`buildUseCases`/
-  `actualBoundCameraId`/`boundVia` restructure + `guideFrameImageRect`/`ImageRect`.
-- `app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ImageProxyExt.kt` — `toCroppedBitmap()`
-  (replaces the old, now-deleted `toBitmap()` extension).
-- `app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModel.kt` — one-line call-site
-  update.
-- `app/src/test/java/com/skyler/pokedexbinder/ui/scanner/` (new directory) — `ScannerScreenTest.kt`,
-  `ImageProxyExtTest.kt`, `ScannerFocusIndependentVerificationTest.kt`,
-  `P0_2_FreshVerificationTest.kt` — 30 new tests total.
-- `docs/specs/2026-09-02-scanner-macro-focus.md`, `docs/specs/2026-09-02-discord-live-lookup-bot.md`
-  — both updated with real findings (feasibility spike results; the architecture reversal).
-- `gaps.md`, `project-overview.md` — refreshed this session.
+- `app/src/androidTest/java/com/skyler/pokedexbinder/data/PokedexDatabaseTest.kt` —
+  `secondaryBinderOrdersByIdDesc` rewritten as `secondaryBinderOrdersByPositionThenInsertionOrder`.
+- `app/src/androidTest/java/com/skyler/pokedexbinder/data/local/Migration6to7Test.kt` — 2 expected
+  column lists corrected.
+- `app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreen.kt` — `CARD_ASPECT_RATIO`
+  constant, threshold-shadow fix, `guideFrameImageRect` rounding fix + updated comments.
+- `app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreenTest.kt` — dedup'd Unsafe
+  fixture, 3 rotation-test assertions corrected.
+- `app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerFocusIndependentVerificationTest.kt`
+  — dedup'd Unsafe fixture.
+- `app/src/test/java/com/skyler/pokedexbinder/ui/scanner/FocalLengthsKeyTestFixture.kt` — new,
+  shared reflection helper.
+- `gaps.md` — refreshed this session (see below).
 
 ## 4. Changes Made (commits, chronological)
 
-- `DiscordBot@61cae7b` — feat: `/card` Discord lookup command. **Pushed to `origin/master`.**
-- `PokedexBinderV2@4715adf` — fix: scanner metering-retry gate defeat + physical ultrawide lens
-  selection + guide-frame crop. **Not pushed** — no auto-push convention for this personal app
-  (unlike DiscordBot, which deploys live on push); ask before pushing if you want it live.
+- `PokedexBinderV2@4715adf` — (session 9's work) pushed to `origin/master` this session.
+- `PokedexBinderV2@ea2b6f3` — fix: two stale DB test assumptions + 4 scanner gap cleanups from
+  attempt #6. **Pushed to `origin/master`.**
 
 ## 5. Failed Attempts
 
-- **Opus-tier reviewer subagents died on rate limits repeatedly this session** — both the
-  account-wide usage limit (reset windows named in the error) and, separately, the weekly Opus
-  limit. Each time: checked whether the dead agent had written any output file before respawning
-  (none had, across ~8 dead spawns total) — per the standing "check subagent artifacts before
-  rerunning" lesson — then respawned identically once the reset window passed. No work was lost;
-  every eventual respawn completed cleanly.
-- **A duplicate lesson file got written and caught during cleanup**: a reviewer wrote
-  `no-erroractionpreference-stop-around-gradle.md` without checking `lessons.md` first — the
-  identical rule (same incident, same date) was already indexed as
-  `erroractionpreference-stop-truncates-native-command-output.md`. Deleted the duplicate rather
-  than indexing it.
+- **Gradle build/test execution: total wall in this session's sandbox, ~7 distinct attempts before
+  stopping.** Tried: inline PowerShell tool invocation, a real `.ps1` via `powershell.exe -File`
+  (per this project's own standing convention), `--daemon`, `--no-daemon`,
+  `dangerouslyDisableSandbox: true`, killing any stale daemon first (`gradlew.bat --stop` — none
+  running), and a plain compile-only task instead of a full test run. All failed identically:
+  `java.io.IOException: Unable to establish loopback connection`. Isolated the actual boundary:
+  wrote a standalone same-process Java `ServerSocket`/`Socket` loopback test (worked) and a .NET
+  `TcpListener`/`TcpClient` loopback test in the same PowerShell process (worked) — so loopback
+  itself isn't blocked, only Gradle's cross-process daemon-fork/worker handshake is. Even
+  `gradlew.bat --version` (which doesn't need the full daemon protocol) succeeded once, but every
+  real task since failed the same way. Concluded this is a genuine, new sandbox-networking
+  limitation for this session, not a fixable flag/invocation problem — stopped per the standing
+  "hard wall → stop, say so" rule rather than continuing to retry variations.
 
 ## 6. Next Steps
 
-1. **Discord Sync — investigated further, real findings, still not fully confirmed working.**
-   Railway's GitHub connection had silently broken (pushes weren't deploying at all) — Skyler
-   reconnected it; `!card` now confirmed working live, but `/card` (slash) still isn't as of this
-   writing — leading hypothesis is a missing `SERVER_ID` env var in Railway causing global instead
-   of guild-scoped command registration (~1hr propagation). Also found and traced (not a code bug):
-   a false "Owned" report on `/card` came from `binder.json` being 16 days stale — needs a fresh
-   Publish from this app, not a code fix. Full detail: `DiscordBot/handoff.md`,
-   `DiscordBot/gaps.md`, this project's own `gaps.md` (new staleness-indicator gap logged).
-2. **Scanner attempt #6**: build+install to the real S26 Ultra, then while scanning a card:
-   ```powershell
-   & "C:\Users\SkylerMayday\AppData\Local\Android\Sdk\platform-tools\adb.exe" logcat -s ScannerFocus:*
-   ```
-   Check `camera id=`, `boundVia=`, and `requestedPhysicalMinFocusDistance=` on the same log line —
-   this is the only thing left that can't be checked from this sandbox (no real multi-camera
-   hardware in the JVM/emulator).
-3. **If attempt #6 confirms working**: Task 5 — a real calibration photo at the ultrawide's actual
-   sharp-focus working distance, to re-derive `GUIDE_FRAME_WIDTH_RATIO` (still `0.32f`, still tuned
-   for the main lens) and the stale "~9 in (23 cm)" on-screen text.
-4. **Cheap, deferred, not blocking** (all in `gaps.md`'s new session-9 section): crop-size-vs-
-   guide-box scale mismatch, 1px rotation rounding, `88f/63f` literal triplication, `20f` threshold
-   shadowing its own named constant, duplicated `sun.misc.Unsafe` test fixture across 2 files.
-5. **Push `4715adf` to `origin`?** — not asked this session.
-6. **Still open, unrelated to this session's work** (carried from session 8, unchanged — see
-   `gaps.md`): `PokedexDatabaseTest.secondaryBinderOrdersByIdDesc` fails live (unconfirmed root
-   cause), `Migration6to7Test` asserts a stale column list, `PendingImportError`'s DataStore-
-   convention deviation, `backup_import_state.xml`'s Auto Backup exclusion gap, Binder Backup's
-   flaky-on-first-run regression test.
-7. **Card-grading spec** — still parked, untouched.
+1. **Confirm this session's 6 fixes actually build and pass, on a working environment** — none of
+   it was compiled or run here. Priority: does the next session's sandbox still have the loopback
+   wall? If not, run `.\gradlew.bat testDebugUnitTest --rerun-tasks` (covers the scanner fixes) and
+   a real `connectedDebugAndroidTest` pass (covers the two DB test fixes) before trusting either as
+   done. If the wall is still there, this needs Skyler's own machine.
+2. **Carried from session 9, unchanged, still blocked on Skyler**: confirm `/card` (Discord slash
+   command) actually works live; republish from this app to refresh the 16-day-stale `binder.json`.
+3. **Carried from session 9, unchanged**: Scanner attempt #6 (physical ultrawide lens + guide-frame
+   crop, `4715adf`) still needs Skyler's real S26 Ultra + the `adb logcat -s ScannerFocus:*` check —
+   see session 9's own next-steps for the exact command. Nothing new reachable from this sandbox.
+4. **Crop-rect-vs-guide-box size mismatch** (gaps.md, still open) — real fix, needs real-device
+   calibration numbers; fold into Task 5 when that's picked up, per session 9's plan.
+5. **Card-grading spec** — still parked, untouched.

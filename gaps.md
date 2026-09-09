@@ -8,6 +8,27 @@ actually fixed and verified, not when merely planned.
 - **`security-review`** — no security-focused skill pass has ever run here, despite a public web-shareable snapshot feature (`binder.json` export) existing. The one concrete data-exposure item found in this file (Personal Collection publishing the full search cache) is confirmed intentional, not a bug — this is a precautionary first pass, not gap-driven.
 - **`dependency-management`** — Room/Hilt/Compose versions have no audit cadence on record (unlike MobileStream, which has one).
 
+## Refreshed — 2026-09-09 (session 10)
+
+### Fixed this session
+
+**Caveat covering every item below**: none of these were compiled or test-executed this session — the sandbox-wide Gradle wall (see Environment note below) blocked even plain compilation, not just test runs. "Fixed" here means code-reviewed and, for the rounding bug, hand-verified by arithmetic — not build-confirmed. Treat as unverified until `.\gradlew.bat testDebugUnitTest --rerun-tasks` (JVM) and a real `connectedDebugAndroidTest` run (the two DB tests) actually go green.
+
+- ~~**`Migration6to7Test`'s expected column lists for `connecting_art_slot`/`personal_collection_entry` were stale.**~~ **Fixed.** Root cause (five-whys, not just "add the missing column"): the test's `CREATE TABLE IF NOT EXISTS` statements for the 4 new tables are no-ops, because `db = Room.inMemoryDatabaseBuilder(...).build()` in `setUp()` already creates every table at the CURRENT entity schema before the test's raw-SQL block ever runs — so `columnsOf("connecting_art_slot")` was always reading Room's real current `ConnectingArtSlot` entity shape, not MIGRATION_6_7's own output in isolation. Both tables gained a `language` column from the 2026-07-15 language/lock/remarks feature, added after this test was written. **Not a systemic pattern** — checked the other two migration tests: `Migration8to9Test` correctly suffixes every table it touches (`main_binder_v8_shape`, etc.) to avoid exactly this collision; `Migration5to6Test` has no column-list assertions at all. This was Migration6to7Test's own inconsistency (suffixed only the one pre-existing table it seeded, not the 4 new ones), not a bug shared across the migration-test suite.
+- ~~**`PokedexDatabaseTest.secondaryBinderOrdersByIdDesc` failed live, root cause unconfirmed.**~~ **Fixed — root cause was the test, not the DAO.** It called the raw `insert()` DAO method (bypassing `insertAtEnd()`), leaving `position` at the entity default (0) for both rows, then asserted "newest first." Traced the DAO's only real caller (`SecondaryBinderViewModel.addCard`) — always `insertAtEnd()`, which assigns the next `position` — confirming the actual intended design is append-to-end (oldest-first), matching the drag-to-reorder Card History grid (`SecondaryBinderScreen.kt`'s `ReorderableItem`/`longPressDraggableHandle`), not a recency feed. Rewrote the test to exercise `insertAtEnd()` and assert the real order.
+- ~~**`88f/63f` card-aspect literal triplicated.**~~ **Fixed.** Extracted `CARD_ASPECT_RATIO`, 3 call sites in `ScannerScreen.kt`.
+- ~~**`ULTRAWIDE_FOCAL_LENGTH_THRESHOLD_MM` shadowed by a hardcoded `20f` in `logUltrawideFeasibility`.**~~ **Fixed** — now reads the named constant, log message included.
+- ~~**~120 lines of `sun.misc.Unsafe` reflection test fixture duplicated across `ScannerScreenTest.kt`/`ScannerFocusIndependentVerificationTest.kt`.**~~ **Fixed** — extracted to `FocalLengthsKeyTestFixture.kt`.
+- ~~**1px rounding shift on mirrored rotation axes (90/180/270) in `guideFrameImageRect`.**~~ **Fixed — turned out to be a real bug, not just a stale doc comment.** `dRight`/`dBot` are exclusive bounds (one-past-last-pixel) but were fed straight into the rotation corner-map, which treats its inputs as literal pixel coordinates — silently shifting the mapped rect by 1px on any axis a rotation flips. Verified by hand: a guide box centered in the frame must map onto itself exactly under a 180° rotation; before this fix it came out 1px off on every edge (339/776/659/1222 instead of 340/777/660/1223). Fixed by converting to inclusive coordinates before mapping, back to exclusive after. `ScannerScreenTest`'s 3 rotation assertions updated to the hand-derived correct values. **Not test-executed** — see Environment note below.
+
+### Still open (untouched this session, deliberately)
+
+- **Crop rect is ~1.4x larger linearly (~1.9x by area) than the guide box `CardFrameOverlay` draws on screen** (carried from session 9, unchanged) — needs real-device calibration data per its own note below, not a blind code patch. See session-9 entry.
+
+### Environment note (not a codebase gap — a tooling limitation, recorded here so it isn't rediscovered from scratch)
+
+- **Every Gradle task — including plain compilation, not just test execution — failed in this session's sandbox with `java.io.IOException: Unable to establish loopback connection`.** Isolated across 3 invocation paths (PowerShell tool direct, `.ps1` via `powershell.exe -File`, with/without `--daemon`/`--no-daemon`) and confirmed the failure is specific to Gradle's cross-process daemon/worker socket handshake — a same-process loopback `ServerSocket`/`TcpListener` round trip (tested directly, both in a standalone Java program and via .NET) works fine. `gradlew.bat --version` succeeded (doesn't need the full daemon protocol); every real task since has failed identically. This did not happen in prior sessions per this file's own history (226/226, 286/286 unit-test runs recorded above) — worth checking at the start of the next session whether it's still present before assuming any build/test claim in this environment.
+
 ## Refreshed — 2026-09-09 (session 9, cont'd)
 
 ### Found this session, no code fix — a workflow/UX gap, not a bug
@@ -58,21 +79,16 @@ actually fixed and verified, not when merely planned.
   positional error (still concentric, never clips the card) — just admits more background than the
   user aimed at, the exact risk the crop feature exists to close. Should fold into Task 5's
   real-device calibration pass, calibrated against the crop's actual behavior, not the drawn box.
-- **1px rounding shift on mirrored rotation axes** (90/180/270) in `guideFrameImageRect` —
-  `ImageRect`'s own "right/bottom exclusive" doc comment is only true for 1 of 4 rotation cases;
-  cosmetically negligible on a ~900px crop, but the comment is wrong for 3 of them.
-- **`88f/63f` card-aspect literal triplicated** across `detectCardInFrame`, `guideFrameImageRect`,
-  and `CardFrameOverlay` — the file's own header comment on `GUIDE_FRAME_WIDTH_RATIO` claims this
-  class of drift was eliminated; it was, for the width ratio, not for the aspect ratio. One named
-  constant + 3 substitutions, zero behavior change.
-- **`ULTRAWIDE_FOCAL_LENGTH_THRESHOLD_MM` (20f) is shadowed by a hardcoded `20f`** in
-  `logUltrawideFeasibility` — the diagnostic Skyler actually reads to check whether the feature
-  engaged. Task 5 will likely retune this threshold; the moment it does, the log starts
-  contradicting the selector.
-- **~120 lines of `sun.misc.Unsafe` reflection test fixture duplicated verbatim** across
-  `ScannerScreenTest.kt` and `ScannerFocusIndependentVerificationTest.kt` — the most JDK-fragile
-  code in the suite, now in two places. A future JDK bump breaks it twice, and the second copy is
-  easy to miss (lives in a file named "IndependentVerification").
+  **(Session 10: deliberately left out of that session's cleanup pass — real geometry fix, not a
+  cheap one, and needs real-device numbers to pick correct values.)**
+- ~~**1px rounding shift on mirrored rotation axes** (90/180/270) in `guideFrameImageRect`~~ —
+  **Fixed session 10** (see that section above) — turned out to be a real 1px bug, not just a
+  stale doc comment.
+- ~~**`88f/63f` card-aspect literal triplicated**~~ — **Fixed session 10.**
+- ~~**`ULTRAWIDE_FOCAL_LENGTH_THRESHOLD_MM` (20f) is shadowed by a hardcoded `20f`**~~ — **Fixed
+  session 10.**
+- ~~**~120 lines of `sun.misc.Unsafe` reflection test fixture duplicated verbatim**~~ — **Fixed
+  session 10** (`FocalLengthsKeyTestFixture.kt`).
 - **Task 2's bind-fallback wiring has zero automated test coverage** — it lives inside a Compose
   `AndroidView` factory closure, not an independently-testable function. Spec-sanctioned gap
   (Task 6 test case 16, explicitly optional, declined twice now across the pipeline). This is also
@@ -234,20 +250,15 @@ actually fixed and verified, not when merely planned.
 
 ### Open, newly discovered this session (2026-09-04, cont'd) — surfaced only now that `connectedDebugAndroidTest` can finally execute
 
-- **`PokedexDatabaseTest.secondaryBinderOrdersByIdDesc` fails live**: `expected:<card-[2]> but
-  was:<card-[1]>`. Never caught before because this instrumented test has never actually run in
-  this sandbox until the Dagger 2.57 fix above unblocked `connectedDebugAndroidTest` entirely.
-  `[Guessing]` — not investigated this session (out of scope for the Dagger/DB-migration fix that
-  surfaced it) — likely a test-data-setup ordering assumption (insertion order vs. expected
-  desc-by-id order) rather than a real production bug, but genuinely unconfirmed. Needs its own
-  debugging pass.
-- **`Migration6to7Test.migration6to7SqlIsValidAgainstV6ShapeAndPreservesExistingData` fails live**:
-  asserts the post-migration column list is `[id, groupId, slotIndex, cardId, cardName,
-  cardImageUrl, owned]`, actual is `[..., owned, language]`. `[Likely]` stale — the 2026-07-15
-  language/lock/remarks feature added a `language` column that this test's hardcoded expected list
-  predates, and like the item above, this test has never executed live before now so the drift was
-  never caught. Straightforward fix (add `language` to the expected list) once picked up, but not
-  fixed here — out of scope for this session's task.
+- ~~**`PokedexDatabaseTest.secondaryBinderOrdersByIdDesc` fails live**~~ — **Root-caused and fixed
+  session 10 (2026-09-09).** Not a test-data-setup ordering assumption as guessed here — the test
+  bypassed the DAO's real `insertAtEnd()` call path entirely and asserted a "newest first" order
+  the DAO was never designed to produce. See session 10's own entry above for the full trace.
+  **Unverified this session** — see session 10's build-wall caveat.
+- ~~**`Migration6to7Test.migration6to7SqlIsValidAgainstV6ShapeAndPreservesExistingData` fails live**~~
+  — **Fixed session 10 (2026-09-09)**, `language` added to both affected expected column lists
+  (`connecting_art_slot` AND `personal_collection_entry` — the latter has the identical drift,
+  not called out here originally). **Unverified this session** — see session 10's build-wall caveat.
 - **Gradle's own `connectedDebugAndroidTest` task-level pass/fail is unreliable in this sandbox,
   separate from whether tests actually pass** — `"Failed to receive the UTP test results"` (a UTP↔
   Gradle IPC glitch) makes the Gradle task report `FAILED` even on a run where every single test in
