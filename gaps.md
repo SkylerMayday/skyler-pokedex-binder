@@ -3,6 +3,60 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
+## Refreshed — 2026-09-09 (session 12, mid-session — full wrapcon pending)
+
+### Fixed this session (build-confirmed via `dev-team-pipeline`, ship at 94/100)
+
+- ~~**Crop rect is ~1.4x larger linearly (~1.9x by area) than the guide box `CardFrameOverlay`
+  draws on screen**~~ (carried from session 7/9, open across attempts #1-6). **Fixed.** Root cause
+  confirmed via decompiled CameraX 1.6.1 bytecode/sources (javap on the real `camera-core-1.6.1.aar`
+  / `camera-lifecycle-1.6.1.aar`, javadoc from `camera-view-1.6.1-sources.jar` — not guessed):
+  `CameraPreview`'s `bindToLifecycle` calls used the plain vararg overload with no `UseCaseGroup`/
+  `ViewPort`, so nothing constrained Preview/ImageCapture/ImageAnalysis to a shared field of view;
+  `PreviewView`'s default `FILL_CENTER` scaling then center-crops what's actually displayed, while
+  `guideFrameImageRect` computed the crop fraction against the captured JPEG's FULL raw width/
+  height — a larger denominator than what's on screen, for the same `GUIDE_FRAME_WIDTH_RATIO`
+  fraction. Fixed: `bindPreviewCaptureAnalysis` (`ScannerScreen.kt`) builds a `UseCaseGroup` with
+  `previewView.viewPort` as the shared `ViewPort` (falls back to the old vararg bind when
+  `viewPort` is null — view not yet laid out), and `ImageProxyExt.kt`'s `toCroppedBitmap()` now
+  crops against `ImageProxy.cropRect` (ViewPort-aligned) instead of the full frame, repositioning
+  via a new `ImageRect.offsetBy`. No-`ViewPort` path is a provable no-op (byte-identical to pre-fix
+  behavior). `testDebugUnitTest --rerun-tasks`: 289/289 pass (286 baseline + 3 new), fresh XML.
+  `assembleDebug --rerun-tasks`: clean. **Still needs Skyler's real S26 Ultra to visually confirm**
+  the crop now matches the guide box on screen — no real multi-camera hardware in this sandbox to
+  check that visually, same standing constraint as every other scanner fix. Full detail:
+  `.pipeline_archive/2026-09-09-scanner-crop-guide-mismatch/` (pending archive).
+
+### New, found during this session's Reviewer pass (P2, not fixed — deferred by Reviewer's own call)
+
+- **`ImageProxyExt.kt`'s `toCroppedBitmap()` can throw `IllegalArgumentException` on a degenerate
+  (zero-width/height) `cropRect`, bypassing the function's own graceful-fallback guard.** New
+  failure surface introduced by the crop-rect fix above: `guideFrameImageRect(cropWidth, cropHeight,
+  ...)` is called outside the `runCatching` block, and `ScannerScreen.kt`'s internal
+  `coerceIn(0, rawWidth - 1)` throws if `cropWidth == 0` (`rawWidth - 1` becomes `-1`,
+  `coerceIn(0, -1)` is an empty range). Pre-fix this was unreachable (`ImageProxy.width`/`.height`
+  are never zero for a real frame); a `ViewPort`-derived `cropRect` is structurally new input.
+  Contained — `ScannerViewModel.kt:90`'s outer `catch(Exception)` prevents a crash, just surfaces a
+  confusing `ScannerState.Error` instead of the intended uncropped-fallback behavior. Likelihood
+  low (a real `ViewPort` on a laid-out `PreviewView` shouldn't compute a zero-area `cropRect` under
+  normal CameraX operation) — Reviewer's own call was ship-as-is, defer. Cheap fix when picked up:
+  early-return before calling `guideFrameImageRect` if `cropWidth <= 0 || cropHeight <= 0`.
+
+### Recurred this session (same signature as session 10/11, still not root-caused, still
+self-resolving — now with one added data point)
+
+- **The Gradle `java.io.IOException: Unable to establish loopback connection` wall came back this
+  session**, mid-pipeline, then went away again without any fix applied — genuinely intermittent,
+  not deterministic. New data point: it failed 5/5 times for a Tester-stage subagent while
+  succeeding twice in direct orchestrator-run commands in the same session, same repo state, same
+  `.ps1`/env-var invocation pattern — rules out anything about the diff or the command itself,
+  points at some session/process-level resource contention (Tailscale adapter confirmed `Up` both
+  times it was checked, still unconfirmed as the actual cause, not acted on). **New, confirmed-false
+  lead: `--no-daemon` is not a fix** — this repo's `gradle.properties` already sets
+  `org.gradle.daemon=false` project-wide, so the flag is a no-op here; a session that appeared to
+  "fix" it with `--no-daemon` was almost certainly just catching the intermittent window, not
+  actually changing anything. Don't credit `--no-daemon` as a real fix if this recurs again.
+
 ## Refreshed — 2026-09-09 (session 11)
 
 ### Fixed this session (build-confirmed, not just code-reviewed)

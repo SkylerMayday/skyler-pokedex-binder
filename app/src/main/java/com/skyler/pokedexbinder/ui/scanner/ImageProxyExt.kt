@@ -26,7 +26,17 @@ fun ImageProxy.toCroppedBitmap(): Bitmap {
     Log.i("ScannerFocus", "captured format=$format planes=${planes.size}")
     val decoded = toBitmap()
 
-    val rect = guideFrameImageRect(width, height, imageInfo.rotationDegrees)
+    // ImageProxy.getCropRect() is defined in the same pre-rotation buffer coordinate space as
+    // width/height, and toBitmap()'s decoded bitmap is always the FULL pre-rotation buffer
+    // regardless of cropRect. Field arithmetic (right-left / bottom-top), NOT crop.width()/
+    // crop.height() method calls — Rect's methods are not confirmed safe under this project's
+    // non-Robolectric unit-test stub jar; field access is a direct GETFIELD, always safe.
+    val crop = cropRect
+    val cropWidth = crop.right - crop.left
+    val cropHeight = crop.bottom - crop.top
+    val rect = guideFrameImageRect(cropWidth, cropHeight, imageInfo.rotationDegrees)
+        .offsetBy(crop.left, crop.top)
+
     if (rect.width <= 0 || rect.height <= 0) {
         Log.w(
             "ScannerFocus",

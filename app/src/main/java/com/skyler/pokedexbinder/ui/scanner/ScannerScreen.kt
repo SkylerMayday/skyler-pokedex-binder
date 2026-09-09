@@ -194,6 +194,19 @@ internal fun guideFrameImageRect(rawWidth: Int, rawHeight: Int, rotationDegrees:
     return ImageRect(left, top, right, bottom)
 }
 
+// Repositions an ImageRect computed relative to a crop region's own (0,0) origin into that
+// region's actual position within a larger coordinate space (e.g. ImageProxy.cropRect's
+// left/top within the full decoded-bitmap frame). Zero deltas are a no-op — used by
+// ImageProxyExt.toCroppedBitmap() to keep today's full-frame behavior byte-identical when no
+// ViewPort constrains the crop.
+internal fun ImageRect.offsetBy(deltaLeft: Int, deltaTop: Int): ImageRect =
+    ImageRect(
+        left = left + deltaLeft,
+        top = top + deltaTop,
+        right = right + deltaLeft,
+        bottom = bottom + deltaTop
+    )
+
 // ------- Card frame overlay ---------------------------------------------------
 
 @Composable
@@ -650,6 +663,36 @@ private fun CameraPreview(
             future.addListener({
                 val provider = future.get()
 
+                // Constrains preview/capture/analysis to one shared field of view via the
+                // PreviewView's own ViewPort, so ImageProxy.cropRect (consumed by
+                // ImageProxyExt.toCroppedBitmap()) reflects what PreviewView actually displays
+                // instead of the full sensor frame. Falls back to the plain vararg bind (today's
+                // behavior) when previewView.viewPort is still null — same defensive shape as
+                // requestFocusAndMetering's existing previewView.width == 0 guard, since viewPort
+                // is only non-null once the view has been laid out.
+                fun bindPreviewCaptureAnalysis(
+                    preview: Preview,
+                    capture: ImageCapture,
+                    analysis: ImageAnalysis
+                ): Camera {
+                    val viewPort = previewView.viewPort
+                    return if (viewPort != null) {
+                        val group = UseCaseGroup.Builder()
+                            .setViewPort(viewPort)
+                            .addUseCase(preview)
+                            .addUseCase(capture)
+                            .addUseCase(analysis)
+                            .build()
+                        Log.i("ScannerFocus", "binding via UseCaseGroup with shared ViewPort")
+                        provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, group)
+                    } else {
+                        Log.i("ScannerFocus", "previewView.viewPort null, binding via plain vararg (no shared FOV)")
+                        provider.bindToLifecycle(
+                            lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture, analysis
+                        )
+                    }
+                }
+
                 // Camera2Interop.setPhysicalCameraId is @RequiresApi(28) — below that level the
                 // whole ultrawide-selection path is skipped and this behaves exactly like "no
                 // ultrawide found" always has (plain DEFAULT_BACK_CAMERA bind).
@@ -673,9 +716,7 @@ private fun CameraPreview(
 
                 provider.unbindAll()
                 camera = runCatching {
-                    provider.bindToLifecycle(
-                        lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture, analysis
-                    )
+                    bindPreviewCaptureAnalysis(preview, capture, analysis)
                 }.getOrElse { firstError ->
                     if (ultrawideId == null) {
                         // Nothing left to retry differently — log and degrade to no camera rather
@@ -701,9 +742,7 @@ private fun CameraPreview(
                         onImageCaptureReady(capture)
                         provider.unbindAll()
                         runCatching {
-                            provider.bindToLifecycle(
-                                lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture, analysis
-                            )
+                            bindPreviewCaptureAnalysis(preview, capture, analysis)
                         }.getOrElse { secondError ->
                             Log.w("ScannerFocus", "fallback default-back-camera bind also threw", secondError)
                             null

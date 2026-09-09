@@ -166,6 +166,7 @@ class ScannerFocusIndependentVerificationTest {
         every { proxy.imageInfo } returns info
         every { info.rotationDegrees } returns rotationDegrees
         every { proxy.toBitmap() } returns decodedBitmap
+        every { proxy.cropRect } returns testRect(0, 0, width, height)
         return proxy
     }
 

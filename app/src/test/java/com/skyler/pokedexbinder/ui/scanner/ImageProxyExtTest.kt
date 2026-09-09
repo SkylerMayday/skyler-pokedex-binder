@@ -2,6 +2,7 @@ package com.skyler.pokedexbinder.ui.scanner
 
 import android.graphics.Bitmap
 import android.graphics.ImageFormat
+import android.graphics.Rect
 import android.util.Log
 import androidx.camera.core.ImageInfo
 import androidx.camera.core.ImageProxy
@@ -46,7 +47,15 @@ class ImageProxyExtTest {
     // something this project's code owns or needs to re-verify), so that call is stubbed
     // directly — width/height/format/planes are still set to a realistic single-plane shape so
     // this fixture documents and exercises the actual production shape, not just the crop math.
-    private fun jpegImageProxy(width: Int = 1000, height: Int = 2000, rotationDegrees: Int = 0): ImageProxy {
+    // cropRect defaults to the full frame (Rect(0,0,width,height)) — matches ImageProxy's own
+    // documented default when no ViewPort constrains the bind, and keeps every pre-existing test
+    // below exercising the byte-identical-to-before no-op case (offsetBy(0,0)).
+    private fun jpegImageProxy(
+        width: Int = 1000,
+        height: Int = 2000,
+        rotationDegrees: Int = 0,
+        cropRect: Rect = testRect(0, 0, width, height)
+    ): ImageProxy {
         val proxy = mockk<ImageProxy>()
         val info = mockk<ImageInfo>()
         val plane = mockk<ImageProxy.PlaneProxy>()
@@ -57,6 +66,7 @@ class ImageProxyExtTest {
         every { proxy.imageInfo } returns info
         every { info.rotationDegrees } returns rotationDegrees
         every { proxy.toBitmap() } returns decodedBitmap
+        every { proxy.cropRect } returns cropRect
         return proxy
     }
 
@@ -80,6 +90,26 @@ class ImageProxyExtTest {
             .toCroppedBitmap()
 
         assertSame(decodedBitmap, result)
+    }
+
+    // ViewPort-constrained case: cropRect is smaller than and offset within the full frame
+    // (1200x2400 full frame, 1000x2000 crop at origin (100,200)). Expected rect is
+    // guideFrameImageRect(1000, 2000, 0) — left=340 top=777 width=320 height=446, per
+    // ScannerScreenTest's own hand-computed rotation-0 case — shifted by (100,200):
+    // left=440 top=977 width=320 height=446 (offsetBy leaves width/height unchanged).
+    @Test
+    fun `nonzero cropRect offset shifts guideFrameImageRect by cropRect origin`() {
+        val cropped = mockk<Bitmap>()
+        every { Bitmap.createBitmap(decodedBitmap, 440, 977, 320, 446) } returns cropped
+
+        val result = jpegImageProxy(
+            width = 1200,
+            height = 2400,
+            rotationDegrees = 0,
+            cropRect = testRect(100, 200, 1100, 2200)
+        ).toCroppedBitmap()
+
+        assertSame(cropped, result)
     }
 
     @Test

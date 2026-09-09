@@ -52,6 +52,7 @@ class P0_2_FreshVerificationTest {
         every { proxy.format } returns ImageFormat.JPEG
         every { proxy.imageInfo } returns info
         every { info.rotationDegrees } returns 0
+        every { proxy.cropRect } returns testRect(0, 0, 1000, 2000)
         return proxy
     }
 

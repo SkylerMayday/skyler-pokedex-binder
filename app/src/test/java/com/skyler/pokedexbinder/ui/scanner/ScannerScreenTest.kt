@@ -224,4 +224,26 @@ class ScannerScreenTest {
         assertEquals(0, rect.top)
         assertEquals(50, rect.bottom)
     }
+
+    // ---- ImageRect.offsetBy ----
+
+    @Test
+    fun `offsetBy zero deltas returns an equal ImageRect (no-op backward-compat case)`() {
+        val rect = guideFrameImageRect(rawWidth = 1000, rawHeight = 2000, rotationDegrees = 0)
+        assertEquals(rect, rect.offsetBy(deltaLeft = 0, deltaTop = 0))
+    }
+
+    @Test
+    fun `offsetBy nonzero deltas shifts all four bounds, leaves width and height unchanged`() {
+        val rect = guideFrameImageRect(rawWidth = 1000, rawHeight = 2000, rotationDegrees = 0)
+
+        val shifted = rect.offsetBy(deltaLeft = 100, deltaTop = 200)
+
+        assertEquals(rect.left + 100, shifted.left)
+        assertEquals(rect.top + 200, shifted.top)
+        assertEquals(rect.right + 100, shifted.right)
+        assertEquals(rect.bottom + 200, shifted.bottom)
+        assertEquals(rect.width, shifted.width)
+        assertEquals(rect.height, shifted.height)
+    }
 }
