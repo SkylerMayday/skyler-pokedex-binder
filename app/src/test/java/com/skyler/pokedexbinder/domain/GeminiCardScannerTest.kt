@@ -11,12 +11,19 @@ import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.SocketPolicy
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.TimeUnit
+
+private const val SUCCESS_BODY = """
+    {"candidates":[{"content":{"parts":[{"text":"{\"name\":\"Pikachu\",\"number\":\"25\",\"setTotal\":\"185\",\"hp\":\"60\",\"artist\":\"Atsuko Nishida\"}"}]}}]}
+"""
 
 class GeminiCardScannerTest {
 
@@ -60,9 +67,7 @@ class GeminiCardScannerTest {
 
     @Test
     fun `scan returns ParsedCardInfo on success`() = runTest {
-        server.enqueue(MockResponse().setBody("""
-            {"candidates":[{"content":{"parts":[{"text":"{\"name\":\"Pikachu\",\"number\":\"25\",\"setTotal\":\"185\",\"hp\":\"60\",\"artist\":\"Atsuko Nishida\"}"}]}}]}
-        """.trimIndent()))
+        server.enqueue(MockResponse().setBody(SUCCESS_BODY.trimIndent()))
 
         val result = scanner.scan(bitmap, "test-key")
 
@@ -98,9 +103,57 @@ class GeminiCardScannerTest {
 
     @Test
     fun `scan throws IOException on 500`() = runTest {
-        server.enqueue(MockResponse().setResponseCode(500))
+        // MAX_SCAN_RETRIES + 1 = 3 total attempts before the retry budget is exhausted.
+        repeat(3) { server.enqueue(MockResponse().setResponseCode(500)) }
         var caught: Exception? = null
         try { scanner.scan(bitmap, "test-key") } catch (e: Exception) { caught = e }
         assert(caught is java.io.IOException) { "Expected IOException but got $caught" }
+        assertEquals(3, server.requestCount)
+    }
+
+    @Test
+    fun `scan retries once on 503 then succeeds`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(503))
+        server.enqueue(MockResponse().setBody(SUCCESS_BODY.trimIndent()))
+
+        val result = scanner.scan(bitmap, "test-key")
+
+        assertEquals("Pikachu", result.cardName)
+        assertEquals(2, server.requestCount)
+    }
+
+    @Test
+    fun `scan retries once on timeout then succeeds`() = runTest {
+        val shortTimeoutClient = OkHttpClient.Builder()
+            .readTimeout(200, TimeUnit.MILLISECONDS)
+            .build()
+        scanner = GeminiCardScanner(shortTimeoutClient, Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build())
+            .also { it.baseUrl = server.url("/").toString() }
+        server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE))
+        server.enqueue(MockResponse().setBody(SUCCESS_BODY.trimIndent()))
+
+        val result = scanner.scan(bitmap, "test-key")
+
+        assertEquals("Pikachu", result.cardName)
+        assertEquals(2, server.requestCount)
+    }
+
+    @Test
+    fun `scan rethrows original timeout after retries exhausted`() = runTest {
+        val shortTimeoutClient = OkHttpClient.Builder()
+            .readTimeout(200, TimeUnit.MILLISECONDS)
+            .build()
+        scanner = GeminiCardScanner(shortTimeoutClient, Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build())
+            .also { it.baseUrl = server.url("/").toString() }
+        repeat(3) { server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE)) }
+
+        var caught: Exception? = null
+        try { scanner.scan(bitmap, "test-key") } catch (e: Exception) { caught = e }
+
+        assertTrue(
+            "Expected SocketTimeoutException but got $caught",
+            caught is java.net.SocketTimeoutException
+        )
+        assertEquals(3, server.requestCount)
     }
 }

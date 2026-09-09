@@ -5,17 +5,23 @@ import android.util.Base64
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.net.SocketTimeoutException
 import javax.inject.Inject
 
 class RateLimitException : IOException("Rate limited by Gemini API")
+
+private const val MAX_SCAN_RETRIES = 2       // extra attempts after the first; 3 total attempts
+private const val SCAN_RETRY_DELAY_MS = 500L // fixed delay between attempts; retune like GUIDE_FRAME_WIDTH_RATIO
 
 @JsonClass(generateAdapter = true)
 data class GeminiResponse(val candidates: List<GeminiCandidate>? = null)
@@ -68,9 +74,7 @@ class GeminiCardScanner @Inject constructor(
             .post(body.toRequestBody("application/json".toMediaType()))
             .build()
 
-        val response = okHttpClient.newCall(request).execute()
-        if (response.code == 429) throw RateLimitException()
-        if (!response.isSuccessful) throw IOException("Gemini error: ${response.code}")
+        val response = executeWithRetry(request)
 
         val geminiResponse = responseAdapter.fromJson(response.body!!.string())
             ?: throw IOException("Empty Gemini response")
@@ -87,6 +91,35 @@ class GeminiCardScanner @Inject constructor(
             artist = result.artist,
             dexNumber = result.dexNumber
         )
+    }
+
+    /** Retries only on a 5xx response or a client-side [SocketTimeoutException]; 429 and other failures fail immediately. */
+    private suspend fun executeWithRetry(request: Request): Response {
+        var lastTimeout: SocketTimeoutException? = null
+        for (attempt in 0..MAX_SCAN_RETRIES) {
+            val response = try {
+                okHttpClient.newCall(request).execute()
+            } catch (e: SocketTimeoutException) {
+                lastTimeout = e
+                if (attempt < MAX_SCAN_RETRIES) {
+                    delay(SCAN_RETRY_DELAY_MS)
+                    continue
+                }
+                throw e
+            }
+            if (response.code == 429) throw RateLimitException()
+            if (response.code in 500..599) {
+                response.close() // must close before retrying — avoid leaking the connection
+                if (attempt < MAX_SCAN_RETRIES) {
+                    delay(SCAN_RETRY_DELAY_MS)
+                    continue
+                }
+                throw IOException("Gemini error: ${response.code}")
+            }
+            if (!response.isSuccessful) throw IOException("Gemini error: ${response.code}")
+            return response
+        }
+        throw lastTimeout ?: IOException("Gemini scan failed after retries")
     }
 
     private fun bitmapToBase64(bitmap: Bitmap): String {
