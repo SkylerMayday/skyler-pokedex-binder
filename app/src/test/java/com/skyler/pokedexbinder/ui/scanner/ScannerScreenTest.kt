@@ -166,55 +166,59 @@ class ScannerScreenTest {
 
     // 4000x3000 (a real landscape camera-sensor buffer shape, width > height — matches this
     // file's own "Camera delivers landscape frames even in portrait mode" comment on
-    // detectCardInFrame) rather than the old 1000x2000. At GUIDE_FRAME_WIDTH_RATIO=0.5 (bumped
-    // 2026-09-10), the old dims' rotation-90/270 cases clamp into the degenerate path (already
-    // covered separately below) instead of demonstrating a clean axis-swap — these dims don't.
+    // detectCardInFrame) rather than 1000x2000. At GUIDE_FRAME_WIDTH_RATIO=0.5 these dims kept
+    // rotation-0/180 clean (no clamping) while 90/270 stayed clean too, each 1px apart from odd-
+    // gap rounding. At 0.75 (bumped 2026-09-10, session 14) the balance flips: guideH now exceeds
+    // this raw HEIGHT (3000) at rotation 0/180's un-rotated 4:3 orientation, so those two now
+    // saturate into the same clamped path the "extreme aspect ratio" test below already covers —
+    // still correct output, just no longer illustrating a clean unclamped swap. 90/270 (the
+    // orientation every real capture actually uses, per the comment above) stay clean, and their
+    // now-even 750/858-unit splits divide exactly, so both directions land on identical numbers
+    // instead of the old 1px-apart pair — also correct, not a regression, just a property of this
+    // ratio's specific arithmetic with these dims.
 
     @Test
-    fun `guideFrameImageRect rotation 0 centers rect in raw coordinates`() {
+    fun `guideFrameImageRect rotation 0 saturates the clamp path at this ratio (real captures never use rotation 0)`() {
         val rect = guideFrameImageRect(rawWidth = 4000, rawHeight = 3000, rotationDegrees = 0)
-        assertEquals(1000, rect.left)
-        assertEquals(103, rect.top)
-        assertEquals(3000, rect.right)
-        assertEquals(2896, rect.bottom)
-        assertEquals(2000, rect.width)
-        assertEquals(2793, rect.height)
+        assertEquals(500, rect.left)
+        assertEquals(0, rect.top)
+        assertEquals(3500, rect.right)
+        assertEquals(3000, rect.bottom)
+        assertEquals(3000, rect.width)
+        assertEquals(3000, rect.height)
     }
 
     @Test
     fun `guideFrameImageRect rotation 90 axis-swaps via 4-corner remap, not a naive swap`() {
         val rect = guideFrameImageRect(rawWidth = 4000, rawHeight = 3000, rotationDegrees = 90)
-        assertEquals(952, rect.left)
-        assertEquals(750, rect.top)
-        assertEquals(3047, rect.right)
-        assertEquals(2250, rect.bottom)
+        assertEquals(429, rect.left)
+        assertEquals(375, rect.top)
+        assertEquals(3571, rect.right)
+        assertEquals(2625, rect.bottom)
     }
 
     @Test
-    fun `guideFrameImageRect rotation 270 axis-swaps the opposite direction from 90`() {
+    fun `guideFrameImageRect rotation 270 lands on the same rect as 90 at this ratio (even split, no 1px rounding gap)`() {
         val rect = guideFrameImageRect(rawWidth = 4000, rawHeight = 3000, rotationDegrees = 270)
-        assertEquals(953, rect.left)
-        assertEquals(750, rect.top)
-        assertEquals(3048, rect.right)
-        assertEquals(2250, rect.bottom)
+        assertEquals(429, rect.left)
+        assertEquals(375, rect.top)
+        assertEquals(3571, rect.right)
+        assertEquals(2625, rect.bottom)
     }
 
     @Test
-    fun `guideFrameImageRect rotation 180 mirrors the centered rect, off by the same 1px an odd gap already put between rotation 0's own top and bottom margins`() {
+    fun `guideFrameImageRect rotation 180 saturates the clamp path identically to rotation 0 at this ratio`() {
         // NOT a bug (this file already fixed the real version of this class of bug once — see
-        // ImageRect's own doc comment on the exclusive/inclusive conversion). With these
-        // dimensions, (dispH - guideH) is ODD (207), so rotation 0's own dTop/dBot split is
-        // already asymmetric by construction (103 above the box, 104 below it) before any
-        // rotation math runs — Int division truncates 103.5 to 103. Rotating 180 degrees swaps
-        // which margin becomes "top", so the mapped top/bottom shift by that same pre-existing
-        // 1px the un-rotated centering already had, not an error introduced by the rotation
-        // transform. (The original 1000x2000 test dims exactly mirrored because that gap
-        // happened to be even — a property of those specific numbers, not a general guarantee.)
+        // ImageRect's own doc comment on the exclusive/inclusive conversion). At
+        // GUIDE_FRAME_WIDTH_RATIO=0.75, rotation 0 and 180 both fully saturate coerceIn's clamp
+        // on these dims (see header comment above) — the mapped rect is identical either way, not
+        // an off-by-1 mirror like it was at 0.5. Still correct, just no longer demonstrating a
+        // near-symmetric mirror since there's no unclamped margin left to be asymmetric about.
         val rect = guideFrameImageRect(rawWidth = 4000, rawHeight = 3000, rotationDegrees = 180)
-        assertEquals(1000, rect.left)
-        assertEquals(104, rect.top)
-        assertEquals(3000, rect.right)
-        assertEquals(2897, rect.bottom)
+        assertEquals(500, rect.left)
+        assertEquals(0, rect.top)
+        assertEquals(3500, rect.right)
+        assertEquals(3000, rect.bottom)
     }
 
     @Test

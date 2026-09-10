@@ -50,21 +50,23 @@ import java.util.concurrent.TimeUnit
 
 // ------- Card detection -------------------------------------------------------
 
-// Guide frame width as a fraction of display-space width. The 0.32 value below (kept in this
-// comment's history, not live) was calibrated for the MAIN lens's documented 18cm minimum focus
-// distance — stale since 2026-09-08's fix (this file's own "Scanner Camera Architecture" history)
-// switched the scanner to bind the PHYSICAL ULTRAWIDE lens instead, whose real minimum focus
-// distance is dramatically closer. Confirmed 2026-09-10 via this file's own live
-// requestedPhysicalMinFocusDistance diagnostic (logged in diopters, per Android's actual
-// CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE contract — distance_m = 1 / diopters,
-// verified against the real API docs, not assumed): 20.0 diopters → 1/20.0 = 0.05m = 5cm, vs. the
-// 18cm figure this ratio was built around. Bumped to 0.5 (card fills half the frame width instead
-// of a third) — targets a working distance of roughly 0.425 × (17.5 / 15) ≈ 0.5, i.e. ~15cm, still
-// 3x the lens's actual 5cm floor for real margin. First live-tested value, not yet a final
-// calibration — re-tune from here based on Skyler's actual scan results, same as before. Shared by
-// detectCardInFrame's analysis-space sampling and CardFrameOverlay's drawn UI geometry so the two
-// can never drift apart.
-private const val GUIDE_FRAME_WIDTH_RATIO = 0.5f
+// Guide frame width as a fraction of display-space width. History: 0.32 (main-lens 18cm floor,
+// stale once the ultrawide physical lens was bound) -> 0.5 (~15cm target, 3x the ultrawide's real
+// 5cm floor, session 13's first live test). Bumped again 2026-09-10 (session 14) to 0.75 (~10cm
+// target, 2x margin over the 5cm floor) after live-testing 0.5 produced 3 genuine (non-transient)
+// failures in one sitting — Furfrou misread as a different species entirely, Furfrou and Castform
+// both twice failed to OCR the printed card number (parsed.cardNumber came back null all 3 times).
+// Root cause confirmed directly, not guessed: replayed a manually-taken CLOSE-UP photo of the same
+// physical Castform card through this app's own exact Gemini call (same model, same prompt, same
+// 1024px/JPEG-q80 pre-send downscale in GeminiCardScanner.kt) — Gemini read the number correctly
+// (116/172) at that framing, proving Gemini's OCR is not the bottleneck; the app's own capture at
+// 0.5's ~15cm distance was giving Gemini less usable card detail than a tight, confident shot does.
+// A larger ratio means more of the frame (and more real card pixels post-crop) regardless of minor
+// positioning slack. Still first-pass, not final — re-tune again from here if 0.75 makes the
+// ultrawide's autofocus start hunting/failing to lock near its own close-focus floor, or if genuine
+// (non-transient) mismatches keep recurring after this. Shared by detectCardInFrame's analysis-space
+// sampling and CardFrameOverlay's drawn UI geometry so the two can never drift apart.
+private const val GUIDE_FRAME_WIDTH_RATIO = 0.75f
 
 // Standard Pokémon TCG card aspect ratio (88mm x 63mm), portrait. Single source for the value
 // previously triplicated across detectCardInFrame, guideFrameImageRect, and CardFrameOverlay —
@@ -280,7 +282,7 @@ private fun CardFrameOverlay(cardDetected: Boolean, modifier: Modifier = Modifie
                 // in spirit — update both together if the ratio/target distance ever changes.
                 if (!cardDetected) {
                     Text(
-                        text = "Hold card ~6 in (15 cm) back",
+                        text = "Hold card ~4 in (10 cm) back",
                         color = Color.White,
                         style = MaterialTheme.typography.bodySmall,
                         textAlign = TextAlign.Center
