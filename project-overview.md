@@ -336,12 +336,35 @@ confirmed working).
     before calling `guideFrameImageRect` if `cropWidth <= 0 || cropHeight <= 0`, instead of letting
     that call's internal `coerceIn(0, rawWidth - 1)` throw on a degenerate input.
 
-**Status as of 2026-09-10 (end of session 13): no known P0.** Items 1-11 above are all shipped and
-test-verified. Items 1-9 were live-hardware-confirmed in session 12 (real S26 Ultra, `adb logcat -s
-ScannerFocus:* ScannerMatch:*`); items 10-11 are unit-test-verified only as of this session — **not
-yet live-device-confirmed**. `GUIDE_FRAME_WIDTH_RATIO=0.5` (item 9) is still a first live-tested
-value, not final calibration. Skyler's own next step: live-test items 10 (retry) and 9 (ratio)
-together on the real S26 Ultra — see `handoff.md`.
+12. **`GUIDE_FRAME_WIDTH_RATIO` recalibrated again, 0.5 -> 0.75** (`79b8417`, 2026-09-10, session
+    14). Live-testing item 9's 0.5 (~15cm) on the real S26 Ultra produced 3 genuine (non-transient)
+    failures in one sitting: Furfrou misread as a different species entirely (Gemini's own OCR
+    read "Hisuian Zorua"), and Furfrou/Castform both twice failed to OCR the printed card number
+    (`parsed.cardNumber` came back `null` all 3 times) — no 5xx/timeout occurred, so item 10's
+    retry logic got zero exercise this test, still unconfirmed either way. Root cause isolated
+    directly, not guessed: replayed a manually-taken close-up photo of the same physical Castform
+    card through the app's own exact Gemini call (same model/prompt, same 1024px/JPEG-q80
+    pre-send downscale in `GeminiCardScanner.kt`) — Gemini read the number correctly (`116/172`)
+    at that framing, proving Gemini's OCR is not the bottleneck; the app's own capture at 0.5's
+    ~15cm distance was giving Gemini less usable card detail than a tight, confident shot does.
+    Bumped to 0.75 (~10cm target, still 2x margin over the ultrawide's real 5cm focus floor).
+    `ScannerScreenTest.kt`'s rotation-0/180 test dims (4000x3000) now saturate into the same clamp
+    path the extreme-aspect-ratio test already covers at this ratio (real captures never use
+    rotation 0/180 per this file's own "camera delivers landscape frames" comment) — updated
+    comments to say so rather than leave stale claims about a clean unclamped swap. 296/296 unit
+    tests pass (fresh XML), `assembleDebug` clean. **Not yet live-device-confirmed** — same
+    standing constraint, Skyler's own next step.
+
+    Separate finding from the same live-test session, **deferred, not fixed**: the Furfrou/Zorua
+    species misread traces to `SmartThresholdUseCase.evaluate()`/`PerceptualHasher.findBestMatch()`
+    both short-circuiting to auto-high-confidence whenever the search returns exactly 1 candidate,
+    skipping the perceptual-hash visual check entirely. Full detail: `gaps.md`.
+
+**Status as of 2026-09-10 (end of session 14): no known P0.** Items 1-12 above are shipped;
+items 1-9 are live-hardware-confirmed (session 12); items 10-12 are unit-test-verified only —
+**not yet live-device-confirmed**. `GUIDE_FRAME_WIDTH_RATIO=0.75` (item 12) is a first live-tested
+value, not final calibration. Skyler's own next step: live-test on the real S26 Ultra again — see
+`handoff.md`.
 
 **Diagnostic-only logging exists in `ScannerScreen.kt`** (`4bd8bac`) — `Log.i("ScannerFocus", ...)`
 per focus request (elapsed time + `isFocusSuccessful`) and a one-time camera AF-capability log at

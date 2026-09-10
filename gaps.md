@@ -3,6 +3,60 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
+## Refreshed — 2026-09-10 (session 14)
+
+**Audit scope note**: this session touched exactly one production file (`ScannerScreen.kt`, a
+single constant + UI string) plus 2 test files updating fixture values to match — a scoped grep
+for `TODO`/`FIXME`/`XXX` in the touched files found nothing new. Not a full codebase re-audit;
+prior sessions' entries below remain comprehensive as of session 12's own full pass. Most of this
+session was live-device diagnosis (logcat, a real Gemini API dashboard check) and a Gemini quota
+investigation — no code touched by that half of the session.
+
+### Fixed this session
+
+- **`GUIDE_FRAME_WIDTH_RATIO` bumped 0.5 -> 0.75** (`79b8417`) — session 13's 0.5 (~15cm) produced
+  3 genuine failures live-testing on the S26 Ultra (Furfrou misread as a different species, Furfrou
+  and Castform both twice failed to OCR the number). Root cause isolated by replaying a manually-
+  taken close-up photo of the same Castform card through the app's exact Gemini call — Gemini read
+  the number correctly at that framing, ruling out Gemini's OCR itself as the bottleneck. See
+  `project-overview.md`'s Scanner Camera Architecture history, item 12.
+
+### New this session — environment/workflow gap, not a codebase bug
+
+- **The Gemini API key configured in the app's Settings shares a Google Cloud project
+  ("Default Gemini Project" on aistudio.google.com) with an unrelated tool, `Claude-mem`** (a
+  separate Claude Code plugin, nothing to do with this app). Confirmed directly from Skyler's own
+  usage dashboard, not guessed: both consumers show real traffic against the same project on the
+  same day, and both hit real errors the same day (`429 TooManyRequests` for pokedex-binder,
+  `503 ServiceUnavailable` for Claude-mem). Live-reproduced tonight: a brand-new API key generated
+  under the same project hit an immediate `429` on its very first request — a fresh key inherits
+  whatever the project's shared quota already used, so minting a new key doesn't help. Root cause
+  of tonight's "Gemini all out after a few photos" confusion: today's combined request volume
+  (Skyler's own testing + Claude-mem's independent background usage, both on the same shared
+  project) crossed the daily/rate limit — not any inefficiency in this app's own Gemini usage
+  (confirmed only one call site exists, `ScannerViewModel.kt:79`, no retry-on-429, auto-capture
+  properly guarded against double-firing). **Fix, if picked up**: create a separate Google Cloud
+  project + API key dedicated to pokedex-binder on aistudio.google.com, so its quota is never
+  shared with whatever else is using the default project. Not done — Skyler's own call whether to
+  bother, since it's a few manual clicks on his end, not app code.
+
+### New this session, not fixed — deferred, needs Skyler's call
+
+- **`SmartThresholdUseCase.evaluate()` (line 18) and `PerceptualHasher.findBestMatch()` (line 39)
+  both short-circuit to auto-high-confidence whenever `cardSearchRepository.searchByParsedInfo()`
+  returns exactly 1 candidate — skipping all visual verification, including the perceptual hash
+  comparison that exists for exactly this purpose.** Live-reproduced: real Furfrou card, Gemini's
+  own species OCR misread it as "Hisuian Zorua," the search-by-name query (built from that
+  misread) returned exactly 1 candidate for the wrong species, and the app confidently assigned it
+  — nothing in the pipeline ever compared the captured photo against a card image, because the
+  search query itself was already scoped to the wrong Pokémon before any visual check could run.
+  Distinct from the confidence-check regression fixed session 10 (`ff0134c`) — that was a
+  self-referential number check among multiple same-name candidates; this is the single-candidate
+  case having no cross-check at all. Fix would mean computing the perceptual hash distance even at
+  `candidates.size == 1` and gating confidence on a hamming-distance threshold — a new, uncalibrated
+  constant needing real data, same class of decision as `GUIDE_FRAME_WIDTH_RATIO`. One data point so
+  far (n=1) — deferred pending Skyler's call on whether to build it now or wait for it to recur.
+
 ## Refreshed — 2026-09-10 (session 13)
 
 **Audit scope note**: this session touched exactly two files (`GeminiCardScanner.kt`,
