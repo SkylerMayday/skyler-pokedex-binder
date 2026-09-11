@@ -45,8 +45,14 @@ data class GeminiCardResult(
     val dexNumber: Int? = null
 )
 
+// gemini-2.5-flash was retired 2026-09-10: any API key/project created after that date gets a
+// hard 404 ("This model ... is no longer available to new users"), confirmed directly against
+// the real API with Skyler's newly-split-off pokedex-binder key/project. Old keys created before
+// the retirement (e.g. the prior shared "Default Gemini Project") kept working against the old
+// model — the 404 only surfaced once quota-decoupling created a genuinely new key. Google's own
+// error names gemini-3.6-flash as the replacement; confirmed working against the same new key.
 private const val GEMINI_BASE_URL =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent"
 
 class GeminiCardScanner @Inject constructor(
     private val okHttpClient: OkHttpClient,
