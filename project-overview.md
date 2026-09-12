@@ -360,11 +360,48 @@ confirmed working).
     both short-circuiting to auto-high-confidence whenever the search returns exactly 1 candidate,
     skipping the perceptual-hash visual check entirely. Full detail: `gaps.md`.
 
-**Status as of 2026-09-10 (end of session 14): no known P0.** Items 1-12 above are shipped;
-items 1-9 are live-hardware-confirmed (session 12); items 10-12 are unit-test-verified only —
-**not yet live-device-confirmed**. `GUIDE_FRAME_WIDTH_RATIO=0.75` (item 12) is a first live-tested
-value, not final calibration. Skyler's own next step: live-test on the real S26 Ultra again — see
-`handoff.md`.
+13. **`gemini-2.5-flash` swapped for `gemini-3.6-flash`** (`fd7752b`, 2026-09-11, session 14 cont'd).
+    After Skyler split pokedex-binder onto its own Google Cloud project/key (to stop sharing quota
+    with an unrelated tool — see `gaps.md`), every scan started 404ing. Replayed the exact request
+    directly against Google's API and read the real error body (the app itself was discarding it,
+    only surfacing the numeric code) — `gemini-2.5-flash` was retired for any API key/project
+    created after 2026-09-10: *"This model ... is no longer available to new users ... use
+    models/gemini-3.6-flash."* The old shared key (created March 2026) kept working the whole
+    time — the 404 only surfaced once a genuinely new key/project existed to be new-user-gated.
+    Confirmed `gemini-3.6-flash` handles the app's real request shape identically (same close-up
+    Castform photo, same JSON-mode prompt, same 1024px/JPEG-q80 downscale) — not just a trivial
+    text ping. 296/296 unit tests pass, installed and verified.
+
+14. **Session 15 (2026-09-13): the ratio bump and model swap did not fix the reported symptoms —
+    real root cause found, fix spec'd, not yet built.** Live-tested post-13/14: `number=null` on
+    all 3 scans (Castform x2, Furfrou x1), identical to before either fix. Traced two genuinely
+    separate bugs in the confidence pipeline, verified empirically rather than guessed:
+    - `PerceptualHasher.computeHash()` has a real bit-mapping bug (`1L shl i` for `i` up to 255
+      wraps via JVM's masked `Long.shl`, so 4 different pixels OR onto the same bit) — verified by
+      replaying the exact algorithm against 16 real card images fetched live from
+      `api.pokemontcg.io`: several completely different Pokémon hashed identically, average
+      pairwise distance across all 16 was 6.0/64. Has silently degraded every hash-based pick
+      since the hasher was introduced (`498d035`, 2026-05-20).
+    - Independent of that bug: `SmartThresholdUseCase.evaluate()` structurally can never mark high
+      confidence when Gemini's OCR'd number is null, regardless of hash quality — it never
+      consults the hasher's result at all. Fixing the hash alone would not have fixed the reported
+      symptom.
+    Full spec for both, plus the still-open `candidates.size == 1` short-circuit (item 12's
+    deferred finding): `docs/specs/2026-09-13-scanner-hash-confidence.md`. Also researched a
+    competitor (EyeRis) advertising on-device camera matching — confirmed this app's own narrower
+    design (species-via-Gemini + hash-rank same-species candidates) does not require bundling a
+    full card-image database; a "skip Gemini entirely" design was considered and rejected (a
+    64-bit average hash's real measured separation is already thin among ~20 same-species
+    candidates, let alone the full 20,479-card catalog). **Not started — planning only, per
+    Skyler's explicit instruction not to build yet.**
+
+**Status as of 2026-09-13 (end of session 15): no known P0, but the scanner's core "wrong/missing
+card" complaint is still open.** Items 1-13 are shipped; items 1-9 are live-hardware-confirmed
+(session 12); items 10-13 are unit-test/API-verified but the underlying symptom they were each
+aimed at (numbers not OCRing, occasional species misreads) persists after all of them. The real
+fix is scoped in `docs/specs/2026-09-13-scanner-hash-confidence.md`, awaiting Skyler's go-ahead to
+build. `GUIDE_FRAME_WIDTH_RATIO=0.75` and `gemini-3.6-flash` are both still reasonable to keep —
+neither is wrong, they just weren't the actual bottleneck.
 
 **Diagnostic-only logging exists in `ScannerScreen.kt`** (`4bd8bac`) — `Log.i("ScannerFocus", ...)`
 per focus request (elapsed time + `isFocusSuccessful`) and a one-time camera AF-capability log at

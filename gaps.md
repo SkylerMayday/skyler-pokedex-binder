@@ -3,6 +3,56 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
+## Refreshed — 2026-09-13 (session 15)
+
+**Audit scope note**: no production code touched this session — pure investigation (live logcat,
+model-deprecation root-cause, a real empirical hash-collision test against 16 live card images,
+and a spec write-up). One diagnostic-only addition (`ScannerViewModel.kt`, temp capture-to-disk)
+made session 14 remains uncommitted in the working tree.
+
+### New this session — confirmed root cause, real bug, not fixed yet
+
+- **`PerceptualHasher.computeHash()` (`PerceptualHasher.kt:18-33`) has a live bit-mapping bug that
+  has silently degraded every perceptual-hash match since the hasher was introduced
+  (`498d035`, 2026-05-20).** It loops over all 256 pixels of a 16x16 downsample but writes each
+  bit via `1L shl i` — Kotlin/JVM's `Long.shl` masks the shift amount to its low 6 bits, so pixel
+  indices `i` and `i+64`/`i+128`/`i+192` all OR onto the *same* final bit instead of getting
+  independent bits. Not a theoretical concern — **verified empirically**: replayed the exact
+  algorithm (real JVM shift semantics reproduced in Python, not assumed) against 16 real card
+  images fetched live from `api.pokemontcg.io` (8 different Charizard prints + 8 clearly-different
+  Pokémon — Pikachu variants, Eevee, Detective Pikachu). Result: several **completely different
+  cards hash identically** (multiple Pikachu prints + Eevee + Detective Pikachu all collapsed to
+  `0xffffffffffffffff`), average pairwise distance across all 16 genuinely-different cards was
+  **6.0 out of a possible 64**, several pairs at exact distance 0. A corrected 8x8-resize version
+  (matching a real 64-bit capacity, no wraparound) separated the same 16 images to an average of
+  21.5/64 with no exact collisions — confirming the fix works, not just that the bug exists.
+  **Fix spec'd, not built**: `docs/specs/2026-09-13-scanner-hash-confidence.md` (task 1-2).
+- **Separately, structurally: `SmartThresholdUseCase.evaluate()` can never mark high confidence
+  when Gemini's OCR'd card number is null, regardless of hash quality** — it only checks for a
+  `numberMatch` among candidates ([SmartThresholdUseCase.kt:21-33](app/src/main/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCase.kt:21)), never consulting the
+  perceptual hasher's own result at all. This means fixing the hash bug above, by itself, does
+  **not** fix the live-reported "Furfrou/Castform number came back null, got a manual-pick list"
+  symptom — confirmed by tracing the exact code path, not assumed. Needs a genuinely new
+  confidence path (hash margin, not just a bare top-pick) — spec'd as tasks 3-6 in the same doc.
+  Both this and the `candidates.size == 1` short-circuit below (session 14 entry, unchanged) are
+  now covered by one spec rather than two separate ad-hoc fixes.
+- **Live-tested since session 14's fixes shipped: neither `GUIDE_FRAME_WIDTH_RATIO=0.75` nor the
+  `gemini-3.6-flash` model swap resolved the original reported symptoms.** 3 scans post-install
+  (Castform x2, Furfrou x1) all still returned `number=null`, identical to the pre-fix behavior.
+  Session 14's own entries below describing the ratio bump as addressing this are **superseded** —
+  the ratio bump was a reasonable, well-evidenced hypothesis (confirmed Gemini *can* read the
+  number given a good enough photo) but did not translate into the live auto-capture pipeline
+  actually producing that quality. Root cause of *why* the live capture still underperforms a
+  manual photo remains open — the session-14 temp diagnostic (captures every scan to
+  `Android/data/com.skyler.pokedexbinder/files/scan_debug_*.jpg`, see `ScannerViewModel.kt`'s
+  uncommitted diagnostic block) exists specifically to answer this once more real scans are taken.
+- **Competitive research note (informational, not a gap)**: looked at EyeRis (a shipped competitor,
+  App Store id6789088141) — it advertises on-device camera matching rather than cloud OCR.
+  Verified this does *not* require bundling a full card-image database for this app's own
+  narrower design (species-via-Gemini + hash-rank same-species candidates reuses the existing
+  per-scan candidate-fetch flow, no new data pipeline) — full detail and the rejected "skip Gemini
+  entirely" alternative in `docs/specs/2026-09-13-scanner-hash-confidence.md`.
+
 ## Refreshed — 2026-09-10 (session 14)
 
 **Audit scope note**: this session touched exactly one production file (`ScannerScreen.kt`, a
@@ -19,7 +69,10 @@ investigation — no code touched by that half of the session.
   and Castform both twice failed to OCR the number). Root cause isolated by replaying a manually-
   taken close-up photo of the same Castform card through the app's exact Gemini call — Gemini read
   the number correctly at that framing, ruling out Gemini's OCR itself as the bottleneck. See
-  `project-overview.md`'s Scanner Camera Architecture history, item 12.
+  `project-overview.md`'s Scanner Camera Architecture history, item 12. **Update, session 15: this
+  did not resolve the live symptom** — post-install scans still returned `number=null`. See session
+  15's entry above; the real fix path is now the hash-margin confidence spec, not further ratio
+  tuning.
 
 ### New this session — environment/workflow gap, not a codebase bug
 

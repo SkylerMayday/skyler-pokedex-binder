@@ -1,127 +1,114 @@
-# Handoff — Session 14 (2026-09-10)
+# Handoff — Session 15 (2026-09-11 to 09-13, continuation of session 14)
 
 ## 1. Goals
 
-Continuation from session 13's own next-steps list: Skyler live-tested items 9 (`GUIDE_FRAME_
-WIDTH_RATIO=0.5`) and 10 (Gemini retry) together on his real S26 Ultra and reported back: "furfrou:
-one wrong result, gave me a list once / castform: gave me a list twice." Diagnosed via real device
-logcat (not guessed), fixed the ratio, shipped, installed to device — then live-testing further was
-blocked by a Gemini API quota wall, root-caused down to a shared Google Cloud project rather than
-anything in this app, and deferred to tomorrow by Skyler's own choice.
+Continuation from session 14: installed the `GUIDE_FRAME_WIDTH_RATIO=0.75` build, then chased a
+live chain of real problems as Skyler actually tried to use it — a Gemini API 404 (caused by his
+own quota-decoupling work between sessions), then a deep dive into whether a hash-based/on-device
+matching approach (inspired by a competitor app, EyeRis) could replace Gemini as the primary
+identification path. Ended with Skyler explicitly deferring the build and asking to spec it,
+log it, and wrap up.
 
 ## 2. Current State
 
-### Item 9 re-tune — `GUIDE_FRAME_WIDTH_RATIO` 0.5 -> 0.75: fixed, committed (`79b8417`), pushed, installed
+### `gemini-2.5-flash` → `gemini-3.6-flash` model swap: fixed, committed (`fd7752b`), pushed, installed
 
-Diagnosed from real logcat pulled off Skyler's connected S26 Ultra: 3 genuine (non-transient)
-failures in the 0.5 live test — Furfrou misread as "Hisuian Zorua" (a different species entirely),
-and Furfrou + Castform both twice failed to OCR the printed card number (`parsed.cardNumber` came
-back `null` all 3 times, `search candidates=20`/`22` each time, low confidence, manual-pick list
-shown). No 5xx/timeout occurred, so item 10's retry logic got zero exercise this test — still
-unconfirmed either way.
+Skyler decoupled pokedex-binder onto its own Google Cloud project/key (per session 14's quota
+finding) between sessions. Every scan then 404'd. Root-caused by replaying the exact request
+directly against Google's API and reading the real error body (the app itself only surfaces the
+numeric code, discards the message) — `gemini-2.5-flash` was retired for any API key/project
+created after 2026-09-10, Google's own error names `gemini-3.6-flash` as the replacement. The old
+shared key (created March 2026) had kept working the whole time; the 404 only appeared once a
+genuinely new key/project existed to be new-user-gated. Confirmed the new model handles the app's
+real request shape (image + JSON-mode prompt, not just a trivial text ping) before shipping.
+296/296 tests pass, installed and verified live.
 
-Root cause of the number-OCR failures isolated **directly, not guessed**: at Skyler's own
-suggestion, replayed a manually-taken close-up photo of the same physical Castform card through
-the app's exact Gemini call (same model/prompt, same 1024px/JPEG-q80 pre-send downscale from
-`GeminiCardScanner.kt`, run via a scratch PowerShell script using Skyler's API key) — Gemini read
-the number correctly (`116/172`) at that framing. Proved Gemini's OCR is not the bottleneck; the
-app's own capture at 0.5's ~15cm distance was giving Gemini less usable card detail than a tight,
-confident shot does.
+### Real root cause of the persisting scanner symptom: found, spec'd, NOT built
 
-Fixed: bumped `GUIDE_FRAME_WIDTH_RATIO` to 0.75 (~10cm target, still 2x margin over the ultrawide's
-real 5cm focus floor). Test fixtures updated to match — not just the numbers, but the comments:
-`ScannerScreenTest.kt`'s 4000x3000 rotation-0/180 test dims now saturate into the same clamp path
-the extreme-aspect-ratio test already covers (real captures never use rotation 0/180 per this
-file's own "camera delivers landscape frames" comment), and 90/270 now land on identical numbers
-(even split, no 1px rounding gap) instead of the old 1px-apart pair — both correct, the stale
-"clean unclamped swap" comments were rewritten rather than left claiming something no longer true.
-Cross-validated the new expected values against real JUnit failure output (first-assertion actuals)
-before trusting the hand-derived corner-remap math for the rest. `testDebugUnitTest --rerun-tasks`:
-296/296 pass (fresh XML). `assembleDebug --rerun-tasks`: clean. Installed to the real device
-(`installDebug`, confirmed "Installed on 1 device" against `SM-S948B`).
+Skyler live-tested after both session-14 fixes (ratio 0.75, model swap) and got the identical
+`number=null` failure on all 3 scans (Castform x2, Furfrou x1) — neither fix touched the actual
+bottleneck. Traced two distinct, verified (not guessed) root causes:
 
-**Not yet live-device-confirmed** at 0.75 — blocked on tomorrow's test (see Next Steps).
+1. **`PerceptualHasher.computeHash()` has a real, live bit-mapping bug** — `1L shl i` for `i` up to
+   255 wraps via JVM's masked `Long.shl` (shift amount mod 64), so 4 different pixels OR onto the
+   same final bit instead of each getting an independent one. Verified empirically: replayed the
+   exact algorithm (real JVM shift semantics, not assumed) against 16 real card images fetched
+   live from `api.pokemontcg.io` (8 Charizard prints + 8 clearly-different Pokémon) — several
+   completely different cards hashed identically, average pairwise distance 6.0/64. A corrected
+   8x8-resize version (matching a real 64-bit capacity) separated the same 16 images to 21.5/64
+   average, no collisions — confirms the fix works, not just that the bug exists. Has silently
+   degraded every hash-based pick since the hasher was introduced (`498d035`, 2026-05-20).
+2. **Independent of the bug above: `SmartThresholdUseCase.evaluate()` structurally can never mark
+   high confidence when Gemini's number is null**, no matter how good the hash is — it only checks
+   a `numberMatch` among candidates, never consults the hasher's own result at all. This is why
+   fixing #1 alone would not have fixed the reported symptom — confirmed by tracing the exact code
+   path, not assumed.
 
-### Zorua species-misread bug — root-caused, NOT fixed, deferred pending Skyler's call
+Also researched a shipped competitor (EyeRis, App Store id6789088141) at Skyler's request — it
+advertises on-device camera matching rather than cloud OCR. Verified this app's own narrower
+design (keep Gemini for species ID, hash-rank same-species candidates) does **not** require
+bundling a full card-image database — it reuses the existing per-scan candidate-fetch flow.
+A more ambitious "skip Gemini entirely, match blind against the full catalog" design was
+considered and explicitly rejected: verified `api.pokemontcg.io` alone has 20,479 cards, and the
+hash's own measured separation is already thin among ~20 same-species candidates — full-catalog
+matching with a plain 64-bit average hash would be materially worse, and would need a trained
+embedding model (a much bigger, separate project) to work reliably at that scale.
 
-Separate, distinct root cause from the number-OCR issue above. `SmartThresholdUseCase.evaluate()`
-(line 18) and `PerceptualHasher.findBestMatch()` (line 39) both short-circuit to auto-high-
-confidence whenever the search returns exactly 1 candidate — skipping the perceptual-hash visual
-check entirely, including on that 1-candidate path. Live-reproduced: Gemini's own species OCR
-misread the Furfrou card as "Hisuian Zorua"; the search-by-name query (already built from that
-wrong species) returned exactly 1 candidate; the app confidently assigned it. Nothing in the
-pipeline ever compared the captured photo against a card image, because the search was already
-scoped to the wrong Pokémon before any visual check could run. Fix would need computing the
-perceptual hash distance even at `candidates.size == 1` and gating confidence on a hamming-distance
-threshold — a new, uncalibrated constant, same class of decision as `GUIDE_FRAME_WIDTH_RATIO`. One
-data point so far (n=1). Logged to `gaps.md`, not built — Skyler's call on whether to spend the
-diff now or wait for it to recur.
-
-### Gemini quota wall — root-caused, not an app bug
-
-After installing the 0.75 build, live-testing hit "Too many scans at once" (a real `429` from
-Google — confirmed via code trace, `RateLimitException` only ever thrown on an actual 429, no
-client-side throttle exists before the network call) twice in a row, escalating to the app's own
-"you may have hit your daily Gemini quota" hedge-text. Skyler generated a brand-new API key and
-still hit an immediate 429 on its first-ever request — ruled out "this specific key personally used
-up its own budget." Confirmed via Skyler's own aistudio.google.com usage dashboard: the key lives
-under a shared "Default Gemini Project" also used by `Claude-mem` (an unrelated Claude Code
-plugin) — both consumers show real traffic and real errors (`429`/`503`) concentrated on today's
-date, at a request volume far above any prior day's. Not a code inefficiency in this app (confirmed
-only one Gemini call site exists, no retry-on-429, auto-capture is properly guarded against
-double-firing — traced explicitly to rule this out). Logged to `gaps.md` as an environment/workflow
-gap with a fix path (separate GCP project + key for pokedex-binder) if Skyler wants it later.
+**Full spec, both fixes plus the still-open `candidates.size == 1` short-circuit from session 14:**
+`docs/specs/2026-09-13-scanner-hash-confidence.md`. **Explicitly not started** — Skyler said spec
+it, log it, wrap up; do not begin `dev-team-pipeline` without his go-ahead.
 
 ## 3. Active Files
 
-- `app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreen.kt` —
-  `GUIDE_FRAME_WIDTH_RATIO` 0.5 -> 0.75, on-screen distance text "~6 in (15 cm)" -> "~4 in (10 cm)",
-  updated derivation comment.
-- `app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreenTest.kt` — 4 rotation-test
-  expected values + comments updated for the new ratio.
-- `app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ImageProxyExtTest.kt` — 2 crop-rect
-  expected values + comments updated for the new ratio.
+- `app/src/main/java/com/skyler/pokedexbinder/domain/GeminiCardScanner.kt` — model constant
+  updated to `gemini-3.6-flash`, comment explaining the retirement.
+- `app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModel.kt` — **uncommitted**,
+  temporary diagnostic block added (saves every scan's exact crop to
+  `Android/data/com.skyler.pokedexbinder/files/scan_debug_*.jpg`, logs the path). Added `Context`
+  injection to support it. Explicitly marked "TEMP DIAGNOSTIC ... remove once resolved" in its own
+  comment — do not let this drift into a real commit without deciding it should stay.
+- `docs/specs/2026-09-13-scanner-hash-confidence.md` — new spec, this session.
 - `gaps.md`, `project-overview.md`, this file — updated this session.
-- Session transcript archived: `D:\Claude Projects\Digital Brain\raw-sources\conversations\
-  2026-09-10-423b5118.md` (not ingested — purely operational session, no new personal/preference
-  knowledge per `conversation-archive.md`'s own ingest criteria).
+- Session transcript re-archived (same continuing session as 14):
+  `D:\Claude Projects\Digital Brain\raw-sources\conversations\2026-09-10-423b5118.md`. Not
+  ingested — engineering-specific content already properly homed in this project's own docs, not
+  personal/wiki-relevant knowledge.
 
 ## 4. Changes Made (commits, chronological)
 
-- `79b8417` — `GUIDE_FRAME_WIDTH_RATIO` 0.5 -> 0.75 + test fixture updates. Committed and pushed
-  directly (same precedent as the 0.32 -> 0.5 tune) — single-constant, contained, not
-  pipeline-worthy. Then `installDebug`'d to Skyler's connected S26 Ultra.
+- `fd7752b` — `gemini-2.5-flash` → `gemini-3.6-flash`, committed and pushed directly (contained,
+  single-constant fix with a clear external cause, same class as prior direct tunes).
+- Nothing else committed this session — the diagnostic block is deliberately left uncommitted
+  (see Active Files above), and the hash-confidence fix is spec-only per Skyler's explicit
+  instruction not to build yet.
 
 ## 5. Failed Attempts
 
-- **claude-mem's observation timeline had no entries for this session's own work yet** when
-  checked for this handoff (DB count is non-zero globally — 145 — so the gate passed, but a
-  `timeline` query scoped to this session's actual topics returned nothing, since compression
-  hadn't caught up to this still-in-progress session). Handoff above is transcript-derived, not
-  observation-cross-checked, for that reason — noted per the wrapcon gate's own instruction not to
-  silently treat this as "nothing happened."
-- No other dead ends this session — the ratio fix, test updates, and quota root-cause all landed
-  on the first real attempt, backed by either fresh test-run output or Skyler's own dashboard
-  screenshot rather than guessed values.
+- None on the coding side — the model-deprecation fix landed clean on the first real attempt,
+  backed by reading Google's actual error body rather than guessing.
+- claude-mem's observation timeline still had no entries scoped to this session's actual topics
+  when checked for this handoff (global DB count is non-zero and grew during the session — 145 to
+  180 — so the recorder is working, just hasn't compressed this specific session's content yet).
+  Handoff is transcript-derived for that reason, same caveat as session 14's own note.
 
 ## 6. Next Steps
 
-1. **Skyler: live-test the 0.75 ratio tomorrow**, once the Gemini quota resets — scan several
-   cards at the new ~10cm distance, watch for (a) whether the number-OCR failures are actually
-   gone now, (b) whether the ultrawide's autofocus starts hunting/failing to lock at this closer
-   distance (the one real risk of pushing the ratio further — not yet observed, but not yet tested
-   at 0.75 either), and (c) whether item 10's Gemini retry logic ever actually fires (still zero
-   real-world exercise as of this session).
-2. **If 0.75 still isn't landing well after a genuine (non-transient) failure**: re-tune again from
-   here, same pattern as before.
-3. **Zorua-class species-misread bug**: still open, needs Skyler's decision on whether to build the
-   hamming-distance confidence gate now (uncalibrated first-guess constant) or wait for more data
-   points. Not blocking — rare enough that it may not recur before genuine calibration data exists.
-4. **Gemini quota**: blocked on tomorrow (daily reset) or Skyler creating a separate GCP
-   project/key for pokedex-binder if he wants scanning to stop depending on Claude-mem's own
-   traffic. His call, not app code.
-5. **binder.json republish** — still gated on Skyler's own confidence that scanning works, per
-   every prior session's note. Unchanged.
-6. **Carried, unchanged from session 13**: the unchanged 400/401/403/404 path in
+1. **Build `docs/specs/2026-09-13-scanner-hash-confidence.md` once there's enough session usage
+   available** — this is the actual fix for the number-null / manual-list symptom he's been
+   hitting all week. Skyler has already pre-authorized this explicitly: **either
+   `dev-team-pipeline` or a direct implementation, orchestrator's call, just not this session**
+   (usage-constrained, not a design objection). No further sign-off needed on approach — only on
+   timing. Two margin-calibration open questions in the spec itself (no real data yet beyond the
+   one 16-card sample) will need live S26 Ultra testing regardless of which path is taken.
+2. **Decide what to do with the uncommitted temp diagnostic block in `ScannerViewModel.kt`** —
+   either use it (scan a few more cards, pull the saved crops, actually see what the live capture
+   looks like before assuming the ratio/model changes were sufficient) or revert it. Left
+   uncommitted deliberately so it doesn't linger in git history either way.
+3. **Gemini quota**: `pokedex-binder`'s own GCP project/key is now separate from `Claude-mem`'s —
+   confirmed working (this session's whole investigation happened because of it, and the fix
+   shipped). No further action needed unless it recurs.
+4. **binder.json republish** — still gated on Skyler's own confidence that scanning works, per
+   every prior session's note. Unchanged, now additionally blocked on item 1 above.
+5. **Carried, unchanged from session 13**: the unchanged 400/401/403/404 path in
    `GeminiCardScanner.kt` still has no dedicated test — cheap follow-up whenever that file is next
    touched, not urgent.
