@@ -15,6 +15,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
@@ -50,13 +51,49 @@ class PerceptualHasherTest {
         try {
             val bitmap = mockk<Bitmap>()
             // createScaledBitmap returns the same mock so we can control getPixels
-            every { Bitmap.createScaledBitmap(bitmap, 16, 16, false) } returns bitmap
+            every { Bitmap.createScaledBitmap(bitmap, 8, 8, false) } returns bitmap
             every { bitmap.recycle() } just Runs
             every { bitmap.getPixels(any(), any(), any(), any(), any(), any(), any()) } answers {
                 val arr = firstArg<IntArray>()
                 arr.fill(0xFF_80_80_80.toInt()) // uniform gray
             }
             assertEquals(hasher.computeHash(bitmap), hasher.computeHash(bitmap))
+        } finally {
+            unmockkStatic(Bitmap::class)
+        }
+    }
+
+    // Regression test for the pre-fix `1L shl i` overflow: a 16x16 (256-pixel) resize wrapped
+    // pixel index into the low 6 bits of a Long shift, silently OR-ing pixels i and i+64/128/192
+    // onto the same bit. With the 8x8 (64-pixel) resize, two genuinely different images must
+    // never collide onto the same hash.
+    @Test
+    fun `computeHash never collides for two distinguishably-different images`() {
+        mockkStatic(Bitmap::class)
+        try {
+            fun makePixelBitmap(pixels: IntArray): Bitmap {
+                val b = mockk<Bitmap>()
+                every { Bitmap.createScaledBitmap(b, 8, 8, false) } returns b
+                every { b.recycle() } just Runs
+                every { b.getPixels(any(), any(), any(), any(), any(), any(), any()) } answers {
+                    pixels.copyInto(firstArg())
+                }
+                return b
+            }
+
+            // Checkerboard pattern vs. its inverse — distinguishably different, would have
+            // collided to -1L under the old 256-pixel/64-bit-shift bug for many index patterns.
+            val checkerboard = IntArray(64) { i ->
+                if (i % 2 == 0) 0xFF_FF_FF_FF.toInt() else 0xFF_00_00_00.toInt()
+            }
+            val topHalfWhite = IntArray(64) { i ->
+                if (i < 32) 0xFF_FF_FF_FF.toInt() else 0xFF_00_00_00.toInt()
+            }
+
+            val hashA = hasher.computeHash(makePixelBitmap(checkerboard))
+            val hashB = hasher.computeHash(makePixelBitmap(topHalfWhite))
+
+            assertNotEquals(hashA, hashB)
         } finally {
             unmockkStatic(Bitmap::class)
         }
@@ -69,20 +106,34 @@ class PerceptualHasherTest {
     }
 
     @Test
-    fun `findBestMatch returns only card when list has one element`() = runTest {
-        val bitmap = mockk<Bitmap>()
-        val card = TcgCard("id1", "Pikachu", "25", "Base Set", "http://example.com/img.jpg", listOf("Pikachu"))
-        val result = hasher.findBestMatch(listOf(card), bitmap)
-        assertEquals(card, result)
+    fun `findBestMatch returns only card with MAX_VALUE margin when list has one element`() = runTest {
+        mockkStatic(Bitmap::class, BitmapFactory::class)
+        try {
+            val bitmap = mockk<Bitmap>()
+            every { Bitmap.createScaledBitmap(bitmap, 8, 8, false) } returns bitmap
+            every { bitmap.recycle() } just Runs
+            every { bitmap.getPixels(any(), any(), any(), any(), any(), any(), any()) } answers {
+                firstArg<IntArray>().fill(0xFF_80_80_80.toInt())
+            }
+            every { BitmapFactory.decodeByteArray(any(), any(), any()) } returns bitmap
+            val card = TcgCard("id1", "Pikachu", "25", "Base Set", "http://example.com/img.jpg", listOf("Pikachu"))
+
+            server.enqueue(MockResponse().setBody("x"))
+            val result = hasher.findBestMatch(listOf(card), bitmap)
+            assertEquals(card, result?.card)
+            assertEquals(Int.MAX_VALUE, result?.margin)
+        } finally {
+            unmockkStatic(Bitmap::class, BitmapFactory::class)
+        }
     }
 
     @Test
-    fun `findBestMatch picks card whose hash is closest to captured bitmap`() = runTest {
+    fun `findBestMatch picks card whose hash is closest to captured bitmap and reports margin`() = runTest {
         mockkStatic(Bitmap::class, BitmapFactory::class)
         try {
             fun makePixelBitmap(pixels: IntArray): Bitmap {
                 val b = mockk<Bitmap>()
-                every { Bitmap.createScaledBitmap(b, 16, 16, false) } returns b
+                every { Bitmap.createScaledBitmap(b, 8, 8, false) } returns b
                 every { b.recycle() } just Runs
                 every { b.getPixels(any(), any(), any(), any(), any(), any(), any()) } answers {
                     pixels.copyInto(firstArg())
@@ -90,16 +141,17 @@ class PerceptualHasherTest {
                 return b
             }
 
-            // First 128 pixels white, last 128 black → hash = -1L (all bits set)
-            val whiteBlack = IntArray(256) { i ->
-                if (i < 128) 0xFF_FF_FF_FF.toInt() else 0xFF_00_00_00.toInt()
+            // First 32 pixels white (gray=255), last 32 black (gray=0) → mean=127.5, only the
+            // first 32 bits clear the mean → hash = 0x00000000FFFFFFFFL (32 bits set, not -1L).
+            val whiteBlack = IntArray(64) { i ->
+                if (i < 32) 0xFF_FF_FF_FF.toInt() else 0xFF_00_00_00.toInt()
             }
             // All gray (128,128,128) → gray=128 not > mean=128.0 → hash = 0L
-            val allGray = IntArray(256) { 0xFF_80_80_80.toInt() }
+            val allGray = IntArray(64) { 0xFF_80_80_80.toInt() }
 
             val capturedBitmap = makePixelBitmap(whiteBlack)
             val card1Bitmap = makePixelBitmap(whiteBlack) // same hash → distance 0
-            val card2Bitmap = makePixelBitmap(allGray)    // different hash → distance > 0
+            val card2Bitmap = makePixelBitmap(allGray)    // hash 0L → distance = bitCount(32 set bits) = 32
 
             server.enqueue(MockResponse().setBody("x"))
             server.enqueue(MockResponse().setBody("x"))
@@ -110,7 +162,9 @@ class PerceptualHasherTest {
             val card2 = TcgCard("id2", "Charizard", "4", "Base Set", "card2", listOf("Charizard"))
 
             val result = hasher.findBestMatch(listOf(card1, card2), capturedBitmap)
-            assertEquals(card1, result)
+            assertEquals(card1, result?.card)
+            assertEquals(0, result?.distance)
+            assertEquals(32, result?.margin)
         } finally {
             unmockkStatic(Bitmap::class, BitmapFactory::class)
         }

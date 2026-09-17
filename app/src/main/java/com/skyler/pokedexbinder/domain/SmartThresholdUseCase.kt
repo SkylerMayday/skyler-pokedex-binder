@@ -3,33 +3,67 @@ package com.skyler.pokedexbinder.domain
 import com.skyler.pokedexbinder.data.model.TcgCard
 import javax.inject.Inject
 
+enum class ConfidencePath { NUMBER_MATCH, HASH_MARGIN, SINGLE_CANDIDATE_HASH, NONE }
+
 data class SearchConfidence(
     val cards: List<TcgCard>,
     val isHighConfidence: Boolean,
-    val topCard: TcgCard?
+    val topCard: TcgCard?,
+    val matchPath: ConfidencePath
 )
 
 class SmartThresholdUseCase @Inject constructor() {
+    companion object {
+        // First-guess, not calibrated beyond the 16-card sample in docs/specs/2026-09-13-
+        // scanner-hash-confidence.md. Margin = runner-up distance minus best, out of 64 bits.
+        // Not a blocker to ship — re-tune once Skyler runs real same-species multi-candidate
+        // scans (same convention as GUIDE_FRAME_WIDTH_RATIO's history).
+        const val HASH_MARGIN_HIGH_CONFIDENCE_THRESHOLD = 12
 
-    fun evaluate(cards: List<TcgCard>, parsedName: String, parsedNumber: String?): SearchConfidence {
-        if (cards.isEmpty()) return SearchConfidence(cards, false, null)
+        // First-guess, calibrated against exactly one real data point (Furfrou/Zorua misread).
+        // Absolute Hamming-distance ceiling for the single-candidate case (no runner-up to build
+        // a relative margin against). Not a blocker to ship — re-tune on real device.
+        const val HASH_SINGLE_CANDIDATE_MAX_DISTANCE = 16
+    }
 
-        // Only one candidate — nothing to disambiguate, so it's automatically the best guess.
-        if (cards.size == 1) return SearchConfidence(cards, true, cards.first())
+    fun evaluate(
+        cards: List<TcgCard>,
+        parsedName: String,
+        parsedNumber: String?,
+        hashMatch: HashMatchResult? = null
+    ): SearchConfidence {
+        if (cards.isEmpty()) return SearchConfidence(cards, false, null, ConfidencePath.NONE)
 
-        // Normalize "025" → "25" so OCR leading zeros don't break matching
+        if (cards.size == 1) {
+            val single = cards.first()
+            // No runner-up to build a margin against — absolute distance ceiling instead.
+            // hashMatch == null (caller skipped hashing) stays conservative (reject).
+            val visuallyConfirmed = hashMatch != null && hashMatch.card.id == single.id &&
+                hashMatch.distance <= HASH_SINGLE_CANDIDATE_MAX_DISTANCE
+            return if (visuallyConfirmed) {
+                SearchConfidence(cards, true, single, ConfidencePath.SINGLE_CANDIDATE_HASH)
+            } else {
+                SearchConfidence(cards, false, single, ConfidencePath.NONE)
+            }
+        }
+
         val normNumber = parsedNumber?.trimStart('0')?.ifEmpty { "0" }
         val numberMatch = normNumber?.let { n ->
             cards.firstOrNull { it.number.trimStart('0').ifEmpty { "0" } == n }
         }
-
-        // Multiple same-name candidates are only high confidence when the parsed card number
-        // actually pins down which printing it is. Without that, auto-picking cards.first()
-        // risks silently assigning the wrong card — surface the full list instead.
-        return if (numberMatch != null) {
-            SearchConfidence(cards, true, numberMatch)
-        } else {
-            SearchConfidence(cards, false, cards.first())
+        if (numberMatch != null) {
+            return SearchConfidence(cards, true, numberMatch, ConfidencePath.NUMBER_MATCH)
         }
+
+        // Deliberately gated on parsedNumber == null, not "numberMatch == null" — a number that
+        // was read but matched nothing is a stronger negative signal than nothing read at all,
+        // and must NOT fall through to the hash-margin path.
+        if (parsedNumber == null && hashMatch != null &&
+            hashMatch.margin >= HASH_MARGIN_HIGH_CONFIDENCE_THRESHOLD
+        ) {
+            return SearchConfidence(cards, true, hashMatch.card, ConfidencePath.HASH_MARGIN)
+        }
+
+        return SearchConfidence(cards, false, cards.first(), ConfidencePath.NONE)
     }
 }

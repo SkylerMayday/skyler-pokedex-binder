@@ -3,6 +3,54 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
+## Refreshed — 2026-09-17 (session 16)
+
+### Fixed this session (full `dev-team-pipeline` run, ship at 95/100)
+
+- ~~**`PerceptualHasher.computeHash()` bit-mapping bug**~~ (session 15's entry, below) **Fixed.**
+  Resized 16x16→8x8, matching `Long`'s real 64-bit capacity. Regression test proves two
+  distinguishably-different images never collide. Full detail: `project-overview.md` item 15.
+- ~~**`SmartThresholdUseCase.evaluate()` structurally couldn't mark high confidence when Gemini's
+  number is null**~~ (session 15's entry, below) **Fixed.** New margin-gated `HASH_MARGIN` path,
+  `ConfidencePath` enum for diagnostics. Full detail: `project-overview.md` item 15.
+- ~~**`candidates.size == 1` short-circuit skipped all visual verification**~~ (session 14's entry,
+  below) **Fixed.** `findBestMatch()` now computes a real distance even for a single candidate;
+  `evaluate()` gates it on `HASH_SINGLE_CANDIDATE_MAX_DISTANCE` instead of auto-accepting.
+
+### New this session — P2, deferred, not fixed
+
+- **`findBestMatch()`'s per-candidate download-failure fallback (`Int.MAX_VALUE` distance,
+  `PerceptualHasher.kt:50-51`) can inflate the margin past `HASH_MARGIN_HIGH_CONFIDENCE_THRESHOLD`
+  if exactly one candidate's image download fails mid-scan** — found by the Reviewer stage, inherited
+  directly from the source spec's own proposed algorithm (not a Coder deviation), untested either
+  direction. Would falsely grant `HASH_MARGIN` high confidence in precisely the `parsedNumber ==
+  null` case the path exists to help. Candidate fix when picked up: skip the `HASH_MARGIN` grant
+  when `hashMatch.distance == Int.MAX_VALUE`. Not a blocker — layered on top of two already-
+  uncalibrated constants pending real-device re-tune anyway.
+
+### Recurred this session — 4th occurrence, now has a standing lesson
+
+- **The Coder-stage subagent hit the standing Gradle daemon IPC wall** (`Unable to establish
+  loopback connection`, open since session 10) and could not run any Gradle task. The orchestrator
+  ran the exact same commands directly immediately after and the wall cleared on the **first**
+  attempt — same pattern as every prior occurrence (sessions 10-13). Captured as a standing lesson
+  this session: `~/.claude/rules/lessons/subagent-sandbox-blocks-loopback-sockets-try-orchestrator-
+  first.md`. Also confirms `usePlainSocketImpl`/forced `WindowsSelectorProvider` (session 13's
+  "not yet tried" candidates) are dead ends — don't re-suggest them.
+
+### Still open, unchanged from session 15
+
+- **Both new confidence-path constants (`HASH_MARGIN_HIGH_CONFIDENCE_THRESHOLD = 12`,
+  `HASH_SINGLE_CANDIDATE_MAX_DISTANCE = 16`) are first-guess values, not live-device-tested.** Same
+  standing pattern as `GUIDE_FRAME_WIDTH_RATIO`'s entire history — needs Skyler's real S26 Ultra
+  scans (same-species multi-candidate cases for the margin, another single-candidate misread for
+  the ceiling) before either number should be trusted as final.
+- Whether this fix would have actually caught the original Furfrou→Zorua misread remains unverified
+  — that exact photo was never saved. The kept TEMP diagnostic block in `ScannerViewModel.kt`
+  (unchanged this session, still uncommitted) exists to catch the next occurrence.
+- `GeminiCardScanner.kt`'s unchanged 400/401/403/404 path still has no dedicated test (carried,
+  unchanged, since session 13).
+
 ## Refreshed — 2026-09-13 (session 15)
 
 **Audit scope note**: no production code touched this session — pure investigation (live logcat,

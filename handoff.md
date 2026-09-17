@@ -1,114 +1,92 @@
-# Handoff — Session 15 (2026-09-11 to 09-13, continuation of session 14)
+# Handoff — Session 16 (2026-09-17)
 
 ## 1. Goals
 
-Continuation from session 14: installed the `GUIDE_FRAME_WIDTH_RATIO=0.75` build, then chased a
-live chain of real problems as Skyler actually tried to use it — a Gemini API 404 (caused by his
-own quota-decoupling work between sessions), then a deep dive into whether a hash-based/on-device
-matching approach (inspired by a competitor app, EyeRis) could replace Gemini as the primary
-identification path. Ended with Skyler explicitly deferring the build and asking to spec it,
-log it, and wrap up.
+Continue from session 15's explicit deferral: build the already-approved, already-researched spec
+at `docs/specs/2026-09-13-scanner-hash-confidence.md`. Skyler said "continue building from the spec
+we left off last sesh" — full `dev-team-pipeline` run (Planner→Coder→Tester→Reviewer, no Debugger
+stage needed) against P0 tasks 1-6 + P1 tasks 7-8.
 
 ## 2. Current State
 
-### `gemini-2.5-flash` → `gemini-3.6-flash` model swap: fixed, committed (`fd7752b`), pushed, installed
+### Hash-margin confidence path: shipped, uncommitted, not yet live-tested
 
-Skyler decoupled pokedex-binder onto its own Google Cloud project/key (per session 14's quota
-finding) between sessions. Every scan then 404'd. Root-caused by replaying the exact request
-directly against Google's API and reading the real error body (the app itself only surfaces the
-numeric code, discards the message) — `gemini-2.5-flash` was retired for any API key/project
-created after 2026-09-10, Google's own error names `gemini-3.6-flash` as the replacement. The old
-shared key (created March 2026) had kept working the whole time; the 404 only appeared once a
-genuinely new key/project existed to be new-user-gated. Confirmed the new model handles the app's
-real request shape (image + JSON-mode prompt, not just a trivial text ping) before shipping.
-296/296 tests pass, installed and verified live.
+Full pipeline run, ship at 95/100, no P0/P1. Full detail: `project-overview.md` item 15,
+`gaps.md`'s session-16 section. Summary:
 
-### Real root cause of the persisting scanner symptom: found, spec'd, NOT built
+- `PerceptualHasher.computeHash()`'s real bit-mapping bug (session 15's finding) is fixed — 8x8
+  resize instead of 16x16, matches `Long`'s real 64-bit capacity, no more `1L shl i` overflow.
+- `findBestMatch()` now returns `HashMatchResult(card, distance, margin)` for every candidate count
+  including 1 — the old "exactly 1 candidate = auto-trust" short-circuit is gone.
+- `SmartThresholdUseCase.evaluate()` gained a margin-gated `HASH_MARGIN` confidence path for when
+  Gemini's OCR'd number is null, plus a `ConfidencePath` enum for diagnostics. Two new first-guess
+  constants (`HASH_MARGIN_HIGH_CONFIDENCE_THRESHOLD = 12`, `HASH_SINGLE_CANDIDATE_MAX_DISTANCE =
+  16`) — explicitly uncalibrated, need real-device data.
+- 303/303 unit tests pass (fresh XML), `assembleDebug --rerun-tasks` clean.
+- One real test-only bug found and fixed during the Tester stage (a wrong fixture-hash assumption
+  in `PerceptualHasherTest.kt` — production code was correct throughout).
+- One P2 finding deferred, not fixed: a per-candidate download failure can inflate the hash margin
+  past the threshold in a specific edge case. Full detail: `gaps.md`.
 
-Skyler live-tested after both session-14 fixes (ratio 0.75, model swap) and got the identical
-`number=null` failure on all 3 scans (Castform x2, Furfrou x1) — neither fix touched the actual
-bottleneck. Traced two distinct, verified (not guessed) root causes:
+**Not committed** — Skyler hasn't been asked yet whether to commit; this session ended right after
+the Reviewer's ship verdict.
 
-1. **`PerceptualHasher.computeHash()` has a real, live bit-mapping bug** — `1L shl i` for `i` up to
-   255 wraps via JVM's masked `Long.shl` (shift amount mod 64), so 4 different pixels OR onto the
-   same final bit instead of each getting an independent one. Verified empirically: replayed the
-   exact algorithm (real JVM shift semantics, not assumed) against 16 real card images fetched
-   live from `api.pokemontcg.io` (8 Charizard prints + 8 clearly-different Pokémon) — several
-   completely different cards hashed identically, average pairwise distance 6.0/64. A corrected
-   8x8-resize version (matching a real 64-bit capacity) separated the same 16 images to 21.5/64
-   average, no collisions — confirms the fix works, not just that the bug exists. Has silently
-   degraded every hash-based pick since the hasher was introduced (`498d035`, 2026-05-20).
-2. **Independent of the bug above: `SmartThresholdUseCase.evaluate()` structurally can never mark
-   high confidence when Gemini's number is null**, no matter how good the hash is — it only checks
-   a `numberMatch` among candidates, never consults the hasher's own result at all. This is why
-   fixing #1 alone would not have fixed the reported symptom — confirmed by tracing the exact code
-   path, not assumed.
+**Not live-tested** — same standing constraint as every constant this scanner's history has shipped
+(`GUIDE_FRAME_WIDTH_RATIO`, retry delays, etc.). The two new constants are first-guess values.
 
-Also researched a shipped competitor (EyeRis, App Store id6789088141) at Skyler's request — it
-advertises on-device camera matching rather than cloud OCR. Verified this app's own narrower
-design (keep Gemini for species ID, hash-rank same-species candidates) does **not** require
-bundling a full card-image database — it reuses the existing per-scan candidate-fetch flow.
-A more ambitious "skip Gemini entirely, match blind against the full catalog" design was
-considered and explicitly rejected: verified `api.pokemontcg.io` alone has 20,479 cards, and the
-hash's own measured separation is already thin among ~20 same-species candidates — full-catalog
-matching with a plain 64-bit average hash would be materially worse, and would need a trained
-embedding model (a much bigger, separate project) to work reliably at that scale.
+### Pre-existing uncommitted TEMP diagnostic block: kept, verified untouched
 
-**Full spec, both fixes plus the still-open `candidates.size == 1` short-circuit from session 14:**
-`docs/specs/2026-09-13-scanner-hash-confidence.md`. **Explicitly not started** — Skyler said spec
-it, log it, wrap up; do not begin `dev-team-pipeline` without his go-ahead.
+Skyler explicitly chose to keep the session-15 TEMP diagnostic block in `ScannerViewModel.kt`
+(saves scan crops to disk) rather than discard it this session. Both the Tester and Reviewer stages
+independently confirmed it was left untouched by this session's changes.
 
 ## 3. Active Files
 
-- `app/src/main/java/com/skyler/pokedexbinder/domain/GeminiCardScanner.kt` — model constant
-  updated to `gemini-3.6-flash`, comment explaining the retirement.
-- `app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModel.kt` — **uncommitted**,
-  temporary diagnostic block added (saves every scan's exact crop to
-  `Android/data/com.skyler.pokedexbinder/files/scan_debug_*.jpg`, logs the path). Added `Context`
-  injection to support it. Explicitly marked "TEMP DIAGNOSTIC ... remove once resolved" in its own
-  comment — do not let this drift into a real commit without deciding it should stay.
-- `docs/specs/2026-09-13-scanner-hash-confidence.md` — new spec, this session.
+- `app/src/main/java/com/skyler/pokedexbinder/domain/PerceptualHasher.kt` — hash fix + `HashMatchResult`.
+- `app/src/main/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCase.kt` — `ConfidencePath` +
+  margin-gated confidence logic.
+- `app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModel.kt` — logging extended;
+  pre-existing uncommitted TEMP diagnostic block (~lines 84-94) untouched, still present.
+- `app/src/test/java/com/skyler/pokedexbinder/domain/PerceptualHasherTest.kt`,
+  `SmartThresholdUseCaseTest.kt` — updated/new tests.
+- `.pipeline/` — full pipeline handoff trail (`specs.md`, `changes.md`, `test-results.md`,
+  `review-verdict.md`, `evidence/test-results.log`). Not yet archived to `.pipeline_archive/`.
 - `gaps.md`, `project-overview.md`, this file — updated this session.
-- Session transcript re-archived (same continuing session as 14):
-  `D:\Claude Projects\Digital Brain\raw-sources\conversations\2026-09-10-423b5118.md`. Not
-  ingested — engineering-specific content already properly homed in this project's own docs, not
-  personal/wiki-relevant knowledge.
+- Two new lessons written by the Reviewer stage:
+  `~/.claude/rules/lessons/subagent-sandbox-blocks-loopback-sockets-try-orchestrator-first.md`,
+  `~/.claude/rules/lessons/grep-tool-n-flag-needs-explicit-output-mode.md`.
 
 ## 4. Changes Made (commits, chronological)
 
-- `fd7752b` — `gemini-2.5-flash` → `gemini-3.6-flash`, committed and pushed directly (contained,
-  single-constant fix with a clear external cause, same class as prior direct tunes).
-- Nothing else committed this session — the diagnostic block is deliberately left uncommitted
-  (see Active Files above), and the hash-confidence fix is spec-only per Skyler's explicit
-  instruction not to build yet.
+- **Nothing committed this session.** All 5 changed files (`PerceptualHasher.kt`,
+  `SmartThresholdUseCase.kt`, `ScannerViewModel.kt`, `PerceptualHasherTest.kt`,
+  `SmartThresholdUseCaseTest.kt`) are uncommitted in the working tree, ship-reviewed at 95/100.
 
 ## 5. Failed Attempts
 
-- None on the coding side — the model-deprecation fix landed clean on the first real attempt,
-  backed by reading Google's actual error body rather than guessing.
-- claude-mem's observation timeline still had no entries scoped to this session's actual topics
-  when checked for this handoff (global DB count is non-zero and grew during the session — 145 to
-  180 — so the recorder is working, just hasn't compressed this specific session's content yet).
-  Handoff is transcript-derived for that reason, same caveat as session 14's own note.
+- None on the coding/logic side — the pipeline shipped in one pass, no Debugger stage needed, no
+  Reviewer auto-loop needed (95/100 on the first review).
+- The Coder-stage subagent hit the standing Gradle daemon IPC wall (`gaps.md`, sessions 10-13) and
+  could not run any Gradle task at all. The orchestrator ran the exact same commands directly and
+  the wall cleared on the first attempt — 4th occurrence of this exact pattern, now captured as a
+  standing lesson so future sessions stop re-diagnosing it from scratch.
 
 ## 6. Next Steps
 
-1. **Build `docs/specs/2026-09-13-scanner-hash-confidence.md` once there's enough session usage
-   available** — this is the actual fix for the number-null / manual-list symptom he's been
-   hitting all week. Skyler has already pre-authorized this explicitly: **either
-   `dev-team-pipeline` or a direct implementation, orchestrator's call, just not this session**
-   (usage-constrained, not a design objection). No further sign-off needed on approach — only on
-   timing. Two margin-calibration open questions in the spec itself (no real data yet beyond the
-   one 16-card sample) will need live S26 Ultra testing regardless of which path is taken.
-2. **Decide what to do with the uncommitted temp diagnostic block in `ScannerViewModel.kt`** —
-   either use it (scan a few more cards, pull the saved crops, actually see what the live capture
-   looks like before assuming the ratio/model changes were sufficient) or revert it. Left
-   uncommitted deliberately so it doesn't linger in git history either way.
-3. **Gemini quota**: `pokedex-binder`'s own GCP project/key is now separate from `Claude-mem`'s —
-   confirmed working (this session's whole investigation happened because of it, and the fix
-   shipped). No further action needed unless it recurs.
-4. **binder.json republish** — still gated on Skyler's own confidence that scanning works, per
-   every prior session's note. Unchanged, now additionally blocked on item 1 above.
-5. **Carried, unchanged from session 13**: the unchanged 400/401/403/404 path in
-   `GeminiCardScanner.kt` still has no dedicated test — cheap follow-up whenever that file is next
-   touched, not urgent.
+1. **Ask Skyler whether to commit the 5 uncommitted files** — shipped, reviewed, tested, but no
+   commit made yet (git safety: never commit without being asked). This is the very next action.
+2. **Live-test on the real S26 Ultra** — same standing constraint as every constant this scanner
+   history has shipped uncalibrated. Specifically want: (a) a same-species multi-candidate scan
+   where Gemini's number comes back null, to see whether `HASH_MARGIN_HIGH_CONFIDENCE_THRESHOLD =
+   12` is in a sane range: too low = false-positive wrong-card assigns, too high = still falls to
+   manual-pick too often; (b) a repeat of the Furfrou→Zorua-style single-candidate misread, to
+   check whether `HASH_SINGLE_CANDIDATE_MAX_DISTANCE = 16` actually catches it.
+3. **Archive `.pipeline/` to `.pipeline_archive/2026-09-17-scanner-hash-confidence/`** once Skyler
+   confirms the commit (or discard) decision — standing project convention, not yet done.
+4. **P2 deferred, not urgent**: `findBestMatch()`'s download-failure fallback can inflate the hash
+   margin past threshold in a specific one-candidate-fails edge case. Full detail: `gaps.md`.
+   Candidate fix: skip the `HASH_MARGIN` grant when `hashMatch.distance == Int.MAX_VALUE`.
+5. **Carried, unchanged**: `GeminiCardScanner.kt`'s unchanged 400/401/403/404 path still has no
+   dedicated test (session 13, still not urgent).
+6. **binder.json republish** — still gated on Skyler's own confidence that scanning works, per every
+   prior session's note. Unchanged.

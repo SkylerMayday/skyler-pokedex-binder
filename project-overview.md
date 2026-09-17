@@ -395,13 +395,56 @@ confirmed working).
     candidates, let alone the full 20,479-card catalog). **Not started — planning only, per
     Skyler's explicit instruction not to build yet.**
 
-**Status as of 2026-09-13 (end of session 15): no known P0, but the scanner's core "wrong/missing
-card" complaint is still open.** Items 1-13 are shipped; items 1-9 are live-hardware-confirmed
-(session 12); items 10-13 are unit-test/API-verified but the underlying symptom they were each
-aimed at (numbers not OCRing, occasional species misreads) persists after all of them. The real
-fix is scoped in `docs/specs/2026-09-13-scanner-hash-confidence.md`, awaiting Skyler's go-ahead to
-build. `GUIDE_FRAME_WIDTH_RATIO=0.75` and `gemini-3.6-flash` are both still reasonable to keep —
-neither is wrong, they just weren't the actual bottleneck.
+15. **Hash-margin confidence path built and shipped** (2026-09-17, session 16, full
+    `dev-team-pipeline` run against `docs/specs/2026-09-13-scanner-hash-confidence.md`'s P0 tasks
+    1-6 + P1 tasks 7-8). Reviewer score 95/100, ship, no P0/P1 — single-pass, no auto-loop needed.
+    - `PerceptualHasher.computeHash()` fixed: resize 16x16→8x8 (64 pixels, matches `Long`'s real
+      64-bit capacity) instead of the old 256-pixel resize that overflowed `1L shl i`. New
+      regression test proves two distinguishably-different images never collide.
+    - `findBestMatch()` now returns `HashMatchResult(card, distance, margin)` for every candidate
+      count (including 1) instead of a bare `TcgCard?` — the `candidates.size == 1` blind-trust
+      short-circuit is gone, replaced by a real (if coarse) distance computation.
+    - `SmartThresholdUseCase.evaluate()` gained a `ConfidencePath` enum (`NUMBER_MATCH`/
+      `HASH_MARGIN`/`SINGLE_CANDIDATE_HASH`/`NONE`) and two new first-guess constants:
+      `HASH_MARGIN_HIGH_CONFIDENCE_THRESHOLD = 12` (grants high confidence off the hash alone when
+      `parsedNumber == null` and the margin clears this) and `HASH_SINGLE_CANDIDATE_MAX_DISTANCE =
+      16` (absolute ceiling replacing the old single-candidate auto-accept). Both explicitly
+      comment-flagged as uncalibrated pending real-device re-tuning — same convention as
+      `GUIDE_FRAME_WIDTH_RATIO`'s history, not a ship blocker.
+    - Deliberately gated on `parsedNumber == null`, not `numberMatch == null` — a number Gemini read
+      but that matched nothing is a stronger negative signal than nothing read at all, and must not
+      fall through to the hash-margin path.
+    - `ScannerViewModel.kt`'s `ScannerMatch` log lines extended with hash distance/margin/matchPath.
+      The session's pre-existing uncommitted TEMP diagnostic block (scan-crop-to-disk, kept per
+      Skyler's explicit instruction) verified untouched by both the Tester and Reviewer stages.
+    - **Real bug found and fixed during the Tester stage, test-only**: `PerceptualHasherTest.kt`'s
+      multi-candidate margin test assumed a 32-white/32-black fixture hashes to `-1L` (all 64 bits);
+      it actually hashes to `0x00000000FFFFFFFFL` (32 bits, since only the white half clears the
+      mean), so the real Hamming distance vs. an all-gray hash (`0L`) is 32, not the asserted 64.
+      Fixed the assertion, not the production code — `computeHash()`/`findBestMatch()` were correct
+      throughout. 303/303 unit tests pass (fresh XML), `assembleDebug --rerun-tasks` clean.
+    - **Environment note**: the Coder-stage subagent hit the standing Gradle daemon IPC wall
+      (`gaps.md`, sessions 10-13) and could not run any Gradle task; the orchestrator ran the exact
+      same commands directly immediately afterward and the wall cleared on the first attempt —
+      4th occurrence of this exact pattern, now captured as a standing lesson
+      (`~/.claude/rules/lessons/subagent-sandbox-blocks-loopback-sockets-try-orchestrator-first.md`).
+    - **One P2 finding, deferred, not fixed**: `findBestMatch()`'s per-candidate download-failure
+      fallback (`Int.MAX_VALUE` distance) can inflate the margin past the high-confidence threshold
+      if exactly one candidate's image download fails mid-scan — inherited directly from the spec's
+      own proposed algorithm, not a Coder deviation. Track alongside the constants' pending
+      re-tune; candidate fix if picked up: skip the `HASH_MARGIN` grant when
+      `hashMatch.distance == Int.MAX_VALUE`. Full detail: `gaps.md`.
+    - **Not yet live-device-tested** — same standing constraint as every constant this scanner
+      history has shipped uncalibrated. Both new constants need Skyler's real S26 Ultra scans
+      (same-species multi-candidate cases for the margin threshold, another single-candidate
+      misread for the ceiling) before either number should be trusted as final.
+
+**Status as of 2026-09-17 (session 16): the hash-margin confidence fix is shipped, not yet
+live-tested.** Items 1-13 are shipped; items 1-9 are live-hardware-confirmed (session 12); items
+10-13 are unit-test/API-verified but didn't resolve the underlying symptom. Item 15 (this session)
+is the actual fix for that symptom, unit-verified but awaiting a real scan to confirm it holds
+against genuine same-species/misread cases. `GUIDE_FRAME_WIDTH_RATIO=0.75` and `gemini-3.6-flash`
+are both still reasonable to keep — neither is wrong, they just weren't the actual bottleneck.
 
 **Diagnostic-only logging exists in `ScannerScreen.kt`** (`4bd8bac`) — `Log.i("ScannerFocus", ...)`
 per focus request (elapsed time + `isFocusSuccessful`) and a one-time camera AF-capability log at
