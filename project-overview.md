@@ -651,6 +651,37 @@ bug class on the TCGCSV merge path) — reused, not reinvented.
 
 ## Test Infrastructure (2026-08-28)
 
+- **DI-based testability pattern for `EncryptedSharedPreferences`/`DataStore`-backed repositories**
+  (2026-09-20, session 16 cont'd). `SettingsRepository`/`PublishSettingsRepository` used to build
+  their `DataStore`/`EncryptedSharedPreferences` inline from a bare `Context`, so no JVM unit test
+  could substitute anything — considered adding Robolectric to close this, rejected (its
+  AndroidKeyStore shadow support is unreliable, and it would test the third-party encryption
+  library, not this app's own logic). Instead: both repositories now take `DataStore<Preferences>`/
+  `SharedPreferences` via constructor injection (`@Named` qualifiers — `"settingsDataStore"`/
+  `"settingsSecrets"`/`"publishDataStore"`/`"publishSecrets"` — following `NetworkModule.kt`'s
+  existing `@Provides @Singleton @Named` convention), with real production construction moved to a
+  new `di/SecurityPrefsModule.kt` (byte-identical file names/schemes to what was inline — verified,
+  no data-loss-on-upgrade risk). Tests substitute real (not mocked) implementations: a map-backed
+  `FakeSharedPreferences` and an in-memory `DataStore<Preferences>`. Ship at 98/100.
+  - **Two real bugs found and fixed while building this, neither shipped**: (1) an indefinite hang
+    (21+ min, manually killed) from constructing `DataStore` in `@Before` via
+    `PreferenceDataStoreFactory.create(scope = TestScope().backgroundScope, ...)` — the actual test
+    body runs under `runTest {}`'s own, separate `TestScope`, so DataStore's internal actor was tied
+    to a scheduler nothing ever drove; every suspend call into it hung forever. Fixed by dropping
+    the explicit `scope` entirely, matching the production module's own default (a real
+    `Dispatchers.IO`-backed scope) rather than tuning around the mismatch. (2) a documented
+    Windows-only AndroidX DataStore bug (`IOException: Unable to rename ... multiple instances of
+    DataStore for this file`) that fires when `.edit()` is called 2+ times against a real
+    temp-file-backed `DataStore` in one JVM test — confirmed via Google's own `nowinandroid`
+    reference app hitting the identical issue (PR #1542) and fixing it the same way. Fixed with a
+    hand-written `InMemoryPreferencesDataStore.kt` (a real, ~15-line `DataStore<Preferences>`
+    implementation — `MutableStateFlow` + `Mutex`-guarded `updateData`, matching the real atomicity
+    contract) instead of adding the `okio-fakefilesystem` dependency the "official" fix would need —
+    no new dependency, and it avoids real file I/O entirely rather than working around Windows'
+    stricter file-locking semantics.
+  - `migrateGeminiKeyIfNeeded()`'s algorithm (ordering, `Mutex`/`@Volatile` guard, `.commit()` for
+    the encrypted write — the exact logic that survived a P1 finding earlier this session) is
+    byte-for-byte unchanged; only what its two fields point to changed.
 - **First Hilt-instrumented test added** (`AppNavigationScreenTest.kt`, `92c5ef9`) — required
   `CustomTestRunner.kt` (swaps in `HiltTestApplication` via `AndroidJUnitRunner`) and the
   `hilt-android-testing` dependency. **Any future Hilt-instrumented test that touches Room must

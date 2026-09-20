@@ -3,6 +3,30 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
+## Refreshed — 2026-09-20 (session 16, cont'd — testable settings repos)
+
+### Fixed this session (full `dev-team-pipeline` run, ship at 98/100)
+
+- ~~**No real test coverage on `EncryptedSharedPreferences`-backed repositories
+  (`SettingsRepository`, `PublishSettingsRepository`)**~~ **Fixed.** Rejected Robolectric (unreliable
+  AndroidKeyStore shadow support, would test the third-party library not this app's logic).
+  Dependency-injected `DataStore`/`SharedPreferences` instead (new `di/SecurityPrefsModule.kt` for
+  production, real-not-mocked fakes for tests), no new dependency. Full detail: `project-overview.md`
+  Test Infrastructure section.
+
+### New this session — 2 real bugs found and fixed while building the above, neither shipped
+
+- **A `TestScope`/`runTest{}` scheduler mismatch caused an indefinite hang** (21+ min, no progress,
+  had to be killed manually) — `DataStore` built in `@Before` via `scope = TestScope().
+  backgroundScope`, but the test body's own `runTest {}` uses a separate, disconnected `TestScope`,
+  so DataStore's internal actor never got scheduled. Fixed by dropping the explicit `scope`
+  (defaults to the same real `Dispatchers.IO`-backed scope production already uses).
+- **A documented Windows-only AndroidX DataStore bug** — real, temp-file-backed `DataStore.edit()`
+  called 2+ times in one JVM test throws `IOException: ... multiple instances of DataStore for this
+  file` (confirmed via Google's own `nowinandroid` hitting the identical issue, PR #1542). Fixed
+  with a hand-written in-memory `DataStore<Preferences>` fake instead of adding the
+  `okio-fakefilesystem` dependency the "official" nowinandroid-style fix would need.
+
 ## Refreshed — 2026-09-20 (session 16, gap-audit batch)
 
 Full audit of the standing gap list at Skyler's request ("fix everything that doesn't need me to

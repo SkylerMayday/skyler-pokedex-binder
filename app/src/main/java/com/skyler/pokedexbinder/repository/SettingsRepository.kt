@@ -1,16 +1,11 @@
 package com.skyler.pokedexbinder.repository
 
-import android.content.Context
 import android.content.SharedPreferences
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -19,6 +14,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import javax.inject.Named
 import javax.inject.Singleton
 
 data class AppSettings(
@@ -31,8 +27,6 @@ data class AppSettings(
     val geminiApiKey: String = ""
 )
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
-
 /**
  * Gate for [SettingsRepository.migrateGeminiKeyIfNeeded]: whether the legacy plaintext Gemini API
  * key should even be checked. Pure/no Android types so it's unit-testable without a real Keystore
@@ -43,7 +37,8 @@ internal fun shouldMigrateGeminiKey(encryptedValue: String?): Boolean = encrypte
 
 @Singleton
 class SettingsRepository @Inject constructor(
-    @ApplicationContext private val context: Context
+    @Named("settingsDataStore") private val dataStore: DataStore<Preferences>,
+    @Named("settingsSecrets") private val securePrefs: SharedPreferences
 ) {
     private object Keys {
         val SHOW_REGIONAL = booleanPreferencesKey("show_regional")
@@ -59,20 +54,6 @@ class SettingsRepository @Inject constructor(
         const val GEMINI_API_KEY = "gemini_api_key"
     }
 
-    // EncryptedSharedPreferences for the Gemini API key — same pattern as
-    // PublishSettingsRepository's securePrefs, but its own file so the two repositories stay
-    // decoupled. Synchronous disk I/O, so build lazily and only touch from IO-dispatched suspend
-    // functions (see getGeminiApiKey/setGeminiApiKey) except the one documented read in `settings`.
-    private val securePrefs: SharedPreferences by lazy {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
-        EncryptedSharedPreferences.create(
-            context, "settings_secrets", masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
-    }
-
     private val migrationMutex = Mutex()
     @Volatile private var geminiKeyMigrated = false
 
@@ -86,7 +67,7 @@ class SettingsRepository @Inject constructor(
         migrationMutex.withLock {
             if (geminiKeyMigrated) return@withLock
             if (shouldMigrateGeminiKey(securePrefs.getString(SecureKeys.GEMINI_API_KEY, null))) {
-                val legacy = context.dataStore.data.map { it[Keys.GEMINI_API_KEY] ?: "" }.first()
+                val legacy = dataStore.data.map { it[Keys.GEMINI_API_KEY] ?: "" }.first()
                 if (legacy.isNotEmpty()) {
                     withContext(Dispatchers.IO) {
                         // commit(), not apply(): the plaintext clear right below suspends until
@@ -96,14 +77,14 @@ class SettingsRepository @Inject constructor(
                         // here is free. Same reasoning as BackupImporter.kt's PendingImportError.persist().
                         securePrefs.edit().putString(SecureKeys.GEMINI_API_KEY, legacy).commit()
                     }
-                    context.dataStore.edit { it.remove(Keys.GEMINI_API_KEY) }
+                    dataStore.edit { it.remove(Keys.GEMINI_API_KEY) }
                 }
             }
             geminiKeyMigrated = true
         }
     }
 
-    val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
+    val settings: Flow<AppSettings> = dataStore.data.map { prefs ->
         migrateGeminiKeyIfNeeded()
         AppSettings(
             showRegional = prefs[Keys.SHOW_REGIONAL] ?: false,
@@ -117,27 +98,27 @@ class SettingsRepository @Inject constructor(
     }
 
     suspend fun setShowRegional(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.SHOW_REGIONAL] = enabled }
+        dataStore.edit { it[Keys.SHOW_REGIONAL] = enabled }
     }
 
     suspend fun setShowAlternateForms(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.SHOW_ALTERNATE_FORMS] = enabled }
+        dataStore.edit { it[Keys.SHOW_ALTERNATE_FORMS] = enabled }
     }
 
     suspend fun setShowMega(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.SHOW_MEGA] = enabled }
+        dataStore.edit { it[Keys.SHOW_MEGA] = enabled }
     }
 
     suspend fun setShowGmax(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.SHOW_GMAX] = enabled }
+        dataStore.edit { it[Keys.SHOW_GMAX] = enabled }
     }
 
     suspend fun setUseCameraScanner(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.USE_CAMERA_SCANNER] = enabled }
+        dataStore.edit { it[Keys.USE_CAMERA_SCANNER] = enabled }
     }
 
     suspend fun setDarkMode(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.DARK_MODE] = enabled }
+        dataStore.edit { it[Keys.DARK_MODE] = enabled }
     }
 
     suspend fun getGeminiApiKey(): String {
