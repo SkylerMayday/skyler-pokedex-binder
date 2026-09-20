@@ -80,6 +80,7 @@ class PublishRepositoryTest {
         }
         mockkStatic(Log::class)
         every { Log.w(any(), any<String>()) } returns 0
+        every { Log.i(any(), any<String>()) } returns 0
 
         repository = PublishRepository(
             gitHubApi, discordApi, moshi, publishSettingsRepository, binderRepository,
@@ -272,6 +273,7 @@ class PublishRepositoryTest {
 
         assertEquals(1, diff.deltas.size)
         assertEquals(ChangeType.ADDED, diff.deltas[0].type)
+        assertTrue(diff.contentChanged)
     }
 
     @Test
@@ -283,6 +285,7 @@ class PublishRepositoryTest {
 
         assertEquals(1, diff.deltas.size)
         assertEquals(ChangeType.REMOVED, diff.deltas[0].type)
+        assertTrue(diff.contentChanged)
     }
 
     @Test
@@ -294,6 +297,7 @@ class PublishRepositoryTest {
 
         assertEquals(1, diff.deltas.size)
         assertEquals(ChangeType.REPLACED, diff.deltas[0].type)
+        assertTrue(diff.contentChanged)
     }
 
     @Test
@@ -305,6 +309,7 @@ class PublishRepositoryTest {
 
         assertTrue(diff.deltas.isEmpty())
         assertFalse(diff.hasChanges)
+        assertFalse(diff.contentChanged)
     }
 
     @Test
@@ -315,6 +320,36 @@ class PublishRepositoryTest {
         val diff = repository.computeDiff(baseline, next)
 
         assertTrue(diff.deltas.isEmpty())
+        assertFalse(diff.contentChanged)
+    }
+
+    @Test
+    fun `computeDiff new unowned card is contentChanged but not hasChanges`() {
+        val baseline = binderWith(slot("s1", cardId = "c1", owned = true))
+        val next = binderWith(slot("s1", cardId = "c1", owned = true), slot("s2", cardId = "c2", owned = false))
+
+        val diff = repository.computeDiff(baseline, next)
+
+        assertTrue(diff.deltas.isEmpty())
+        assertFalse(diff.hasChanges)
+        assertTrue(diff.contentChanged)
+    }
+
+    @Test
+    fun `computeDiff identical binders but different publishedAt is not contentChanged`() {
+        val slots = listOf(slot("s1", cardId = "c1"))
+        val baseline = BinderSnapshot(
+            publishedAt = "2026-01-01T00:00:00+08:00",
+            binders = listOf(SnapshotBinder("pokedex", "Pokédex", listOf(SnapshotSection("Generation I", slots))))
+        )
+        val next = BinderSnapshot(
+            publishedAt = "2026-09-20T00:00:00+08:00",
+            binders = listOf(SnapshotBinder("pokedex", "Pokédex", listOf(SnapshotSection("Generation I", slots))))
+        )
+
+        val diff = repository.computeDiff(baseline, next)
+
+        assertFalse(diff.contentChanged)
     }
 
     @Test
@@ -516,6 +551,84 @@ class PublishRepositoryTest {
 
         assertTrue(result is PublishResult.Failure)
         assertEquals(PublishStep.Uploading, (result as PublishResult.Failure).step)
+        coVerify(exactly = 0) { discordApi.sendWebhook(any(), any()) }
+    }
+
+    @Test
+    fun `content-only publish uploads binder json but skips changelog and discord`() = runTest {
+        val entries = listOf(entry("bulbasaur", "Bulbasaur", 1, cardId = "xy1-1"))
+        val baselineSnapshot = repository.buildSnapshot(entries, emptyList(), defaultConfig)
+        coEvery { publishSettingsRepository.getConfig() } returns
+            defaultConfig.copy(discordWebhookUrl = "https://discord.com/api/webhooks/x/y")
+        coEvery { binderRepository.getAllEntries() } returns entries
+        coEvery { gitHubApi.getContent(any(), any(), any(), eq("binder.json"), any()) } returns
+            contentResponse(baselineSnapshot)
+        coEvery { personalCollectionRepository.getAllCache() } returns listOf(pcCache("c1", "charizard"))
+        coEvery { personalCollectionRepository.getAllEntries() } returns emptyList()
+        coEvery { gitHubApi.putContent(any(), any(), any(), eq("binder.json"), any()) } returns
+            Response.success(GitHubPutResponse(content = null, commit = null))
+
+        val result = repository.publish {}
+
+        assertTrue(result is PublishResult.Success)
+        val diff = (result as PublishResult.Success).diff
+        assertTrue(diff.contentChanged)
+        assertFalse(diff.hasChanges)
+        coVerify { gitHubApi.putContent(any(), any(), any(), eq("binder.json"), any()) }
+        coVerify(exactly = 0) { gitHubApi.getContent(any(), any(), any(), eq("changelog.json"), any()) }
+        coVerify(exactly = 0) { gitHubApi.putContent(any(), any(), any(), eq("changelog.json"), any()) }
+        coVerify(exactly = 0) { discordApi.sendWebhook(any(), any()) }
+    }
+
+    @Test
+    fun `owned change with webhook configured calls binder put changelog get+put and discord webhook`() = runTest {
+        val baselineEntries = listOf(entry("bulbasaur", "Bulbasaur", 1, cardId = null))
+        val entries = listOf(entry("bulbasaur", "Bulbasaur", 1, cardId = "xy1-1"))
+        val baselineSnapshot = repository.buildSnapshot(baselineEntries, emptyList(), defaultConfig)
+        coEvery { publishSettingsRepository.getConfig() } returns
+            defaultConfig.copy(discordWebhookUrl = "https://discord.com/api/webhooks/x/y")
+        coEvery { binderRepository.getAllEntries() } returns entries
+        coEvery { gitHubApi.getContent(any(), any(), any(), eq("binder.json"), any()) } returns
+            contentResponse(baselineSnapshot)
+        coEvery { gitHubApi.putContent(any(), any(), any(), eq("binder.json"), any()) } returns
+            Response.success(GitHubPutResponse(content = null, commit = null))
+        coEvery { gitHubApi.getContent(any(), any(), any(), eq("changelog.json"), any()) } returns notFound()
+        coEvery { gitHubApi.putContent(any(), any(), any(), eq("changelog.json"), any()) } returns
+            Response.success(GitHubPutResponse(content = null, commit = null))
+        coEvery { discordApi.sendWebhook(any(), any()) } returns Response.success(Unit)
+
+        val result = repository.publish {}
+
+        assertTrue(result is PublishResult.Success)
+        val diff = (result as PublishResult.Success).diff
+        assertFalse(diff.isFirstPublish)
+        assertTrue(diff.hasChanges)
+        coVerify(exactly = 1) { gitHubApi.putContent(any(), any(), any(), eq("binder.json"), any()) }
+        coVerify(exactly = 1) { gitHubApi.getContent(any(), any(), any(), eq("changelog.json"), any()) }
+        coVerify(exactly = 1) { gitHubApi.putContent(any(), any(), any(), eq("changelog.json"), any()) }
+        coVerify(exactly = 1) { discordApi.sendWebhook(any(), any()) }
+    }
+
+    @Test
+    fun `first publish with zero owned cards uploads binder json but skips changelog and discord`() = runTest {
+        val entries = listOf(entry("bulbasaur", "Bulbasaur", 1, cardId = null))
+        coEvery { publishSettingsRepository.getConfig() } returns
+            defaultConfig.copy(discordWebhookUrl = "https://discord.com/api/webhooks/x/y")
+        coEvery { binderRepository.getAllEntries() } returns entries
+        coEvery { gitHubApi.getContent(any(), any(), any(), eq("binder.json"), any()) } returns notFound()
+        coEvery { gitHubApi.putContent(any(), any(), any(), eq("binder.json"), any()) } returns
+            Response.success(GitHubPutResponse(content = null, commit = null))
+
+        val result = repository.publish {}
+
+        assertTrue(result is PublishResult.Success)
+        val diff = (result as PublishResult.Success).diff
+        assertTrue(diff.isFirstPublish)
+        assertTrue(diff.contentChanged)
+        assertFalse(diff.hasChanges)
+        coVerify { gitHubApi.putContent(any(), any(), any(), eq("binder.json"), any()) }
+        coVerify(exactly = 0) { gitHubApi.getContent(any(), any(), any(), eq("changelog.json"), any()) }
+        coVerify(exactly = 0) { gitHubApi.putContent(any(), any(), any(), eq("changelog.json"), any()) }
         coVerify(exactly = 0) { discordApi.sendWebhook(any(), any()) }
     }
 

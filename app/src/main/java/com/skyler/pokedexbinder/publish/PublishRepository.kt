@@ -128,7 +128,7 @@ class PublishRepository @Inject constructor(
 
             val diff = computeDiff(baseline, nextSnapshot)
 
-            if (!diff.hasChanges && !diff.isFirstPublish) {
+            if (!diff.contentChanged && !diff.isFirstPublish) {
                 currentStep = PublishStep.NoChanges
                 onStep(currentStep)
                 return PublishResult.NoChanges
@@ -157,90 +157,106 @@ class PublishRepository @Inject constructor(
                 )
             }
 
-            // b. Fetch + update changelog.json
-            val changelogGetResponse = gitHubApi.getContent(
-                auth = auth,
-                owner = config.githubOwner,
-                repo = config.githubRepo,
-                path = CHANGELOG_JSON_PATH
-            )
-            val (existingChangelog, changelogSha) = when {
-                changelogGetResponse.code() == 404 -> Changelog(emptyList()) to null
-                changelogGetResponse.isSuccessful -> {
-                    val dto = changelogGetResponse.body()
-                    val decoded = dto?.content?.let { decodeBase64(it) }
-                    val parsed = decoded?.let {
-                        moshi.adapter(Changelog::class.java).fromJson(it)
-                    } ?: Changelog(emptyList())
-                    parsed to dto?.sha
-                }
-                else -> throw PublishFailedException(
-                    PublishStep.Uploading,
-                    "Failed to fetch current changelog.json: HTTP ${changelogGetResponse.code()}"
-                )
-            }
+            // Discord/changelog fire only on an owned-transition change (diff.hasChanges).
+            // A content-only publish (e.g. new unowned Personal Collection cards) still uploads
+            // binder.json above but skips both: no empty "0 added/0 removed" changelog entry, no
+            // wasted GitHub PUT, no Discord ping for something the user can't act on.
+            //
+            // onStep fires unconditionally so the UI progress step never looks skipped, but
+            // currentStep (used only for error attribution in the generic catch below) stays
+            // Uploading through the changelog fetch/parse and only flips to NotifyingDiscord right
+            // before the actual webhook call — an unwrapped exception during changelog fetch/parse
+            // must still report step Uploading, matching this function's pre-existing attribution.
+            onStep(PublishStep.NotifyingDiscord)
 
-            val newEntry = ChangelogEntry(
-                publishedAt = nextSnapshot.publishedAt,
-                summary = PublishSummaryCounts(
-                    added = diff.added,
-                    replaced = diff.replaced,
-                    removed = diff.removed,
-                    pokedexComplete = diff.pokedexComplete,
-                    pokedexTotal = diff.pokedexTotal
-                ),
-                changes = diff.deltas.map { delta ->
-                    SlotChange(
-                        type = delta.type.name,
-                        slotId = delta.slotId,
-                        slotName = delta.displayName,
-                        cardSet = delta.cardSet
+            if (diff.hasChanges) {
+                // b. Fetch + update changelog.json
+                val changelogGetResponse = gitHubApi.getContent(
+                    auth = auth,
+                    owner = config.githubOwner,
+                    repo = config.githubRepo,
+                    path = CHANGELOG_JSON_PATH
+                )
+                val (existingChangelog, changelogSha) = when {
+                    changelogGetResponse.code() == 404 -> Changelog(emptyList()) to null
+                    changelogGetResponse.isSuccessful -> {
+                        val dto = changelogGetResponse.body()
+                        val decoded = dto?.content?.let { decodeBase64(it) }
+                        val parsed = decoded?.let {
+                            moshi.adapter(Changelog::class.java).fromJson(it)
+                        } ?: Changelog(emptyList())
+                        parsed to dto?.sha
+                    }
+                    else -> throw PublishFailedException(
+                        PublishStep.Uploading,
+                        "Failed to fetch current changelog.json: HTTP ${changelogGetResponse.code()}"
                     )
                 }
-            )
-            val updatedChangelog = Changelog(
-                entries = (listOf(newEntry) + existingChangelog.entries).take(CHANGELOG_MAX_ENTRIES)
-            )
-            val changelogJson = moshi.adapter(Changelog::class.java).toJson(updatedChangelog)
-            val changelogPutResponse = gitHubApi.putContent(
-                auth = auth,
-                owner = config.githubOwner,
-                repo = config.githubRepo,
-                path = CHANGELOG_JSON_PATH,
-                body = GitHubPutRequest(
-                    message = "Update changelog",
-                    content = encodeBase64(changelogJson),
-                    sha = changelogSha
-                )
-            )
-            if (!changelogPutResponse.isSuccessful) {
-                // binder.json is already committed at this point. Per spec §2.7 step 5b,
-                // we still treat this as a hard failure and skip the webhook so the user
-                // retries — a known imperfection (changelog can drift from binder on retry
-                // since the retry will re-diff against the now-updated binder.json).
-                throw PublishFailedException(
-                    PublishStep.Uploading,
-                    "GitHub upload of changelog.json failed: HTTP ${changelogPutResponse.code()}"
-                )
-            }
 
-            // Notify Discord
-            currentStep = PublishStep.NotifyingDiscord
-            onStep(currentStep)
-            if (config.discordWebhookUrl.isNotBlank()) {
-                val embed = buildEmbed(diff, publicPageUrl(config))
-                val webhookResponse = discordApi.sendWebhook(
-                    config.discordWebhookUrl,
-                    DiscordWebhookPayload(embeds = listOf(embed))
+                val newEntry = ChangelogEntry(
+                    publishedAt = nextSnapshot.publishedAt,
+                    summary = PublishSummaryCounts(
+                        added = diff.added,
+                        replaced = diff.replaced,
+                        removed = diff.removed,
+                        pokedexComplete = diff.pokedexComplete,
+                        pokedexTotal = diff.pokedexTotal
+                    ),
+                    changes = diff.deltas.map { delta ->
+                        SlotChange(
+                            type = delta.type.name,
+                            slotId = delta.slotId,
+                            slotName = delta.displayName,
+                            cardSet = delta.cardSet
+                        )
+                    }
                 )
-                if (!webhookResponse.isSuccessful) {
+                val updatedChangelog = Changelog(
+                    entries = (listOf(newEntry) + existingChangelog.entries).take(CHANGELOG_MAX_ENTRIES)
+                )
+                val changelogJson = moshi.adapter(Changelog::class.java).toJson(updatedChangelog)
+                val changelogPutResponse = gitHubApi.putContent(
+                    auth = auth,
+                    owner = config.githubOwner,
+                    repo = config.githubRepo,
+                    path = CHANGELOG_JSON_PATH,
+                    body = GitHubPutRequest(
+                        message = "Update changelog",
+                        content = encodeBase64(changelogJson),
+                        sha = changelogSha
+                    )
+                )
+                if (!changelogPutResponse.isSuccessful) {
+                    // binder.json is already committed at this point. Per spec §2.7 step 5b,
+                    // we still treat this as a hard failure and skip the webhook so the user
+                    // retries — a known imperfection (changelog can drift from binder on retry
+                    // since the retry will re-diff against the now-updated binder.json).
                     throw PublishFailedException(
-                        PublishStep.NotifyingDiscord,
-                        "Discord notification failed: HTTP ${webhookResponse.code()}"
+                        PublishStep.Uploading,
+                        "GitHub upload of changelog.json failed: HTTP ${changelogPutResponse.code()}"
                     )
+                }
+
+                // Notify Discord
+                currentStep = PublishStep.NotifyingDiscord
+                if (config.discordWebhookUrl.isNotBlank()) {
+                    val embed = buildEmbed(diff, publicPageUrl(config))
+                    val webhookResponse = discordApi.sendWebhook(
+                        config.discordWebhookUrl,
+                        DiscordWebhookPayload(embeds = listOf(embed))
+                    )
+                    if (!webhookResponse.isSuccessful) {
+                        throw PublishFailedException(
+                            PublishStep.NotifyingDiscord,
+                            "Discord notification failed: HTTP ${webhookResponse.code()}"
+                        )
+                    }
+                } else {
+                    Log.w("PublishRepository", "Discord webhook not configured — skipping notification")
                 }
             } else {
-                Log.w("PublishRepository", "Discord webhook not configured — skipping notification")
+                Log.i("PublishRepository",
+                    "Content-only publish (no owned-card changes) — binder.json updated, changelog/Discord skipped")
             }
 
             currentStep = PublishStep.Done(diff)
@@ -519,11 +535,14 @@ class PublishRepository @Inject constructor(
             .flatMap { it.slots }
             .count { it.slotType == SLOT_TYPE_BASE && it.cardId != null }
 
+        val contentChanged = next.binders != baseline?.binders   // baseline null → always true
+
         return PublishDiff(
             deltas = deltas,
             isFirstPublish = isFirstPublish,
             pokedexComplete = pokedexComplete,
-            pokedexTotal = POKEDEX_TOTAL
+            pokedexTotal = POKEDEX_TOTAL,
+            contentChanged = contentChanged
         )
     }
 

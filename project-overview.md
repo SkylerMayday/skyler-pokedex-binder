@@ -558,6 +558,32 @@ must be the single source of truth for "counts as filled," set correctly per bin
 (`assignedCardId != null` for Pokédex/Card History/Unown, the real toggle for CA/PC) — do not
 revert to checking `cardId` nullness directly.**
 
+**binder.json upload decoupled from Discord/changelog notification** (2026-09-20, session 16
+cont'd). Skyler's explicit design intent: the public site should show ALL Personal Collection
+cards for a given Pokémon (grayscale until owned — already correct in-app via
+`ui/common/DimmableCardImage.kt`), but Discord/changelog should stay silent unless an actual owned
+card changed. Found the conflict directly in code: `PublishDiff.hasChanges` (`deltas.isNotEmpty()`,
+owned-transitions only) was the ONLY gate for whether `publish()` uploaded binder.json at all
+(`PublishRepository.kt:131`) — so a newly-cached UNOWNED card (e.g. a fresh print discovered by
+`PersonalCollectionViewModel.refreshAll()`) produced zero deltas and the whole publish short-
+circuited to `NoChanges`, meaning the site never saw it. Fixed by adding a second, independent
+signal: `PublishDiff.contentChanged` (`next.binders != baseline?.binders`, a free structural
+comparison since all snapshot model classes are data classes — deliberately compares only
+`.binders`, not the whole `BinderSnapshot`, since `publishedAt` regenerates every build and would
+make any two snapshots always "different"). `contentChanged` now gates the binder.json upload;
+`hasChanges` (unchanged meaning) still exclusively gates the changelog.json entry and the Discord
+webhook — a content-only publish uploads binder.json but skips both, no empty "0 added" changelog
+noise. Ship at 89/100 → 100 after closing the one finding. Full `dev-team-pipeline` run, 315/315
+tests. Two real bugs caught and fixed mid-pipeline, neither shipped: (1) Tester stage — 2 new tests
+failed because `@Before` stubbed `Log.w` but not the new code's `Log.i` call (MockK throws on
+unstubbed static calls, `publish()`'s generic `catch` silently turned that into `Failure`) — a
+test-infra gap, not a logic bug, fixed by adding the missing stub. (2) Reviewer stage — moving the
+Discord/changelog block into a conditional had shifted `currentStep = PublishStep.NotifyingDiscord`
+to fire before the changelog fetch instead of right before the actual webhook call, so an unwrapped
+exception during changelog fetch/parse would misreport its failure step as "Notifying Discord"
+instead of "Uploading" in the Publish dialog — fixed by restoring the original position of that
+assignment while keeping the UI's `onStep()` progress callback unconditional and separate.
+
 ## Binder Backup: Card History Restore Gap + Local Export/Import (2026-09-03/04, shipped uncommitted)
 
 Full `dev-team-pipeline` run (Planner→Coder→Tester→Debugger→re-Tester→3-lens Reviewer, 2 score-loop

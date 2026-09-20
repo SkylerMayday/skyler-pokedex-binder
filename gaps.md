@@ -43,9 +43,12 @@ audit (OkHttp/Room/Moshi/AGP, no active CVEs on pinned versions) both performed 
 - **`detectCardInFrame()` still duplicates `guideFrameImageRect()`'s geometry** instead of sharing
   it — deferred again this session for the same reason (live camera-analysis path, no way to verify
   a refactor here without real hardware). Already deferred twice before this.
-- **Personal Collection publishes its entire search cache (owned + unowned)** — not a bug, a
-  design decision from 2026-07-12 worth reconfirming is still desired before the next publish.
-  This needs Skyler's answer, not a code change.
+- ~~**Personal Collection publishes its entire search cache (owned + unowned) — confirm still
+  desired**~~ **Answered same session: yes, confirmed and clarified.** Skyler's exact spec: show
+  all cards, grayscale until owned (already correct in-app), and — the real gap this surfaced —
+  Discord/changelog should only fire on an actual owned-card change, decoupled from whether
+  binder.json itself uploads. Built and shipped same session, see `project-overview.md`'s "Publish
+  Diff Semantics" section, 2026-09-20 entry.
 - **The two calibration items from item 16 (rotation + crop-margin fix) and item 15/17 (hash-margin
   constants) all still need a real live-device scan** to confirm they hold — see the session-16
   entries below and `project-overview.md` items 15-17.
