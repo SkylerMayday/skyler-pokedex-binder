@@ -1,0 +1,188 @@
+=================================================================================
+CHECK 1 (typecheck) and CHECK 4 (production build) — BLOCKED, same environment wall as CHECK 3 below.
+Android/Kotlin has no separate typecheck step outside Gradle compile tasks
+(compileDebugKotlin/compileDebugUnitTestKotlin), and assembleDebug needs the same
+Gradle daemon IPC. Both hit the identical failure documented below.
+=================================================================================
+
+=================================================================================
+CHECK 2 (lint) — BLOCKED, same environment wall. No standalone ktlint/detekt is
+configured in this project (checked app/build.gradle.kts, root build.gradle.kts —
+no matches for ktlint/detekt/lint plugin ids beyond AGP's built-in `lintDebug`
+task, which also requires the Gradle daemon).
+=================================================================================
+
+=================================================================================
+CHECK 3 (scoped unit tests) — `.\gradlew.bat testDebugUnitTest --rerun-tasks`
+=================================================================================
+
+--- Attempt 1: default (JAVA_HOME=D:\jdk17\jdk-17.0.14+7, --rerun-tasks --console=plain) ---
+Exit code 1. Error: java.io.IOException: Unable to establish loopback connection
+
+--- Attempt 2: + --no-daemon (confirmed no-op: gradle.properties already sets org.gradle.daemon=false) ---
+Exit code 1. Same error.
+
+--- Attempt 3: + GRADLE_OPTS/-Dorg.gradle.jvmargs="-Djdk.net.usePlainSocketImpl=true" ---
+Exit code 1. Same error. (This was gaps.md's "not yet tried" candidate fix — now confirmed-false, same as --no-daemon was in a prior session.)
+
+--- Attempt 4: JAVA_HOME switched to "C:\Program Files\Android\Android Studio\jbr" ---
+Exit code 1. Same error, reproduced on a second, independent JDK install.
+
+--- Attempt 5: JAVA_OPTS="-Djava.nio.channels.spi.SelectorProvider=sun.nio.ch.WindowsSelectorProvider" ---
+Exit code 1. Same error. Notably the stacktrace now shows `WindowsSelectorImpl` instead of
+`WEPollSelectorImpl` (confirming the override was honored) but still bottoms out at
+`UnixDomainSockets.connect0` — proves the failure is below the Selector-implementation
+abstraction entirely (JDK 17's Pipe implementation routes through UnixDomainSockets
+regardless of which Selector provider is active). Not fixable via selector-provider flags.
+
+--- Attempt 6: dangerouslyDisableSandbox=true (rule out Bash-tool sandbox blocking AF_UNIX) ---
+Exit code 1. Same error — rules out the harness's own command sandbox as the cause.
+
+--- Attempts 7-8: plain retries (documented in gaps.md as sometimes self-resolving) ---
+Exit code 1 both times. Did not self-resolve this session.
+
+--- Diagnostic: `.\gradlew.bat --version` (no task execution / no daemon IPC needed) ---
+SUCCEEDED:
+------------------------------------------------------------
+Gradle 8.11.1
+------------------------------------------------------------
+Build time:    2024-11-20 16:56:46 UTC
+Revision:      481cb05a490e0ef9f8620f7873b83bd8a72e7c39
+Kotlin:        2.0.20
+Groovy:        3.0.22
+Ant:           Apache Ant(TM) version 1.10.14 compiled on August 16 2023
+Launcher JVM:  17.0.14 (Eclipse Adoptium 17.0.14+7)
+Daemon JVM:    D:\jdk17\jdk-17.0.14+7 (no JDK specified, using current Java home)
+OS:            Windows 11 10.0 amd64
+
+This confirms JAVA_HOME/wrapper/classpath are all fine — the wall is specific to any
+command that requires Gradle's daemon IPC socket (i.e. every actual build/test task),
+not a general Java or wrapper misconfiguration.
+
+--- Full stacktrace (Attempt 1, representative of all attempts 1-4; attempt 5's differs
+    only in which Selector impl class appears, per note above) ---
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.11.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+java.io.IOException: Unable to establish loopback connection
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+* Exception is:
+org.gradle.api.UncheckedIOException: java.io.IOException: Unable to establish loopback connection
+	at org.gradle.internal.UncheckedException.throwAsUncheckedException(UncheckedException.java:63)
+	at org.gradle.internal.UncheckedException.throwAsUncheckedException(UncheckedException.java:42)
+	at org.gradle.internal.remote.internal.inet.SocketConnection.<init>(SocketConnection.java:67)
+	at org.gradle.internal.remote.internal.inet.SocketConnectCompletion.create(SocketConnectCompletion.java:40)
+	at org.gradle.launcher.daemon.client.DefaultDaemonConnector.connectToDaemon(DefaultDaemonConnector.java:268)
+	at org.gradle.launcher.daemon.client.DefaultDaemonConnector.connectToDaemonWithId(DefaultDaemonConnector.java:254)
+	at org.gradle.launcher.daemon.client.DefaultDaemonConnector.doStartDaemon(DefaultDaemonConnector.java:221)
+	at org.gradle.launcher.daemon.client.DefaultDaemonConnector.startSingleUseDaemon(DefaultDaemonConnector.java:241)
+	at org.gradle.launcher.daemon.client.SingleUseDaemonClient.execute(SingleUseDaemonClient.java:60)
+	at org.gradle.launcher.daemon.client.SingleUseDaemonClient.execute(SingleUseDaemonClient.java:37)
+	at org.gradle.launcher.cli.RunBuildAction.run(RunBuildAction.java:56)
+	... (framework frames omitted, full trace in earlier gradle-test-output.log captures) ...
+Caused by: java.io.IOException: Unable to establish loopback connection
+	at java.base/sun.nio.ch.PipeImpl$Initializer.run(PipeImpl.java:103)
+	at java.base/sun.nio.ch.PipeImpl$Initializer.run(PipeImpl.java:67)
+	at java.base/java.security.AccessController.doPrivileged(AccessController.java:569)
+	at java.base/sun.nio.ch.PipeImpl.<init>(PipeImpl.java:198)
+	at java.base/sun.nio.ch.WEPollSelectorImpl.<init>(WEPollSelectorImpl.java:78)   [attempt 5: WindowsSelectorImpl instead]
+	at java.base/sun.nio.ch.WEPollSelectorProvider.openSelector(WEPollSelectorProvider.java:33)
+	at java.base/java.nio.channels.Selector.open(Selector.java:295)
+	at org.gradle.internal.remote.internal.inet.SocketConnection$SocketInputStream.<init>(SocketConnection.java:167)
+	at org.gradle.internal.remote.internal.inet.SocketConnection.<init>(SocketConnection.java:65)
+	... 34 more
+Caused by: java.net.SocketException: Invalid argument: connect
+	at java.base/sun.nio.ch.UnixDomainSockets.connect0(Native Method)
+	at java.base/sun.nio.ch.UnixDomainSockets.connect(UnixDomainSockets.java:148)
+	at java.base/sun.nio.ch.UnixDomainSockets.connect(UnixDomainSockets.java:144)
+	at java.base/sun.nio.ch.SocketChannelImpl.connect(SocketChannelImpl.java:851)
+	at java.base/java.nio.channels.SocketChannel.open(SocketChannel.java:285)
+	at java.base/sun.nio.ch.PipeImpl$Initializer$LoopbackConnector.run(PipeImpl.java:133)
+	at java.base/sun.nio.ch.PipeImpl$Initializer.run(PipeImpl.java:85)
+	... 42 more
+
+This exact signature (`Unable to establish loopback connection` -> `WEPollSelectorImpl`/
+`WindowsSelectorImpl` -> `UnixDomainSockets.connect0` -> `SocketException: Invalid argument:
+connect`) is documented in this project's own `gaps.md` as recurring across sessions 10-12
+and again in the 2026-09-10 archived pipeline run (`.pipeline_archive/2026-09-10-gemini-retry-
+and-croprect-guard/changes.md`), described there as "previously self-resolving" but which did
+NOT self-resolve in that session either, across an equivalent set of workarounds. Not caused
+by this diff (confirmed via `gradlew.bat --version`, which needs no daemon and succeeds; the
+identical failure was also reproduced on an unrelated diff in the 2026-09-10 session).
+
+Given a hard wall after 6 distinct workaround attempts, this was not retried further.
+
+=================================================================================
+Correctness verification performed instead (manual trace, since automated
+compile/test could not run this session):
+=================================================================================
+- Re-read all 3 touched main-source files end-to-end after editing; confirmed against the
+  spec's exact-changes listing line-for-line.
+- Confirmed TcgCard's fields (id, name, number, setName, imageUrl, pokemonNames) match every
+  usage in SmartThresholdUseCase.kt and PerceptualHasher.kt (checked TcgCard.kt directly).
+- Grepped the whole app/src tree for other callers of `findBestMatch` / `evaluate(` /
+  `SmartThresholdUseCase(` / `SearchConfidence(` — only the one production call site
+  (ScannerViewModel.processImage) plus the two test files touched here; no other call site
+  breaks against the new signatures.
+- Hand-traced every branch of the new SmartThresholdUseCaseTest.kt cases against
+  SmartThresholdUseCase.evaluate()'s actual control flow (empty / single-in-ceiling /
+  single-beyond-ceiling / single-no-hashMatch / number-match-wins-over-wide-margin /
+  margin-wins-when-number-null / margin-too-narrow / number-read-but-unmatched-doesn't-
+  fall-through) — all traced to the expected branch and return value.
+- Hand-traced PerceptualHasherTest.kt's new/updated cases: the 8x8 mocks match the new
+  `Bitmap.createScaledBitmap(_, 8, 8, false)` / `getPixels(_, 0, 8, 0, 0, 8, 8)` call
+  signature exactly (previously 16, 16 / 256-length arrays); computed the expected hash bits
+  by hand for the collision-regression test (checkerboard vs. top-half-white 8x8 patterns
+  produce different bit patterns, not equal).
+- ScannerViewModelTest.kt (existing, untouched) only exercises `confidenceCheckInputs`, which
+  did not change — re-read to confirm no incidental breakage.
+
+=================================================================================
+CHECK 5 (dev/start server boots) — N/A. Android app, no dev/start server.
+=================================================================================
+
+=================================================================================
+CHECK 6 (no stray debug output / scratch files in the diff)
+=================================================================================
+$ git diff app/src/main/java/.../PerceptualHasher.kt app/src/main/java/.../SmartThresholdUseCase.kt app/src/main/java/.../ScannerViewModel.kt | grep -inE "println|console\.log|debugger|TODO|FIXME|Log\.d\(|Log\.v\("
+(no output — grep exit code 1, zero matches)
+
+No scratch/temp files added to the repo. The verification .ps1 scripts and raw gradle logs
+live in the session scratchpad (outside the repo) and this gitignored .pipeline/evidence/
+directory — not tracked by git.
+
+The pre-existing TEMP DIAGNOSTIC block in ScannerViewModel.kt (~lines 84-94, `runCatching { ...
+scan_debug_*.jpg ... }`) is untouched — it was already present/uncommitted before this task
+started (per the task brief and git diff below) and is explicitly out of scope to remove.
+
+=================================================================================
+CHECK 7 (git status shows only intended changed files)
+=================================================================================
+$ git status --porcelain
+ M app/src/main/java/com/skyler/pokedexbinder/domain/PerceptualHasher.kt
+ M app/src/main/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCase.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModel.kt
+ M app/src/test/java/com/skyler/pokedexbinder/domain/PerceptualHasherTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCaseTest.kt
+
+Exactly the 5 files the spec's Dependencies section named. ScannerViewModel.kt's diff includes
+the pre-existing uncommitted TEMP diagnostic block (already modified before this session per
+the conversation's starting git status) plus this task's new confidence-path edits — verified
+via `git diff` that the TEMP block's lines are unchanged content, only appearing in the diff
+because the file's baseline (last commit) predates it.
+
+$ git diff --stat
+ .../pokedexbinder/domain/PerceptualHasher.kt       | 27 ++++--
+ .../pokedexbinder/domain/SmartThresholdUseCase.kt  | 60 ++++++++++---
+ .../pokedexbinder/ui/scanner/ScannerViewModel.kt   | 30 +++++--
+ .../pokedexbinder/domain/PerceptualHasherTest.kt   | 81 +++++++++++++++---
+ .../domain/SmartThresholdUseCaseTest.kt            | 99 +++++++++++++++++++++-
+ 5 files changed, 253 insertions(+), 44 deletions(-)

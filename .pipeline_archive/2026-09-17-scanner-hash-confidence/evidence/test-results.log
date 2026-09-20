@@ -1,0 +1,99 @@
+﻿To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.11.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateDebugBuildConfig
+> Task :app:generateDebugResValues
+> Task :app:checkDebugAarMetadata
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources
+> Task :app:packageDebugResources
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :app:parseDebugLocalResources
+> Task :app:mergeDebugResources
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:processDebugManifestForPackage
+> Task :app:javaPreCompileDebugUnitTest
+> Task :app:javaPreCompileDebug
+> Task :app:processDebugResources
+> Task :app:kspDebugKotlin
+
+> Task :app:compileDebugKotlin
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreen.kt:580:26 'val LocalLifecycleOwner: ProvidableCompositionLocal<LifecycleOwner>' is deprecated. Moved to lifecycle-runtime-compose library in androidx.lifecycle.compose package.
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/main/java/com/skyler/pokedexbinder/ui/slotdetail/SlotDetailViewModel.kt:28:10 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+
+> Task :app:compileDebugJavaWithJavac
+> Task :app:hiltAggregateDepsDebug
+
+> Task :app:hiltJavaCompileDebug
+gradlew.bat : warning: Kapt support in Moshi Kotlin Code Gen is deprecated and will be removed in 2.0. Please migrate 
+to KSP. https://github.com/square/moshi#codegen
+At C:\Users\SkylerMayday\AppData\Local\Temp\claude\D--Claude-Projects-PokedexBinderV2\eba800ca-9dca-4330-82e7-a4a0f6c43
+f50\scratchpad\run_tests_evidence.ps1:5 char:1
++ & .\gradlew.bat testDebugUnitTest --rerun-tasks *>&1 | Tee-Object -Fi ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: Kapt s...e/moshi#codegen:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+1 warning
+
+> Task :app:processDebugJavaRes
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:kspDebugUnitTestKotlin
+> Task :app:transformDebugClassesWithAsm
+> Task :app:bundleDebugClassesToRuntimeJar
+
+> Task :app:compileDebugUnitTestKotlin
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/repository/CardSearchRepositoryTest.kt:248:9 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/repository/CardSearchRepositoryTest.kt:251:9 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/MainBinderViewModelTest.kt:26:34 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/MainBinderViewModelTest.kt:36:39 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/MainBinderViewModelTest.kt:37:41 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/ManualSearchViewModelTest.kt:25:34 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/ManualSearchViewModelTest.kt:30:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/ManualSearchViewModelTest.kt:35:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/QuickScanViewModelTest.kt:41:34 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/QuickScanViewModelTest.kt:49:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/QuickScanViewModelTest.kt:54:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/SlotDetailViewModelTest.kt:23:34 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/SlotDetailViewModelTest.kt:26:39 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/SlotDetailViewModelTest.kt:27:41 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/connectingart/ConnectingArtViewModelTest.kt:27:34 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/connectingart/ConnectingArtViewModelTest.kt:35:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/connectingart/ConnectingArtViewModelTest.kt:42:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/personalcollection/PersonalCollectionViewModelTest.kt:25:34 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/personalcollection/PersonalCollectionViewModelTest.kt:33:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/personalcollection/PersonalCollectionViewModelTest.kt:41:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/unown/UnownBinderViewModelTest.kt:25:34 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/unown/UnownBinderViewModelTest.kt:31:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/app/src/test/java/com/skyler/pokedexbinder/ui/unown/UnownBinderViewModelTest.kt:37:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:hiltAggregateDepsDebugUnitTest
+> Task :app:hiltJavaCompileDebugUnitTest NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes
+> Task :app:transformDebugUnitTestClassesWithAsm
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has 
+been appended
+> Task :app:testDebugUnitTest
+[Incubating] Problems report is available at: file:///D:/Claude%20Projects/PokedexBinderV2/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 1m 21s
+31 actionable tasks: 31 executed
+EXITCODE=0
+=== Fresh JUnit XML summary (post-fix run) ===
+tests=303 skipped=0 failures=0 errors=0
+
+=== PerceptualHasherTest.xml (the class with the diagnosed failure, pre-fix) ===
+<testsuite name="com.skyler.pokedexbinder.domain.PerceptualHasherTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-09-17T04:45:43" hostname="DESKTOP-2G0T4AM" time="0.488">
+  <testcase name="computeHash never collides for two distinguishably-different images" classname="com.skyler.pokedexbinder.domain.PerceptualHasherTest" time="0.092"/>
+  <testcase name="hammingDistance of identical hashes is zero" classname="com.skyler.pokedexbinder.domain.PerceptualHasherTest" time="0.002"/>
+  <testcase name="findBestMatch returns null for empty list" classname="com.skyler.pokedexbinder.domain.PerceptualHasherTest" time="0.004"/>
+  <testcase name="findBestMatch returns only card with MAX_VALUE margin when list has one element" classname="com.skyler.pokedexbinder.domain.PerceptualHasherTest" time="0.135"/>
+  <testcase name="computeHash returns same value for identical bitmaps" classname="com.skyler.pokedexbinder.domain.PerceptualHasherTest" time="0.083"/>
+  <testcase name="hammingDistance of all-zeros vs all-ones is 64" classname="com.skyler.pokedexbinder.domain.PerceptualHasherTest" time="0.002"/>
+  <testcase name="findBestMatch picks card whose hash is closest to captured bitmap and reports margin" classname="com.skyler.pokedexbinder.domain.PerceptualHasherTest" time="0.17"/>

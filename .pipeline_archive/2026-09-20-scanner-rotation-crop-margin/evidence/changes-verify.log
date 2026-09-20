@@ -1,0 +1,23 @@
+=== Gradle build/test verification attempts (3x) — all hit known sandbox Gradle daemon IPC wall ===
+Command: gradlew.bat testDebugUnitTest assembleDebug --rerun-tasks (attempt 2 also tried --no-daemon)
+JAVA_HOME=D:\jdk17\jdk-17.0.14+7
+
+﻿To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.11.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+gradlew.bat : 
+At C:\Users\SkylerMayday\AppData\Local\Temp\claude\D--Claude-Projects-PokedexBinderV2\eba800ca-9dca-4330-82e7-a4a0f6c43
+f50\scratchpad\run_verify.ps1:5 char:1
++ & .\gradlew.bat testDebugUnitTest assembleDebug --rerun-tasks --conso ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+java.io.IOException: Unable to establish loopback connection
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.

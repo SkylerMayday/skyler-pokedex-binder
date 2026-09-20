@@ -439,12 +439,64 @@ confirmed working).
       (same-species multi-candidate cases for the margin threshold, another single-candidate
       misread for the ceiling) before either number should be trusted as final.
 
-**Status as of 2026-09-17 (session 16): the hash-margin confidence fix is shipped, not yet
+16. **Two real, previously-undiagnosed capture bugs found and fixed** (2026-09-17/20, session 16
+    cont'd, full `dev-team-pipeline` run). Found via direct device evidence after session 16's
+    hash-margin fix shipped but 5 live scans (Furfrou x2, Castform x2, Elgyem x1) still all landed
+    low-confidence — pulled the actual `scan_debug_*.jpg` files (session 15's kept TEMP diagnostic)
+    via `adb pull` and looked at them directly, rather than continuing to reason about the hash
+    pipeline in the abstract. Reviewer score 97/100, ship, no P0/P1.
+    - **Bug A — captured images were never rotated upright.** `ImageProxyExt.kt`'s
+      `toCroppedBitmap()` used `imageInfo.rotationDegrees` only to pick which pre-rotation
+      rectangle to crop (`guideFrameImageRect()`) — it never applied the actual pixel rotation.
+      Confirmed by viewing all 4 pulled debug JPEGs: every one sideways, regardless of phone
+      orientation. This means every image ever sent to `GeminiCardScanner.scan()` since this
+      capture path was written has been sideways. Fixed: rotate the already-cropped bitmap via
+      `Matrix().postRotate(imageInfo.rotationDegrees.toFloat())`, no-op (no `Matrix` constructed)
+      at `rotation == 0`. Rotating the small cropped bitmap rather than the full ~4000x3000 raw
+      decode keeps this cheap and doesn't touch `guideFrameImageRect()`'s crop-position math, which
+      is correct and already unit-tested for all 4 rotation cases.
+    - **Bug B — the guide box gave too little visual feedback and too little real-world margin.**
+      Added temporary on-device diagnostic logging (canvas size, `guideFrameImageRect`'s internal
+      math, the raw `ImageProxy.cropRect`) and mathematically proved — to 4 decimal places, from
+      real captured numbers, not just formula-reading — that the on-screen guide box and the actual
+      capture crop correspond to the exact same real-world rectangle. So the geometry itself was
+      never buggy. The real problem: at `GUIDE_FRAME_WIDTH_RATIO=0.75` the box already consumes
+      87.7% of available canvas height, and `CardFrameOverlay` drew only 4 corner brackets (no
+      continuous edge) — leaving almost no visual reference or physical tolerance, so a card the
+      user judged "fully in frame" still had its header (name/HP) and footer (printed number/
+      illustrator) strip clipped by the crop. Fixed: `CardFrameOverlay` now draws one continuous
+      `drawRect` border (replacing the 8 `drawLine` corner-bracket calls) for a precise visual
+      target; a new `CROP_MARGIN_FACTOR = 1.10f` (10% linear, first-guess/uncalibrated, same
+      comment convention as `GUIDE_FRAME_WIDTH_RATIO`) inflates only the actual capture crop inside
+      `guideFrameImageRect()` — deliberately NOT the drawn box or `detectCardInFrame()`'s presence
+      heuristic, so the box stays a confident visual target while the real captured region gets
+      slack. Rejected shrinking `GUIDE_FRAME_WIDTH_RATIO` instead: session 14's own history shows a
+      smaller box gave Gemini less usable card detail, which is why the ratio was raised to 0.75 in
+      the first place.
+    - **Real bug found and fixed during the Tester stage**: the Coder's new rotation test added
+      `import io.mockk.anyConstructed`, which doesn't resolve — `anyConstructed<T>()` is a
+      `MockKMatcherScope` member, not a top-level importable function (confirmed against this
+      codebase's own working `BackupImporterTest.kt` precedent, which uses it successfully with no
+      such import). Fixed by removing the bogus import. 305/305 unit tests pass (fresh XML) after
+      the fix, `assembleDebug --rerun-tasks` clean.
+    - **3 temporary diagnostic log blocks removed** (tagged "TEMP DIAGNOSTIC (2026-09-17)") now that
+      they'd served their purpose of proving Bug B's root cause. Session 15's separate, still-needed
+      "TEMP DIAGNOSTIC (2026-09-11)" `scan_debug_*.jpg` block in `ScannerViewModel.kt` is untouched
+      — confirmed by both the Coder and Reviewer stages, and it's not part of this diff's file list.
+    - **Not yet live-device-verified.** Per the spec, this is an explicit human-in-the-loop gate
+      outside the pipeline's own Tester/Reviewer scope — Skyler needs to take a real scan on the
+      connected S26 Ultra and the orchestrator needs to `adb pull` the resulting debug JPEG to
+      confirm both (a) the image is right-side-up and (b) the full card (header through footer) is
+      now captured, not just the middle band.
+
+**Status as of 2026-09-20 (session 16 cont'd): both new capture bugs are shipped, not yet
 live-tested.** Items 1-13 are shipped; items 1-9 are live-hardware-confirmed (session 12); items
-10-13 are unit-test/API-verified but didn't resolve the underlying symptom. Item 15 (this session)
-is the actual fix for that symptom, unit-verified but awaiting a real scan to confirm it holds
-against genuine same-species/misread cases. `GUIDE_FRAME_WIDTH_RATIO=0.75` and `gemini-3.6-flash`
-are both still reasonable to keep — neither is wrong, they just weren't the actual bottleneck.
+10-14 are unit-test/API-verified but didn't resolve the underlying symptom on their own. Item 15
+(hash-margin confidence) is the fix for the "low confidence" symptom; item 16 (this entry) is the
+fix for the actual image-quality root cause discovered while live-testing item 15 — both are
+unit-verified but await a real scan to confirm they hold together in practice.
+`GUIDE_FRAME_WIDTH_RATIO=0.75` and `gemini-3.6-flash` are both still reasonable to keep — neither is
+wrong, they just weren't the actual bottleneck.
 
 **Diagnostic-only logging exists in `ScannerScreen.kt`** (`4bd8bac`) — `Log.i("ScannerFocus", ...)`
 per focus request (elapsed time + `isFocusSuccessful`) and a one-time camera AF-capability log at

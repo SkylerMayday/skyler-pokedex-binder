@@ -2,14 +2,18 @@ package com.skyler.pokedexbinder.ui.scanner
 
 import android.graphics.Bitmap
 import android.graphics.ImageFormat
+import android.graphics.Matrix
 import android.graphics.Rect
 import android.util.Log
 import androidx.camera.core.ImageInfo
 import androidx.camera.core.ImageProxy
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
+import io.mockk.unmockkConstructor
 import io.mockk.unmockkStatic
+import io.mockk.verify
 import org.junit.After
 import org.junit.Assert.assertSame
 import org.junit.Before
@@ -71,12 +75,12 @@ class ImageProxyExtTest {
     }
 
     // width/height/rotation match guideFrameImageRect(1000, 2000, 0) at
-    // GUIDE_FRAME_WIDTH_RATIO=0.75 (bumped 2026-09-10, session 14): left=125 top=476 width=750
-    // height=1047.
+    // GUIDE_FRAME_WIDTH_RATIO=0.75 with CROP_MARGIN_FACTOR=1.10 applied (ScannerScreen.kt):
+    // left=87 top=424 width=825 height=1151.
     @Test
     fun `valid rect crops the decoded bitmap via Bitmap createBitmap`() {
         val cropped = mockk<Bitmap>()
-        every { Bitmap.createBitmap(decodedBitmap, 125, 476, 750, 1047) } returns cropped
+        every { Bitmap.createBitmap(decodedBitmap, 87, 424, 825, 1151) } returns cropped
 
         val result = jpegImageProxy(width = 1000, height = 2000, rotationDegrees = 0)
             .toCroppedBitmap()
@@ -112,13 +116,13 @@ class ImageProxyExtTest {
 
     // ViewPort-constrained case: cropRect is smaller than and offset within the full frame
     // (1200x2400 full frame, 1000x2000 crop at origin (100,200)). Expected rect is
-    // guideFrameImageRect(1000, 2000, 0) — left=125 top=476 width=750 height=1047 at
-    // GUIDE_FRAME_WIDTH_RATIO=0.75 (bumped 2026-09-10, session 14) — shifted by (100,200):
-    // left=225 top=676 width=750 height=1047 (offsetBy leaves width/height unchanged).
+    // guideFrameImageRect(1000, 2000, 0) — left=87 top=424 width=825 height=1151 at
+    // GUIDE_FRAME_WIDTH_RATIO=0.75 with CROP_MARGIN_FACTOR=1.10 applied — shifted by (100,200):
+    // left=187 top=624 width=825 height=1151 (offsetBy leaves width/height unchanged).
     @Test
     fun `nonzero cropRect offset shifts guideFrameImageRect by cropRect origin`() {
         val cropped = mockk<Bitmap>()
-        every { Bitmap.createBitmap(decodedBitmap, 225, 676, 750, 1047) } returns cropped
+        every { Bitmap.createBitmap(decodedBitmap, 187, 624, 825, 1151) } returns cropped
 
         val result = jpegImageProxy(
             width = 1200,
@@ -140,5 +144,54 @@ class ImageProxyExtTest {
             .toCroppedBitmap()
 
         assertSame(decodedBitmap, result)
+    }
+
+    // rotation == 0 is the existing no-op path (all 5 tests above use it) — this test additionally
+    // confirms no Matrix is ever constructed on that path, per the spec's explicit acceptance
+    // criterion, not just that the returned bitmap matches.
+    @Test
+    fun `rotation 0 constructs no Matrix`() {
+        mockkConstructor(Matrix::class)
+        try {
+            val cropped = mockk<Bitmap>()
+            every { Bitmap.createBitmap(decodedBitmap, 87, 424, 825, 1151) } returns cropped
+
+            val result = jpegImageProxy(width = 1000, height = 2000, rotationDegrees = 0)
+                .toCroppedBitmap()
+
+            assertSame(cropped, result)
+            verify(exactly = 0) { anyConstructed<Matrix>().postRotate(any()) }
+        } finally {
+            unmockkConstructor(Matrix::class)
+        }
+    }
+
+    // rotationDegrees=90: guideFrameImageRect(1000, 2000, 90) -> left=0 top=175 width=1000
+    // height=1650 (display space swaps for a rotated raw buffer). Non-Robolectric stub jar throws
+    // "not mocked" on real Matrix/Bitmap method calls, so both are fully intercepted: the
+    // constructor via mockkConstructor, and the 6-arg Bitmap.createBitmap(bitmap, x, y, w, h,
+    // Matrix, filter) overload via its own stub returning a distinct mock, asserted via assertSame
+    // so a wrong overload (e.g. accidentally returning the pre-rotation `cropped`) fails loudly.
+    @Test
+    fun `nonzero rotation rotates the cropped bitmap via Matrix postRotate`() {
+        mockkConstructor(Matrix::class)
+        try {
+            val cropped = mockk<Bitmap>()
+            val rotated = mockk<Bitmap>()
+            every { Bitmap.createBitmap(decodedBitmap, 0, 175, 1000, 1650) } returns cropped
+            every { cropped.width } returns 1000
+            every { cropped.height } returns 1650
+            every { anyConstructed<Matrix>().postRotate(90f) } returns true
+            every {
+                Bitmap.createBitmap(cropped, 0, 0, 1000, 1650, any<Matrix>(), true)
+            } returns rotated
+
+            val result = jpegImageProxy(width = 1000, height = 2000, rotationDegrees = 90)
+                .toCroppedBitmap()
+
+            assertSame(rotated, result)
+        } finally {
+            unmockkConstructor(Matrix::class)
+        }
     }
 }

@@ -166,44 +166,41 @@ class ScannerScreenTest {
 
     // 4000x3000 (a real landscape camera-sensor buffer shape, width > height — matches this
     // file's own "Camera delivers landscape frames even in portrait mode" comment on
-    // detectCardInFrame) rather than 1000x2000. At GUIDE_FRAME_WIDTH_RATIO=0.5 these dims kept
-    // rotation-0/180 clean (no clamping) while 90/270 stayed clean too, each 1px apart from odd-
-    // gap rounding. At 0.75 (bumped 2026-09-10, session 14) the balance flips: guideH now exceeds
-    // this raw HEIGHT (3000) at rotation 0/180's un-rotated 4:3 orientation, so those two now
-    // saturate into the same clamped path the "extreme aspect ratio" test below already covers —
-    // still correct output, just no longer illustrating a clean unclamped swap. 90/270 (the
-    // orientation every real capture actually uses, per the comment above) stay clean, and their
-    // now-even 750/858-unit splits divide exactly, so both directions land on identical numbers
-    // instead of the old 1px-apart pair — also correct, not a regression, just a property of this
-    // ratio's specific arithmetic with these dims.
+    // detectCardInFrame) rather than 1000x2000. At GUIDE_FRAME_WIDTH_RATIO=0.75, guideH already
+    // exceeds this raw HEIGHT (3000) at rotation 0/180's un-rotated 4:3 orientation, so those two
+    // saturate into the same clamped path the "extreme aspect ratio" test below also covers.
+    // 90/270 (the orientation every real capture actually uses) stay unclamped. CROP_MARGIN_FACTOR
+    // (1.10x, applied inside this function only) inflates the box these corners are derived from,
+    // which is why 90 and 270 no longer land on identical numbers below — the extra margin's own
+    // odd-vs-even split differs by rotation, not a bug (see CROP_MARGIN_FACTOR's own doc comment).
 
     @Test
     fun `guideFrameImageRect rotation 0 saturates the clamp path at this ratio (real captures never use rotation 0)`() {
         val rect = guideFrameImageRect(rawWidth = 4000, rawHeight = 3000, rotationDegrees = 0)
-        assertEquals(500, rect.left)
+        assertEquals(350, rect.left)
         assertEquals(0, rect.top)
-        assertEquals(3500, rect.right)
+        assertEquals(3650, rect.right)
         assertEquals(3000, rect.bottom)
-        assertEquals(3000, rect.width)
+        assertEquals(3300, rect.width)
         assertEquals(3000, rect.height)
     }
 
     @Test
     fun `guideFrameImageRect rotation 90 axis-swaps via 4-corner remap, not a naive swap`() {
         val rect = guideFrameImageRect(rawWidth = 4000, rawHeight = 3000, rotationDegrees = 90)
-        assertEquals(429, rect.left)
-        assertEquals(375, rect.top)
-        assertEquals(3571, rect.right)
-        assertEquals(2625, rect.bottom)
+        assertEquals(272, rect.left)
+        assertEquals(263, rect.top)
+        assertEquals(3728, rect.right)
+        assertEquals(2738, rect.bottom)
     }
 
     @Test
-    fun `guideFrameImageRect rotation 270 lands on the same rect as 90 at this ratio (even split, no 1px rounding gap)`() {
+    fun `guideFrameImageRect rotation 270 lands 1px off rotation 90 once CROP_MARGIN_FACTOR applies (arithmetic, not a bug)`() {
         val rect = guideFrameImageRect(rawWidth = 4000, rawHeight = 3000, rotationDegrees = 270)
-        assertEquals(429, rect.left)
-        assertEquals(375, rect.top)
-        assertEquals(3571, rect.right)
-        assertEquals(2625, rect.bottom)
+        assertEquals(272, rect.left)
+        assertEquals(262, rect.top)
+        assertEquals(3728, rect.right)
+        assertEquals(2737, rect.bottom)
     }
 
     @Test
@@ -215,9 +212,9 @@ class ScannerScreenTest {
         // an off-by-1 mirror like it was at 0.5. Still correct, just no longer demonstrating a
         // near-symmetric mirror since there's no unclamped margin left to be asymmetric about.
         val rect = guideFrameImageRect(rawWidth = 4000, rawHeight = 3000, rotationDegrees = 180)
-        assertEquals(500, rect.left)
+        assertEquals(350, rect.left)
         assertEquals(0, rect.top)
-        assertEquals(3500, rect.right)
+        assertEquals(3650, rect.right)
         assertEquals(3000, rect.bottom)
     }
 

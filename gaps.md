@@ -3,6 +3,32 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
+## Refreshed — 2026-09-20 (session 16, cont'd)
+
+### Fixed this session (full `dev-team-pipeline` run, ship at 97/100)
+
+- **Captured images were never rotated upright** — `ImageProxyExt.kt`'s `toCroppedBitmap()` used
+  `rotationDegrees` only for crop-rect math, never for the actual pixel rotation. Found by pulling
+  4 real `scan_debug_*.jpg` files via `adb pull` and looking at them: every one sideways. This has
+  been true since the crop function was written — every image ever sent to Gemini has been
+  sideways. Fixed: `Matrix().postRotate()` on the already-cropped bitmap, no-op at rotation 0.
+  305/305 tests pass, `assembleDebug` clean. Full detail: `project-overview.md` item 16.
+- **Guide box gave too little visual/physical margin, causing real header/footer clipping** — box
+  consumed 87.7% of canvas height with only corner-bracket visual feedback (no continuous edge).
+  Mathematically confirmed the crop geometry itself matched the on-screen box exactly (not a math
+  bug) — the box was just too tight and too hard to align to precisely. Fixed: full `drawRect`
+  border replacing corner brackets, plus `CROP_MARGIN_FACTOR=1.10f` (first-guess, uncalibrated)
+  inflating only the actual capture crop, not the drawn box or `detectCardInFrame()`'s presence
+  heuristic. Full detail: `project-overview.md` item 16.
+
+### New this session — needs Skyler's live-device confirmation
+
+- **Neither fix above is live-tested yet.** Explicit human-in-the-loop gate per this session's own
+  spec — take a real scan on the connected S26 Ultra, orchestrator pulls the resulting
+  `scan_debug_*.jpg` and confirms (a) right-side-up, (b) full card (header through footer) visible,
+  not just the middle band. `CROP_MARGIN_FACTOR=1.10` is a first guess pending this data — same
+  standing pattern as `GUIDE_FRAME_WIDTH_RATIO`'s entire history.
+
 ## Refreshed — 2026-09-17 (session 16)
 
 ### Fixed this session (full `dev-team-pipeline` run, ship at 95/100)
@@ -45,6 +71,25 @@ actually fixed and verified, not when merely planned.
   standing pattern as `GUIDE_FRAME_WIDTH_RATIO`'s entire history — needs Skyler's real S26 Ultra
   scans (same-species multi-candidate cases for the margin, another single-candidate misread for
   the ceiling) before either number should be trusted as final.
+  **Live data, 2026-09-17, same session as install (`adb logcat -s ScannerMatch:*`), 4 real
+  post-install scans (2x Furfrou, 2x Castform, different angles each), all correctly avoided a
+  false-accept (real improvement over session 14/15's actual wrong-assigns) but none reached high
+  confidence — all 4 fell to manual-pick, all `path=NONE`:**
+  | Card | Gemini number | Best hash distance | Margin | Why NONE |
+  |---|---|---|---|---|
+  | Furfrou #1 | null | 27/64 | 2 | margin << 12 |
+  | Castform #1 | 42 (unmatched) | 25/64 | 0 | number read but unmatched — correctly skips hash path per design |
+  | Castform #2 | null | 24/64 | 1 | margin << 12 |
+  | Furfrou #2 | 148 (unmatched) | 21/64 | 5 | number read but unmatched — correctly skips hash path per design |
+
+  Every best-match distance landed in a narrow 21-27/64 band, and every margin was ≤5 — all well
+  under `HASH_MARGIN_HIGH_CONFIDENCE_THRESHOLD=12`. Two of four also show Gemini reading a card
+  number that matches none of the returned candidates (not a null-number case at all) — the
+  deliberate `parsedNumber==null` vs `numberMatch==null` distinction correctly refused to fall
+  through to the hash path in both. n=4, 0 false positives so far, but also 0 confirmed true
+  positives — no wide-margin case has occurred yet to prove the threshold catches a real match
+  rather than just avoiding bad ones. Don't retune off this data alone; keep watching for a
+  wide-margin scan.
 - Whether this fix would have actually caught the original Furfrou→Zorua misread remains unverified
   — that exact photo was never saved. The kept TEMP diagnostic block in `ScannerViewModel.kt`
   (unchanged this session, still uncommitted) exists to catch the next occurrence.

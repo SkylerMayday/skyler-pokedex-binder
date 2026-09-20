@@ -1,6 +1,7 @@
 package com.skyler.pokedexbinder.ui.scanner
 
 import android.graphics.Bitmap
+import android.graphics.Matrix
 import android.util.Log
 import androidx.camera.core.ImageProxy
 
@@ -57,7 +58,14 @@ fun ImageProxy.toCroppedBitmap(): Bitmap {
         return decoded
     }
     return runCatching {
-        Bitmap.createBitmap(decoded, rect.left, rect.top, rect.width, rect.height)
+        val cropped = Bitmap.createBitmap(decoded, rect.left, rect.top, rect.width, rect.height)
+        val rotation = imageInfo.rotationDegrees
+        if (rotation == 0) {
+            cropped
+        } else {
+            val matrix = Matrix().apply { postRotate(rotation.toFloat()) }
+            Bitmap.createBitmap(cropped, 0, 0, cropped.width, cropped.height, matrix, true)
+        }
     }.getOrElse {
         Log.w("ScannerFocus", "crop failed, using uncropped", it)
         decoded

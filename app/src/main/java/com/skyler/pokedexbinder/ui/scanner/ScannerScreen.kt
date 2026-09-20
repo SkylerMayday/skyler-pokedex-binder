@@ -28,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -73,6 +72,13 @@ private const val GUIDE_FRAME_WIDTH_RATIO = 0.75f
 // this file's own header comment on GUIDE_FRAME_WIDTH_RATIO claimed that class of drift was
 // eliminated; it was, for the width ratio, not for this one.
 private const val CARD_ASPECT_RATIO = 88f / 63f
+
+// First-guess, uncalibrated — same convention as GUIDE_FRAME_WIDTH_RATIO's history. Grows the
+// ACTUAL CAPTURE crop beyond the drawn guide box (same center) so a card judged "in frame"
+// against the tight visual target doesn't get header/footer clipped. Does NOT affect
+// CardFrameOverlay's drawn box or detectCardInFrame's presence heuristic — both must keep
+// matching what's on screen exactly.
+private const val CROP_MARGIN_FACTOR = 1.10f
 
 private fun detectCardInFrame(imageProxy: ImageProxy): Boolean {
     val iw = imageProxy.width
@@ -167,10 +173,12 @@ internal fun guideFrameImageRect(rawWidth: Int, rawHeight: Int, rotationDegrees:
 
     val guideW = (dispW * GUIDE_FRAME_WIDTH_RATIO).toInt()
     val guideH = (guideW * CARD_ASPECT_RATIO).toInt()
-    val dLeft = (dispW - guideW) / 2
-    val dTop = (dispH - guideH) / 2
-    val dRight = dLeft + guideW
-    val dBot = dTop + guideH
+    val boxW = (guideW * CROP_MARGIN_FACTOR).toInt()
+    val boxH = (guideH * CROP_MARGIN_FACTOR).toInt()
+    val dLeft = (dispW - boxW) / 2
+    val dTop = (dispH - boxH) / 2
+    val dRight = dLeft + boxW
+    val dBot = dTop + boxH
 
     fun toImage(dx: Int, dy: Int): Pair<Int, Int> = when (rotationDegrees) {
         90 -> Pair(dy, rawHeight - 1 - dx)
@@ -244,23 +252,16 @@ private fun CardFrameOverlay(cardDetected: Boolean, modifier: Modifier = Modifie
             // right strip
             drawRect(color = dark, topLeft = Offset(left + guideW, top), size = Size(size.width - left - guideW, guideH))
 
-            // Corner brackets
-            val bracketLen = guideW * 0.12f
+            // Full border — a single continuous edge is an unambiguous alignment reference for
+            // all 4 sides, unlike the previous 4 corner-only brackets.
             val strokeWidth = 4.dp.toPx()
-            val stroke = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-
-            // Top-left
-            drawLine(frameColor, Offset(left, top + bracketLen), Offset(left, top), stroke.width)
-            drawLine(frameColor, Offset(left, top), Offset(left + bracketLen, top), stroke.width)
-            // Top-right
-            drawLine(frameColor, Offset(left + guideW - bracketLen, top), Offset(left + guideW, top), stroke.width)
-            drawLine(frameColor, Offset(left + guideW, top), Offset(left + guideW, top + bracketLen), stroke.width)
-            // Bottom-left
-            drawLine(frameColor, Offset(left, top + guideH - bracketLen), Offset(left, top + guideH), stroke.width)
-            drawLine(frameColor, Offset(left, top + guideH), Offset(left + bracketLen, top + guideH), stroke.width)
-            // Bottom-right
-            drawLine(frameColor, Offset(left + guideW - bracketLen, top + guideH), Offset(left + guideW, top + guideH), stroke.width)
-            drawLine(frameColor, Offset(left + guideW, top + guideH - bracketLen), Offset(left + guideW, top + guideH), stroke.width)
+            val stroke = Stroke(width = strokeWidth)
+            drawRect(
+                color = frameColor,
+                topLeft = Offset(left, top),
+                size = Size(guideW, guideH),
+                style = stroke
+            )
         }
 
         // Hint text at bottom of guide area
