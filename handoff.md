@@ -1,92 +1,92 @@
-# Handoff — Session 16 (2026-09-17)
+# Handoff — Session 16 (2026-09-17 to 09-20)
 
 ## 1. Goals
 
-Continue from session 15's explicit deferral: build the already-approved, already-researched spec
-at `docs/specs/2026-09-13-scanner-hash-confidence.md`. Skyler said "continue building from the spec
-we left off last sesh" — full `dev-team-pipeline` run (Planner→Coder→Tester→Reviewer, no Debugger
-stage needed) against P0 tasks 1-6 + P1 tasks 7-8.
+Continued from session 15's deferral: build the hash-margin confidence spec, then chase the real
+root cause when live-testing showed it wasn't enough, then (per Skyler's explicit instruction) fix
+every remaining standing gap that doesn't require his physical involvement.
 
 ## 2. Current State
 
-### Hash-margin confidence path: shipped, uncommitted, not yet live-tested
+Three separate `dev-team-pipeline` runs shipped this session, all committed and pushed to
+`origin/master` (`c39ddef..5e563e5`, plus `b1e68fb` from earlier in the session):
 
-Full pipeline run, ship at 95/100, no P0/P1. Full detail: `project-overview.md` item 15,
-`gaps.md`'s session-16 section. Summary:
+### 1. Hash-margin confidence path (`b1e68fb`) — shipped, live-tested, holding up so far
 
-- `PerceptualHasher.computeHash()`'s real bit-mapping bug (session 15's finding) is fixed — 8x8
-  resize instead of 16x16, matches `Long`'s real 64-bit capacity, no more `1L shl i` overflow.
-- `findBestMatch()` now returns `HashMatchResult(card, distance, margin)` for every candidate count
-  including 1 — the old "exactly 1 candidate = auto-trust" short-circuit is gone.
-- `SmartThresholdUseCase.evaluate()` gained a margin-gated `HASH_MARGIN` confidence path for when
-  Gemini's OCR'd number is null, plus a `ConfidencePath` enum for diagnostics. Two new first-guess
-  constants (`HASH_MARGIN_HIGH_CONFIDENCE_THRESHOLD = 12`, `HASH_SINGLE_CANDIDATE_MAX_DISTANCE =
-  16`) — explicitly uncalibrated, need real-device data.
-- 303/303 unit tests pass (fresh XML), `assembleDebug --rerun-tasks` clean.
-- One real test-only bug found and fixed during the Tester stage (a wrong fixture-hash assumption
-  in `PerceptualHasherTest.kt` — production code was correct throughout).
-- One P2 finding deferred, not fixed: a per-candidate download failure can inflate the hash margin
-  past the threshold in a specific edge case. Full detail: `gaps.md`.
+Fixed `PerceptualHasher.computeHash()`'s real bit-mapping bug (8x8 resize, no more `1L shl i`
+overflow), added a margin-gated `HASH_MARGIN` confidence path for when Gemini can't OCR the card
+number, narrowed the `candidates.size==1` auto-trust short-circuit. Ship at 95/100. **Live-tested**:
+5 real post-install scans all correctly avoided false-accepts (real improvement over session
+14/15's actual wrong-assigns), though none hit high confidence yet either — margins observed were
+all thin (0-5), consistent with `HASH_MARGIN_HIGH_CONFIDENCE_THRESHOLD=12` not yet confirmed to
+catch a true positive. Full detail: `project-overview.md` item 15.
 
-**Not committed** — Skyler hasn't been asked yet whether to commit; this session ended right after
-the Reviewer's ship verdict.
+### 2. Scanner capture bugs: sideways images + guide-box clipping (`c39ddef`) — shipped, NOT live-tested
 
-**Not live-tested** — same standing constraint as every constant this scanner's history has shipped
-(`GUIDE_FRAME_WIDTH_RATIO`, retry delays, etc.). The two new constants are first-guess values.
+Live-testing #1 above led to pulling the actual `scan_debug_*.jpg` files off the phone and looking
+at them directly — found two real, previously-undiagnosed bugs: captured images were never rotated
+upright (`ImageProxyExt.kt` used `rotationDegrees` only for crop math, never applied the actual
+pixel rotation), and the guide box gave too little visual/physical margin (87.7% of canvas height,
+corner-brackets only), causing real header/footer clipping even when the card looked "in frame."
+Fixed both: `Matrix().postRotate()` for rotation, a full `drawRect` border + new
+`CROP_MARGIN_FACTOR=1.10f` for the margin. Ship at 97/100. Full detail: `project-overview.md` item 16.
 
-### Pre-existing uncommitted TEMP diagnostic block: kept, verified untouched
+**This is the one thing still blocking calling this session fully done** — needs a real scan on the
+S26 Ultra, then `adb pull` the resulting `scan_debug_*.jpg` to confirm (a) right-side-up, (b) full
+card visible header-to-footer, not just the middle band.
 
-Skyler explicitly chose to keep the session-15 TEMP diagnostic block in `ScannerViewModel.kt`
-(saves scan crops to disk) rather than discard it this session. Both the Tester and Reviewer stages
-independently confirmed it was left untouched by this session's changes.
+### 3. Gap-audit batch (`5e563e5`) — shipped, no live-device dependency
+
+Skyler asked to "fix everything that doesn't need me to run." Ran a manual security audit (found
+the Gemini API key was stored in plaintext, unlike the GitHub PAT/Discord webhook) and a dependency
+audit (no active CVEs on pinned versions, no bump made). Shipped 5 fixes: encrypted the Gemini API
+key with a migration for Skyler's existing key, closed the hash-margin download-failure P2 from fix
+#1's own gap list, excluded `backup_import_state.xml` from Auto Backup, added the missing
+`GeminiCardScanner` 404 test, documented `PendingImportError`'s deliberate SharedPreferences choice.
+**Reviewer caught a real P1** in the first pass — the key migration's `.apply()` could race the
+plaintext clear and lose the key on a process death — fixed via `.commit()`, re-reviewed clean at
+95/100 (up from 77/100). Full detail: `project-overview.md` item 17.
 
 ## 3. Active Files
 
-- `app/src/main/java/com/skyler/pokedexbinder/domain/PerceptualHasher.kt` — hash fix + `HashMatchResult`.
-- `app/src/main/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCase.kt` — `ConfidencePath` +
-  margin-gated confidence logic.
-- `app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModel.kt` — logging extended;
-  pre-existing uncommitted TEMP diagnostic block (~lines 84-94) untouched, still present.
-- `app/src/test/java/com/skyler/pokedexbinder/domain/PerceptualHasherTest.kt`,
-  `SmartThresholdUseCaseTest.kt` — updated/new tests.
-- `.pipeline/` — full pipeline handoff trail (`specs.md`, `changes.md`, `test-results.md`,
-  `review-verdict.md`, `evidence/test-results.log`). Not yet archived to `.pipeline_archive/`.
-- `gaps.md`, `project-overview.md`, this file — updated this session.
-- Two new lessons written by the Reviewer stage:
-  `~/.claude/rules/lessons/subagent-sandbox-blocks-loopback-sockets-try-orchestrator-first.md`,
-  `~/.claude/rules/lessons/grep-tool-n-flag-needs-explicit-output-mode.md`.
+All committed, nothing uncommitted. `.pipeline/` is empty (all 3 runs archived to
+`.pipeline_archive/2026-09-17-scanner-hash-confidence/`, `.pipeline_archive/2026-09-20-scanner-rotation-crop-margin/`,
+`.pipeline_archive/2026-09-20-gap-audit-batch/`, all committed).
 
 ## 4. Changes Made (commits, chronological)
 
-- **Nothing committed this session.** All 5 changed files (`PerceptualHasher.kt`,
-  `SmartThresholdUseCase.kt`, `ScannerViewModel.kt`, `PerceptualHasherTest.kt`,
-  `SmartThresholdUseCaseTest.kt`) are uncommitted in the working tree, ship-reviewed at 95/100.
+- `b1e68fb` — hash-margin confidence path (session 16 start).
+- `c39ddef` — scanner rotation fix + guide-box border/margin fix.
+- `5e563e5` — gap-audit batch (API key encryption + 4 smaller fixes).
+
+All pushed to `origin/master` this session (were 1-2 commits behind before — pushed at Skyler's
+explicit request to sync for his home Android Studio setup).
 
 ## 5. Failed Attempts
 
-- None on the coding/logic side — the pipeline shipped in one pass, no Debugger stage needed, no
-  Reviewer auto-loop needed (95/100 on the first review).
-- The Coder-stage subagent hit the standing Gradle daemon IPC wall (`gaps.md`, sessions 10-13) and
-  could not run any Gradle task at all. The orchestrator ran the exact same commands directly and
-  the wall cleared on the first attempt — 4th occurrence of this exact pattern, now captured as a
-  standing lesson so future sessions stop re-diagnosing it from scratch.
+- None on the coding/logic side across all 3 pipeline runs. Two real bugs were caught by
+  Tester/Reviewer stages before shipping (a bogus MockK import in run #2, the `.apply()`/`.commit()`
+  durability race in run #3) — both fixed within the same pipeline run, no wasted cycles.
+- One Reviewer subagent hit the account's session rate limit mid-run (run #3's re-review pass) —
+  orchestrator substituted directly, same precedent as session 13.
+- The sandbox's Gradle daemon IPC wall fired for every Coder-stage subagent across all 3 runs,
+  100% reproducible this session (not just intermittent, per this session's own friction notes) —
+  orchestrator's direct runs cleared every time, no exceptions.
 
 ## 6. Next Steps
 
-1. **Ask Skyler whether to commit the 5 uncommitted files** — shipped, reviewed, tested, but no
-   commit made yet (git safety: never commit without being asked). This is the very next action.
-2. **Live-test on the real S26 Ultra** — same standing constraint as every constant this scanner
-   history has shipped uncalibrated. Specifically want: (a) a same-species multi-candidate scan
-   where Gemini's number comes back null, to see whether `HASH_MARGIN_HIGH_CONFIDENCE_THRESHOLD =
-   12` is in a sane range: too low = false-positive wrong-card assigns, too high = still falls to
-   manual-pick too often; (b) a repeat of the Furfrou→Zorua-style single-candidate misread, to
-   check whether `HASH_SINGLE_CANDIDATE_MAX_DISTANCE = 16` actually catches it.
-3. **Archive `.pipeline/` to `.pipeline_archive/2026-09-17-scanner-hash-confidence/`** once Skyler
-   confirms the commit (or discard) decision — standing project convention, not yet done.
-4. **P2 deferred, not urgent**: `findBestMatch()`'s download-failure fallback can inflate the hash
-   margin past threshold in a specific one-candidate-fails edge case. Full detail: `gaps.md`.
-   Candidate fix: skip the `HASH_MARGIN` grant when `hashMatch.distance == Int.MAX_VALUE`.
-5. **Carried, unchanged**: `GeminiCardScanner.kt`'s unchanged 400/401/403/404 path still has no
-   dedicated test (session 13, still not urgent).
-6. **binder.json republish** — still gated on Skyler's own confidence that scanning works, per every
-   prior session's note. Unchanged.
+1. **Live-test the rotation + guide-box fix (`c39ddef`)** — the one thing actually blocking calling
+   this session's scanner work done. Take a real scan on the S26 Ultra; ask Claude to `adb pull` the
+   resulting `scan_debug_*.jpg` and confirm it's upright and shows the full card.
+2. **Retune 3 uncalibrated constants once live data exists**: `HASH_MARGIN_HIGH_CONFIDENCE_
+   THRESHOLD=12`, `HASH_SINGLE_CANDIDATE_MAX_DISTANCE=16`, `CROP_MARGIN_FACTOR=1.10`. All first-guess,
+   same standing pattern as `GUIDE_FRAME_WIDTH_RATIO`'s entire history.
+3. **Two policy questions only Skyler can answer** (not bugs, not fixable blind): (a) is Personal
+   Collection's full-cache (owned+unowned) publish behavior still desired? (b) is it worth
+   introducing Robolectric to get real test coverage on the `EncryptedSharedPreferences`-backed
+   repositories (`SettingsRepository`, `PublishSettingsRepository`), which currently have none?
+4. **Deliberately not touched, needs live-camera verification if ever picked up**: the
+   `CameraControl$OperationCanceledException` focus-race noise (not blocking), `detectCardInFrame()`'s
+   duplicated geometry (cosmetic dedup, deferred 3 times now).
+5. **binder.json republish** — still gated on Skyler's own confidence that scanning works, per
+   every prior session's note. Unchanged.
