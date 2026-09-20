@@ -112,6 +112,15 @@ class GeminiCardScannerTest {
     }
 
     @Test
+    fun `scan throws immediately on 404 with no retry`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(404))
+        var caught: Exception? = null
+        try { scanner.scan(bitmap, "test-key") } catch (e: Exception) { caught = e }
+        assert(caught is java.io.IOException) { "Expected IOException but got $caught" }
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
     fun `scan retries once on 503 then succeeds`() = runTest {
         server.enqueue(MockResponse().setResponseCode(503))
         server.enqueue(MockResponse().setBody(SUCCESS_BODY.trimIndent()))

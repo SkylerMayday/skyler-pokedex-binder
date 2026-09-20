@@ -123,6 +123,20 @@ class SmartThresholdUseCaseTest {
     }
 
     @Test
+    fun `hash margin does not grant high confidence when winning distance is the download-failure sentinel`() {
+        val xy1 = card("xy1-1", "Charizard", "1")
+        val base1 = card("base1-4", "Charizard", "4")
+        val result = useCase.evaluate(
+            cards = listOf(xy1, base1),
+            parsedName = "Charizard",
+            parsedNumber = null,
+            hashMatch = hashMatch(xy1, distance = Int.MAX_VALUE, margin = 999)
+        )
+        assertFalse(result.isHighConfidence)
+        assertEquals(ConfidencePath.NONE, result.matchPath)
+    }
+
+    @Test
     fun `falls through when margin is narrower than the threshold`() {
         val xy1 = card("xy1-1", "Charizard", "1")
         val base1 = card("base1-4", "Charizard", "4")

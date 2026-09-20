@@ -49,6 +49,10 @@ private val REQUIRED_TABLES = setOf("main_binder", "secondary_binder")
  * start (`MainActivity`), is the only way it survives that restart.
  */
 object PendingImportError {
+    // Deliberately NOT this codebase's usual DataStore convention (SettingsRepository,
+    // PublishSettingsRepository): DataStore has no synchronous write API, and persist() below must
+    // complete before the imminent Process.killProcess() call in BackupImporter.applyDb() — an async
+    // DataStore write would race the kill and could be lost. See persist()'s commit=true below.
     private const val PREFS_NAME = "backup_import_state"
     private const val KEY_MESSAGE = "pending_import_error"
 

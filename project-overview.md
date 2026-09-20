@@ -489,14 +489,57 @@ confirmed working).
       confirm both (a) the image is right-side-up and (b) the full card (header through footer) is
       now captured, not just the middle band.
 
-**Status as of 2026-09-20 (session 16 cont'd): both new capture bugs are shipped, not yet
-live-tested.** Items 1-13 are shipped; items 1-9 are live-hardware-confirmed (session 12); items
-10-14 are unit-test/API-verified but didn't resolve the underlying symptom on their own. Item 15
-(hash-margin confidence) is the fix for the "low confidence" symptom; item 16 (this entry) is the
-fix for the actual image-quality root cause discovered while live-testing item 15 — both are
-unit-verified but await a real scan to confirm they hold together in practice.
-`GUIDE_FRAME_WIDTH_RATIO=0.75` and `gemini-3.6-flash` are both still reasonable to keep — neither is
-wrong, they just weren't the actual bottleneck.
+17. **Gap-audit batch: 5 independent fixes + 1 new security finding** (2026-09-20, session 16
+    cont'd, full `dev-team-pipeline` run, Skyler's instruction: "fix everything that doesn't need
+    me to run"). Score history 77 → 95/100 — one auto-loop iteration for a real P1 finding.
+    - **Security finding, not on the original gap list**: `SettingsRepository.kt` stored the Gemini
+      API key in plaintext `DataStore`, inconsistent with `PublishSettingsRepository.kt` storing the
+      GitHub PAT/Discord webhook via `EncryptedSharedPreferences` for the identical threat model.
+      Fixed: moved the Gemini key to the same `EncryptedSharedPreferences` pattern (new
+      `"settings_secrets"` file, decoupled from `PublishSettingsRepository`'s own `"publish_secrets"`),
+      with a one-time migration so Skyler's already-configured key isn't lost —
+      `getGeminiApiKey()`/`setGeminiApiKey()` signatures unchanged, all 3 call sites untouched.
+      **Reviewer caught a real P1 in the first pass**: the migration's encrypted write used
+      `.apply()` (async, non-durable) immediately before a durable-blocking DataStore clear of the
+      plaintext copy — a process death in that window could lose the key from both stores, exactly
+      the failure the read→write→clear ordering was meant to prevent. Fixed via `.commit()` instead
+      (already inside `Dispatchers.IO`, free to block), reusing this same session's own
+      `BackupImporter.kt`/`PendingImportError.persist()` precedent for the identical durability
+      class of bug. Re-reviewed independently after the fix: 95/100, ship.
+    - `SmartThresholdUseCase.evaluate()`'s `HASH_MARGIN` branch now also requires
+      `hashMatch.distance != Int.MAX_VALUE` — closes the P2 from item 15 where a single failed
+      candidate-image download could inflate the margin past the confidence threshold.
+      `PerceptualHasher.kt` has zero diff; the guard only touches the consuming condition.
+    - `backup_import_state.xml` (the `PendingImportError` backing file) excluded from Android Auto
+      Backup in both `data_extraction_rules.xml` and `full_backup_content.xml` — closes a session-8
+      gap where a stale pending-import-error message could ride a cloud backup/device-transfer onto
+      a fresh install.
+    - New dedicated test for `GeminiCardScanner.kt`'s 400/401/403/404 no-retry path (404 chosen as
+      representative) — zero production change, closes a session-13 test-coverage gap.
+    - `PendingImportError`'s deliberate use of raw `SharedPreferences` instead of this codebase's
+      DataStore convention now documented in place (comment-only) — the choice was already correct
+      (DataStore has no synchronous write, would race the forced `Process.killProcess()`), just
+      previously undocumented at the point of deviation.
+    - **Security/dependency audit performed, no code action needed beyond the above**: manual
+      security pass found the API key issue above; no other secret/exported-component/backup-domain
+      issues found. Dependency audit (OkHttp 4.12.0, Room 2.6.1, Moshi 1.15.1, AGP 8.9.1) found no
+      active CVEs on the currently pinned versions — no version bump made, consistent with this
+      project's own documented caution against speculative bumps.
+    - Deliberately NOT touched: `detectCardInFrame()`'s duplicated geometry, the
+      `CameraControl$OperationCanceledException` focus-race noise, and Personal Collection's
+      full-cache publish behavior — all three either need live-camera verification this session
+      couldn't provide, or are policy questions only Skyler can answer, not bugs to fix blind.
+    - 310/310 unit tests pass (fresh XML, 305 baseline + 5 new), `assembleDebug`/`lintDebug
+      --rerun-tasks` clean.
+
+**Status as of 2026-09-20 (session 16 cont'd): items 16 and 17 are both shipped, not yet
+live-tested (item 16) / not device-dependent (item 17).** Items 1-13 are shipped; items 1-9 are
+live-hardware-confirmed (session 12); items 10-14 are unit-test/API-verified but didn't resolve the
+underlying symptom on their own. Item 15 (hash-margin confidence) is the fix for the "low
+confidence" symptom; item 16 is the fix for the actual image-quality root cause discovered while
+live-testing item 15, awaiting a real scan; item 17 is a batch of independent hardening fixes with
+no live-device dependency of its own. `GUIDE_FRAME_WIDTH_RATIO=0.75` and `gemini-3.6-flash` are
+both still reasonable to keep — neither is wrong, they just weren't the actual bottleneck.
 
 **Diagnostic-only logging exists in `ScannerScreen.kt`** (`4bd8bac`) — `Log.i("ScannerFocus", ...)`
 per focus request (elapsed time + `isFocusSuccessful`) and a one-time camera AF-capability log at

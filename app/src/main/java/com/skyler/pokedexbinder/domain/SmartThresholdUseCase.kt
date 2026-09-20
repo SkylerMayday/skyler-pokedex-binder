@@ -58,7 +58,12 @@ class SmartThresholdUseCase @Inject constructor() {
         // Deliberately gated on parsedNumber == null, not "numberMatch == null" — a number that
         // was read but matched nothing is a stronger negative signal than nothing read at all,
         // and must NOT fall through to the hash-margin path.
+        // hashMatch.distance == Int.MAX_VALUE means the *winning* candidate's own image download
+        // failed (PerceptualHasher.findBestMatch()'s documented fallback) — the margin is an
+        // artifact of a missing comparison, not a strong visual match, even though the raw
+        // arithmetic can clear the threshold.
         if (parsedNumber == null && hashMatch != null &&
+            hashMatch.distance != Int.MAX_VALUE &&
             hashMatch.margin >= HASH_MARGIN_HIGH_CONFIDENCE_THRESHOLD
         ) {
             return SearchConfidence(cards, true, hashMatch.card, ConfidencePath.HASH_MARGIN)

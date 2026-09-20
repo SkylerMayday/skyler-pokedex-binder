@@ -1,0 +1,191 @@
+===== ATTEMPT 1: testDebugUnitTest / assembleDebug / lintDebug --rerun-tasks (daemon) =====
+=== testDebugUnitTest --rerun-tasks ===
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.11.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+java.io.IOException: Unable to establish loopback connection
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+=== assembleDebug --rerun-tasks ===
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.11.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+java.io.IOException: Unable to establish loopback connection
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+=== lintDebug --rerun-tasks ===
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.11.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+java.io.IOException: Unable to establish loopback connection
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+EXIT_SUMMARY test=1 assemble=1 lint=1
+
+===== ATTEMPT 2: inline -Command env mangling repro (confirms documented Bash $env: issue) =====
+:JAVA_HOME=D:\jdk17\jdk-17.0.14+7 : The term ':JAVA_HOME=D:\jdk17\jdk-17.0.14+7' is not recognized as the name of a 
+cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify 
+that the path is correct and try again.
+At line:1 char:1
++ :JAVA_HOME='D:\jdk17\jdk-17.0.14+7'; :TEMP='C:\Users\SkylerMayday\App ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (:JAVA_HOME=D:\jdk17\jdk-17.0.14+7:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+:TEMP=C:\Users\SkylerMayday\AppData\Local\Temp : The term ':TEMP=C:\Users\SkylerMayday\AppData\Local\Temp' is not 
+recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if 
+a path was included, verify that the path is correct and try again.
+At line:1 char:38
++ ... -17.0.14+7'; :TEMP='C:\Users\SkylerMayday\AppData\Local\Temp'; :TMP=' ...
++                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (:TEMP=C:\Users\...Data\Local\Temp:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+:TMP=C:\Users\SkylerMayday\AppData\Local\Temp : The term ':TMP=C:\Users\SkylerMayday\AppData\Local\Temp' is not 
+recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if 
+a path was included, verify that the path is correct and try again.
+At line:1 char:88
++ ... \Local\Temp'; :TMP='C:\Users\SkylerMayday\AppData\Local\Temp'; Set-Lo ...
++                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (:TMP=C:\Users\S...Data\Local\Temp:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+ 
+ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH. 
+ 
+Please set the JAVA_HOME variable in your environment to match the 
+location of your Java installation. 
+
+===== ATTEMPT 3: testDebugUnitTest / assembleDebug / lintDebug --rerun-tasks --no-daemon (.ps1 file) =====
+=== testDebugUnitTest --rerun-tasks (no-daemon) ===
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.11.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+java.io.IOException: Unable to establish loopback connection
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+=== assembleDebug --rerun-tasks (no-daemon) ===
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.11.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+java.io.IOException: Unable to establish loopback connection
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+=== lintDebug --rerun-tasks (no-daemon) ===
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.11.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+java.io.IOException: Unable to establish loopback connection
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+EXIT_SUMMARY test=1 assemble=1 lint=1
+
+===== ATTEMPT 4: same, dangerouslyDisableSandbox=true =====
+=== testDebugUnitTest --rerun-tasks (no-daemon) ===
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.11.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+java.io.IOException: Unable to establish loopback connection
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+=== assembleDebug --rerun-tasks (no-daemon) ===
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.11.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+java.io.IOException: Unable to establish loopback connection
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+=== lintDebug --rerun-tasks (no-daemon) ===
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.11.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+java.io.IOException: Unable to establish loopback connection
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+EXIT_SUMMARY test=1 assemble=1 lint=1
+
+===== ATTEMPT 5: minimal 'gradlew help' isolation test, sandbox disabled =====
+(see inline output above in session; also universal loopback IOException)
+
+===== git status --porcelain =====
+ M app/src/main/java/com/skyler/pokedexbinder/data/local/backup/BackupImporter.kt
+ M app/src/main/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCase.kt
+ M app/src/main/java/com/skyler/pokedexbinder/repository/SettingsRepository.kt
+ M app/src/main/res/xml/data_extraction_rules.xml
+ M app/src/main/res/xml/full_backup_content.xml
+ M app/src/test/java/com/skyler/pokedexbinder/domain/GeminiCardScannerTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCaseTest.kt
+?? app/src/test/java/com/skyler/pokedexbinder/repository/SettingsRepositoryTest.kt
+
+===== git diff --stat =====
+ .../data/local/backup/BackupImporter.kt            |  4 ++
+ .../pokedexbinder/domain/SmartThresholdUseCase.kt  |  5 ++
+ .../pokedexbinder/repository/SettingsRepository.kt | 74 ++++++++++++++++++++--
+ app/src/main/res/xml/data_extraction_rules.xml     |  4 ++
+ app/src/main/res/xml/full_backup_content.xml       |  2 +
+ .../pokedexbinder/domain/GeminiCardScannerTest.kt  |  9 +++
+ .../domain/SmartThresholdUseCaseTest.kt            | 14 ++++
+ 7 files changed, 108 insertions(+), 4 deletions(-)
+
+===== grep for stray debug/scratch markers in diff =====
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/data/local/backup/BackupImporter.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCase.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/repository/SettingsRepository.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/res/xml/data_extraction_rules.xml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/res/xml/full_backup_content.xml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/test/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCaseTest.kt', LF will be replaced by CRLF the next time Git touches it
+(none found)

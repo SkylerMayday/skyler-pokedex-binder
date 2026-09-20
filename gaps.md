@@ -3,6 +3,53 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
+## Refreshed — 2026-09-20 (session 16, gap-audit batch)
+
+Full audit of the standing gap list at Skyler's request ("fix everything that doesn't need me to
+run"). Manual security review (secrets storage, exported components, backup domain) and dependency
+audit (OkHttp/Room/Moshi/AGP, no active CVEs on pinned versions) both performed this session.
+
+### Fixed this session (full `dev-team-pipeline` run, score 77 → 95/100 after one auto-loop)
+
+- ~~**`findBestMatch()`'s per-candidate download-failure fallback could inflate the hash margin
+  past threshold**~~ (session 16's original entry, below) **Fixed.** `SmartThresholdUseCase.
+  evaluate()`'s `HASH_MARGIN` branch now also requires `hashMatch.distance != Int.MAX_VALUE`.
+  `PerceptualHasher.kt` untouched. Full detail: `project-overview.md` item 17.
+- ~~**`GeminiCardScanner.kt`'s 400/401/403/404 path has no dedicated test**~~ (carried since
+  session 13) **Fixed.** New test, zero production change.
+- ~~**`shared_prefs/backup_import_state.xml` not excluded from Android Auto Backup**~~ (session 8)
+  **Fixed.** Excluded in both `data_extraction_rules.xml` and `full_backup_content.xml`.
+- ~~**`PendingImportError` uses raw `SharedPreferences`, undocumented deviation**~~ (session 8)
+  **Fixed (documentation only).** Comment now explains the deliberate choice (DataStore has no
+  synchronous write, would race the forced `Process.killProcess()`).
+
+### New this session — found by the security audit, not on the original list
+
+- ~~**Gemini API key stored in plaintext `DataStore`, inconsistent with the GitHub PAT/Discord
+  webhook's `EncryptedSharedPreferences` storage (same threat model, same app)**~~ **Fixed.** Moved
+  to `EncryptedSharedPreferences` with a migration preserving Skyler's existing key.
+  **Reviewer caught a real P1 in the first pass**: the migration's encrypted write used `.apply()`
+  (async) immediately before a durable-blocking plaintext clear — a process death in that window
+  could lose the key from both stores. Fixed via `.commit()`, re-reviewed clean at 95/100. Full
+  detail: `project-overview.md` item 17.
+
+### Still open — needs Skyler, not fixable blind
+
+- **Repeated focus requests still cancel each other** (`CameraControl$OperationCanceledException`,
+  open since 2026-09-04) — deliberately not touched this session. Not blocking (every sequence
+  eventually reaches a real focus lock), but this is delicate, much-iterated camera code and any
+  fix needs live-device confirmation this session couldn't provide — touching it blind risks
+  reopening a multi-session saga for a cosmetic log-noise issue.
+- **`detectCardInFrame()` still duplicates `guideFrameImageRect()`'s geometry** instead of sharing
+  it — deferred again this session for the same reason (live camera-analysis path, no way to verify
+  a refactor here without real hardware). Already deferred twice before this.
+- **Personal Collection publishes its entire search cache (owned + unowned)** — not a bug, a
+  design decision from 2026-07-12 worth reconfirming is still desired before the next publish.
+  This needs Skyler's answer, not a code change.
+- **The two calibration items from item 16 (rotation + crop-margin fix) and item 15/17 (hash-margin
+  constants) all still need a real live-device scan** to confirm they hold — see the session-16
+  entries below and `project-overview.md` items 15-17.
+
 ## Refreshed — 2026-09-20 (session 16, cont'd)
 
 ### Fixed this session (full `dev-team-pipeline` run, ship at 97/100)
@@ -45,14 +92,11 @@ actually fixed and verified, not when merely planned.
 
 ### New this session — P2, deferred, not fixed
 
-- **`findBestMatch()`'s per-candidate download-failure fallback (`Int.MAX_VALUE` distance,
+- ~~**`findBestMatch()`'s per-candidate download-failure fallback (`Int.MAX_VALUE` distance,
   `PerceptualHasher.kt:50-51`) can inflate the margin past `HASH_MARGIN_HIGH_CONFIDENCE_THRESHOLD`
-  if exactly one candidate's image download fails mid-scan** — found by the Reviewer stage, inherited
-  directly from the source spec's own proposed algorithm (not a Coder deviation), untested either
-  direction. Would falsely grant `HASH_MARGIN` high confidence in precisely the `parsedNumber ==
-  null` case the path exists to help. Candidate fix when picked up: skip the `HASH_MARGIN` grant
-  when `hashMatch.distance == Int.MAX_VALUE`. Not a blocker — layered on top of two already-
-  uncalibrated constants pending real-device re-tune anyway.
+  if exactly one candidate's image download fails mid-scan**~~ **Fixed same day (2026-09-20 gap-audit
+  batch, above).** `evaluate()`'s `HASH_MARGIN` branch now also requires `hashMatch.distance !=
+  Int.MAX_VALUE`. `PerceptualHasher.kt` itself untouched, as originally proposed here.
 
 ### Recurred this session — 4th occurrence, now has a standing lesson
 
@@ -93,8 +137,8 @@ actually fixed and verified, not when merely planned.
 - Whether this fix would have actually caught the original Furfrou→Zorua misread remains unverified
   — that exact photo was never saved. The kept TEMP diagnostic block in `ScannerViewModel.kt`
   (unchanged this session, still uncommitted) exists to catch the next occurrence.
-- `GeminiCardScanner.kt`'s unchanged 400/401/403/404 path still has no dedicated test (carried,
-  unchanged, since session 13).
+- ~~`GeminiCardScanner.kt`'s unchanged 400/401/403/404 path still has no dedicated test~~ **Fixed
+  2026-09-20 (gap-audit batch).** New test, zero production change.
 
 ## Refreshed — 2026-09-13 (session 15)
 
@@ -550,17 +594,13 @@ self-resolving — now with one added data point)
   regression guard for this specific fix can go red for reasons unrelated to the code — if
   `BackupImporterTest`'s two newest cases (the ones asserting `Process.killProcess`/`startActivity`
   after a simulated swap failure) ever fail again, re-run clean before assuming a real regression.
-- **`PendingImportError` (new, `BackupImporter.kt`) uses raw `SharedPreferences` rather than this
-  codebase's `@Singleton`/DataStore convention for persisted state** (`SettingsRepository.kt`,
-  `PublishSettingsRepository.kt`). The technical choice is correct — DataStore has no synchronous
-  write and would race the forced `Process.killProcess()` — but the deviation isn't documented at
-  the point it diverges, unlike a precedented similar deviation already in
-  `PublishSettingsRepository.kt`. Low priority, cosmetic/consistency only.
-- **The new `shared_prefs/backup_import_state.xml` (`PendingImportError`'s backing file) isn't
-  excluded from Android's Auto Backup domain** — `data_extraction_rules.xml`/`full_backup_content.xml`
-  only exclude the `exports/` directory. An unconsumed pending-error message could theoretically
-  ride a cloud backup or device-transfer onto a fresh install and show a stale Toast there. Low
-  severity (no data exposure, just a confusing one-shot message), two-line fix when picked up.
+- ~~**`PendingImportError` (new, `BackupImporter.kt`) uses raw `SharedPreferences` rather than this
+  codebase's `@Singleton`/DataStore convention for persisted state**~~ **Fixed 2026-09-20 (gap-audit
+  batch, documentation only).** A comment above `PREFS_NAME` now explains why (DataStore has no
+  synchronous write, would race the forced `Process.killProcess()`) — no behavior change.
+- ~~**The new `shared_prefs/backup_import_state.xml` (`PendingImportError`'s backing file) isn't
+  excluded from Android's Auto Backup domain**~~ **Fixed 2026-09-20 (gap-audit batch.)** Excluded in
+  both `data_extraction_rules.xml` and `full_backup_content.xml` now, alongside `exports/`.
 - ~~**Scanner's `requestFocusAndMetering()` treated a THROWN metering future identically to a
   completed-but-unsuccessful one, defeating the real-focus-convergence gate near-instantly after
   bind.**~~ **Fixed 2026-09-04, found via the Task 0 feasibility spike's diagnostic logging
