@@ -3,6 +3,99 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
+## Refreshed — 2026-09-22 (session 17 — logcat check, direct debugging skill fix)
+
+### Fixed this session (root-caused via `adb logcat`, not a full pipeline run)
+
+- ~~**Repeated focus requests still cancel each other**
+  (`CameraControl$OperationCanceledException`, open since 2026-09-04)~~ **Fixed.** Real root cause,
+  confirmed live: the edge-triggered auto-refocus had no in-flight guard, so normal hand jitter
+  flickering the card-detection transition fired overlapping `startFocusAndMetering()` calls (9
+  cancellations in <2s in the captured log) — not the vague "delicate camera code" risk this entry
+  carried for 3+ deferrals. New `focusInFlight` boolean gates just the edge-triggered call site;
+  manual tap-to-focus untouched. Build-verified, **not yet live-device re-tested** — see below.
+- **New finding this session, fixed**: `CameraPreview`'s `AndroidView` never unbound the camera
+  provider when leaving composition — relied entirely on CameraX's own lifecycle-owner-stop unbind,
+  which lags Compose's own teardown enough to race the PreviewView's SurfaceView release. Confirmed
+  via logcat: `BufferQueueProducer: ... BufferQueue has been abandoned` (4-5x, ~150-300ms) on every
+  one of 4 scan sessions, immediately after `SV[...] releaseSurfaces`. Fixed: `AndroidView`'s
+  `onRelease` now calls `provider.unbindAll()` directly. Full detail: `project-overview.md` item 18.
+
+### Investigated this session, disputed — not a bug
+
+- **One `SQLiteLog: (10) POSIX Error 9 / SQLite Error 3850` lock-protocol line at cold start.**
+  Single occurrence, no exception, no failed query, no crash, self-resolved. Matches known benign
+  Samsung/Android SQLite-VFS log noise; no app code owns SQLite locking directly (single Room DB,
+  single connection pool). Not fixed — would be a blind patch with no confirmed root cause, against
+  the debugging skill's own Iron Law. Flagging here so it isn't re-investigated from scratch if it
+  recurs.
+
+### Second pass this session (2026-09-23) — live-retest after a fresh install
+
+- ~~**Item 18's two fixes (camera unbind + focus in-flight guard) are build-verified only, not
+  live-device re-tested**~~ **Re-tested after a fresh `installDebug`** (device was still running
+  the pre-fix build — `lastUpdateTime` confirmed it predated the source edit). Focus-cancellation
+  storm: **fully gone**, 0 occurrences (was 9). Camera-unbind race: **much improved, not literally
+  zero** — collapsed from a 150-300ms burst of `queueBuffer`/`dequeueBuffer` (CameraX actively
+  still producing new frames for a dead surface) to under 30ms, mostly benign `cancelBuffer`
+  cleanup, one real straggler frame per teardown at most. Reasonable ceiling given `unbindAll()`
+  is itself async — not chasing further.
+- **Session 16's rotation fix confirmed correct** — the retest's first scan actually succeeded
+  (Gemini 200 on the 3rd retry), producing this project's first-ever pulled-and-viewed successful
+  debug image (`scan_debug_1790101276039.jpg`): upright, text reads normally. Rotation fix holds.
+- ~~**`CROP_MARGIN_FACTOR=1.10` was a first guess pending live data**~~ **First live data says 1.10
+  was clearly insufficient — bumped to 1.30.** The successful scan's debug image was clipped on
+  all 4 edges (text cut mid-word left and right, no card header/HP visible at top at all), not
+  just header/footer as originally assumed when 1.10 was chosen. `ScannerScreen.kt`'s constant
+  bumped; `ScannerScreenTest.kt` (4 rotation cases) and `ImageProxyExtTest.kt` (3 cases) updated.
+  **First hand-recomputation pass was wrong** — 6 test failures on Skyler's own run, all a
+  1px-off pattern: `1.30f` isn't exactly representable in binary float32, so `boxW`/`boxH`
+  truncate 1 lower than exact-decimal arithmetic predicts. Root-caused by simulating Kotlin's real
+  float32 semantics in Python against the actual JVM failure output (matched exactly), then fixed
+  all 6 values from that simulation. **Re-run confirmed: `testDebugUnitTest --rerun-tasks` BUILD
+  SUCCESSFUL**, all failures gone, only pre-existing unrelated coroutines opt-in warnings. Value
+  itself is still first-guess/uncalibrated — **needs one more live scan** to confirm 1.30 actually
+  captures the full card, not just "less wrong" — same standing pattern as
+  `GUIDE_FRAME_WIDTH_RATIO`'s entire history.
+- **New data point on the Gradle loopback wall**: failed 3/3 more orchestrator-direct attempts this
+  session (`installDebug` once, `testDebugUnitTest` twice), on top of yesterday's 3/3 — the wall is
+  now failing consistently at orchestrator level across 2 consecutive sessions, not the "always
+  clears" pattern documented before 2026-09-22. `installDebug` itself was run by Skyler directly,
+  same workaround as yesterday.
+
+### New this session — the actual headline finding, initially missed
+
+- **All 4 of this session's live-test scans failed at the Gemini API call — none ever reached the
+  matching pipeline.** Skyler's stated purpose for this session was live-testing session 16's
+  pending items (rotation/crop-margin, hash-margin confidence); first pass at the logcat check
+  missed this and reported only crash/error noise. Re-checked the same captured log for
+  `ScannerMatch`/Gemini HTTP activity: 4 scans × 3 attempts each (the app's own `executeWithRetry`
+  budget) = 12 requests, 11 got `503 Service Unavailable`, 1 timed out — 100% failure rate, every
+  scan exhausted its retries and hit `ScannerViewModel.kt:133`'s generic catch, surfacing
+  `ScannerState.Error("Gemini error: 503")` on screen each time. `503` is Gemini's own
+  model-overloaded signal, distinct from the session-14 `429`/shared-quota-project gap (still
+  separately open, below) — not reproducible from this log alone whether it was a transient
+  Gemini-side outage at that specific time (2026-09-22 ~21:15-21:17) or something recurring; needs
+  a retry to know. **Session 16's live-test items remain unverified** — zero successful scans this
+  session to check rotation/crop or hash-margin data against.
+- **Item 18's two fixes (camera unbind + focus in-flight guard) are build-verified only, not
+  live-device re-tested** — same root cause as above: no scan reached far enough to exercise
+  either fix's actual behavior (the camera-unbind fix triggers on leaving the screen regardless of
+  scan outcome, so it likely did fire all 4 times, but wasn't specifically confirmed). `compileDebugKotlin
+  --rerun-tasks` succeeded (confirmed on Skyler's own machine, see below).
+- **Not committed.** Both fixes sit uncommitted in the working tree (`ScannerScreen.kt`) — Skyler
+  didn't ask for a commit this session.
+- **New data point on the Gradle loopback wall — this time the standing "always clears on
+  orchestrator retry" pattern did NOT hold.** `compileDebugKotlin --rerun-tasks` hit
+  `Unable to establish loopback connection` 3/3 times run directly by the orchestrator (inline
+  command, a real `.ps1` with `--no-daemon`, the same `.ps1` with `dangerouslyDisableSandbox: true`)
+  — first time this has failed at the orchestrator level since the pattern was first documented
+  session 16. Resolved only by Skyler running the identical command on his own machine via screen
+  share (`BUILD SUCCESSFUL in 31s`). Logged as an update to the standing lesson file
+  (`~/.claude/rules/lessons/subagent-sandbox-blocks-loopback-sockets-try-orchestrator-first.md`) —
+  what changed on the host between 2026-09-17 and now (VPN, firewall, AV, Windows update) is
+  untested, flagged open, not diagnosed.
+
 ## Refreshed — 2026-09-20 (session 16, cont'd — testable settings repos)
 
 ### Fixed this session (full `dev-team-pipeline` run, ship at 98/100)
@@ -59,11 +152,11 @@ audit (OkHttp/Room/Moshi/AGP, no active CVEs on pinned versions) both performed 
 
 ### Still open — needs Skyler, not fixable blind
 
-- **Repeated focus requests still cancel each other** (`CameraControl$OperationCanceledException`,
-  open since 2026-09-04) — deliberately not touched this session. Not blocking (every sequence
-  eventually reaches a real focus lock), but this is delicate, much-iterated camera code and any
-  fix needs live-device confirmation this session couldn't provide — touching it blind risks
-  reopening a multi-session saga for a cosmetic log-noise issue.
+- ~~**Repeated focus requests still cancel each other** (`CameraControl$OperationCanceledException`,
+  open since 2026-09-04)~~ **Fixed session 17 (2026-09-22)** — see that session's entry at the top
+  of this file. Root cause turned out to be a missing in-flight guard on the edge-triggered
+  auto-refocus, confirmed via a real logcat capture, not the "delicate, needs live hardware" risk
+  this entry carried for 3 prior deferrals.
 - **`detectCardInFrame()` still duplicates `guideFrameImageRect()`'s geometry** instead of sharing
   it — deferred again this session for the same reason (live camera-analysis path, no way to verify
   a refactor here without real hardware). Already deferred twice before this.

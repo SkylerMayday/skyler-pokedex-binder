@@ -532,8 +532,55 @@ confirmed working).
     - 310/310 unit tests pass (fresh XML, 305 baseline + 5 new), `assembleDebug`/`lintDebug
       --rerun-tasks` clean.
 
-**Status as of 2026-09-20 (session 16 cont'd): items 16 and 17 are both shipped, not yet
-live-tested (item 16) / not device-dependent (item 17).** Items 1-13 are shipped; items 1-9 are
+18. **Camera unbind race + focus-request cancellation storm** (2026-09-22, session 17, direct fix
+    via `debugging` skill, not a full pipeline run — two root-caused logcat findings, not a
+    speculative cleanup). Skyler connected his S26 Ultra, scanned 4 times, asked for a log check.
+    - **Camera not unbound before the AndroidView's SurfaceView tears down.** `CameraPreview`'s
+      `bindToLifecycle` relies entirely on CameraX's own automatic unbind when `LocalLifecycleOwner.
+      current` stops — but that lags Compose actually removing the `AndroidView` from composition
+      (i.e. navigating off `ScannerScreen`) enough to race the PreviewView's own SurfaceView
+      teardown. Confirmed via `adb logcat`: every one of the 4 scan sessions showed `SV[...]
+      releaseSurfaces` immediately followed by 4-5x `BufferQueueProducer: queueBuffer/dequeueBuffer:
+      BufferQueue has been abandoned` over ~150-300ms — CameraX still pushing frames to a surface
+      Compose had already released. Fixed: `AndroidView`'s `onRelease` callback now calls
+      `provider.unbindAll()` directly (provider captured in a `remember { arrayOfNulls<
+      ProcessCameraProvider>(1) }` holder, set the moment `ProcessCameraProvider.getInstance(ctx)`
+      resolves) — `onRelease` fires synchronously when the AndroidView leaves composition, closing
+      the race at its source instead of waiting on the lifecycle owner's stop event.
+    - **Closes the standing `CameraControl$OperationCanceledException` focus-race gap** (open since
+      2026-09-04, deliberately deferred 3+ times across sessions 9/16 as "delicate, needs live
+      hardware to verify" — see `gaps.md`). Root cause, confirmed via the same logcat capture: the
+      edge-triggered auto-refocus (`triggerFocus()` on the analyzer's not-detected→detected
+      transition) had no guard against firing again before the previous `startFocusAndMetering()`
+      settled — normal hand jitter holding a card in frame flickers the detection across consecutive
+      frames, each flicker firing a new focus call that CameraX cancels outright (9 cancellations
+      in under 2s in the captured log). Fixed with a new `focusInFlight` boolean, set `true` in
+      `triggerFocus()` and cleared only in the matching (non-superseded) `onSettled` callback,
+      gating just the edge-triggered call site — manual tap-to-focus and the post-bind initial
+      trigger are untouched, so user-initiated focus stays as responsive as before.
+    - Third log finding, investigated and deliberately NOT fixed: a single `SQLiteLog: (10) POSIX
+      Error 9 / SQLite Error 3850 (LOCK: Getting lock (4) failed)` at cold start, before any query
+      ran, no exception propagated, no crash, self-resolved. Matches a known benign Samsung/Android
+      SQLite-VFS lock-protocol log line, not an app bug — single Room DB, single connection pool, no
+      app code owns SQLite locking directly. Disputed rather than patched blind, per the debugging
+      skill's root-cause-first discipline.
+    - `compileDebugKotlin --rerun-tasks`: **BUILD SUCCESSFUL**, confirmed live on Skyler's own
+      machine via screen share after the harness's own Gradle loopback wall did NOT clear on 3
+      direct orchestrator retries (new data point — see `gaps.md` and the standing lesson file,
+      this contradicts the wall's prior "always clears at orchestrator level" pattern). Only
+      pre-existing, unrelated deprecation warnings in the output (`LocalLifecycleOwner`,
+      `SlotDetailViewModel.kt`'s coroutines opt-in notice).
+    - **Not committed this session** — Skyler didn't ask for a commit; changes sit in the working
+      tree. Not live-device re-tested after the fix — build-verified only. Note: the 4 scans that
+      *prompted* this fix (Skyler's actual live-test session) all failed at the Gemini API call
+      itself (11/12 requests `503`, 1 timeout, 100% failure, never reached the matching pipeline) —
+      unrelated to this fix, but means neither this fix nor session 16's still-pending rotation/
+      hash-margin items have a successful scan to verify against yet. Full detail: `gaps.md`'s
+      2026-09-22 entry.
+
+**Status as of 2026-09-22 (session 17): item 18 is build-verified, not live-device re-tested and
+not committed.** Items 16 and 17 (session 16) are both shipped, not yet live-tested (item 16) / not
+device-dependent (item 17). Items 1-13 are shipped; items 1-9 are
 live-hardware-confirmed (session 12); items 10-14 are unit-test/API-verified but didn't resolve the
 underlying symptom on their own. Item 15 (hash-margin confidence) is the fix for the "low
 confidence" symptom; item 16 is the fix for the actual image-quality root cause discovered while
