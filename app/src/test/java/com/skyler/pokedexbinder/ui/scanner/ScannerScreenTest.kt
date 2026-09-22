@@ -170,37 +170,38 @@ class ScannerScreenTest {
     // exceeds this raw HEIGHT (3000) at rotation 0/180's un-rotated 4:3 orientation, so those two
     // saturate into the same clamped path the "extreme aspect ratio" test below also covers.
     // 90/270 (the orientation every real capture actually uses) stay unclamped. CROP_MARGIN_FACTOR
-    // (1.10x, applied inside this function only) inflates the box these corners are derived from,
-    // which is why 90 and 270 no longer land on identical numbers below — the extra margin's own
-    // odd-vs-even split differs by rotation, not a bug (see CROP_MARGIN_FACTOR's own doc comment).
+    // (1.30x as of 2026-09-23, applied inside this function only) inflates the box these corners
+    // are derived from, which is why 90 and 270 no longer land on identical numbers below — the
+    // extra margin's own odd-vs-even split differs by rotation, not a bug (see
+    // CROP_MARGIN_FACTOR's own doc comment). Values below hand-recomputed for 1.30 (was 1.10).
 
     @Test
     fun `guideFrameImageRect rotation 0 saturates the clamp path at this ratio (real captures never use rotation 0)`() {
         val rect = guideFrameImageRect(rawWidth = 4000, rawHeight = 3000, rotationDegrees = 0)
-        assertEquals(350, rect.left)
+        assertEquals(50, rect.left)
         assertEquals(0, rect.top)
-        assertEquals(3650, rect.right)
+        assertEquals(3949, rect.right)
         assertEquals(3000, rect.bottom)
-        assertEquals(3300, rect.width)
+        assertEquals(3899, rect.width)
         assertEquals(3000, rect.height)
     }
 
     @Test
     fun `guideFrameImageRect rotation 90 axis-swaps via 4-corner remap, not a naive swap`() {
         val rect = guideFrameImageRect(rawWidth = 4000, rawHeight = 3000, rotationDegrees = 90)
-        assertEquals(272, rect.left)
-        assertEquals(263, rect.top)
-        assertEquals(3728, rect.right)
-        assertEquals(2738, rect.bottom)
+        assertEquals(0, rect.left)
+        assertEquals(38, rect.top)
+        assertEquals(4000, rect.right)
+        assertEquals(2963, rect.bottom)
     }
 
     @Test
     fun `guideFrameImageRect rotation 270 lands 1px off rotation 90 once CROP_MARGIN_FACTOR applies (arithmetic, not a bug)`() {
         val rect = guideFrameImageRect(rawWidth = 4000, rawHeight = 3000, rotationDegrees = 270)
-        assertEquals(272, rect.left)
-        assertEquals(262, rect.top)
-        assertEquals(3728, rect.right)
-        assertEquals(2737, rect.bottom)
+        assertEquals(0, rect.left)
+        assertEquals(37, rect.top)
+        assertEquals(4000, rect.right)
+        assertEquals(2962, rect.bottom)
     }
 
     @Test
@@ -212,9 +213,9 @@ class ScannerScreenTest {
         // an off-by-1 mirror like it was at 0.5. Still correct, just no longer demonstrating a
         // near-symmetric mirror since there's no unclamped margin left to be asymmetric about.
         val rect = guideFrameImageRect(rawWidth = 4000, rawHeight = 3000, rotationDegrees = 180)
-        assertEquals(350, rect.left)
+        assertEquals(51, rect.left)
         assertEquals(0, rect.top)
-        assertEquals(3650, rect.right)
+        assertEquals(3950, rect.right)
         assertEquals(3000, rect.bottom)
     }
 

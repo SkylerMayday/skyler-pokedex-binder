@@ -73,12 +73,17 @@ private const val GUIDE_FRAME_WIDTH_RATIO = 0.75f
 // eliminated; it was, for the width ratio, not for this one.
 private const val CARD_ASPECT_RATIO = 88f / 63f
 
-// First-guess, uncalibrated — same convention as GUIDE_FRAME_WIDTH_RATIO's history. Grows the
+// Still uncalibrated — same convention as GUIDE_FRAME_WIDTH_RATIO's history. Grows the
 // ACTUAL CAPTURE crop beyond the drawn guide box (same center) so a card judged "in frame"
 // against the tight visual target doesn't get header/footer clipped. Does NOT affect
 // CardFrameOverlay's drawn box or detectCardInFrame's presence heuristic — both must keep
 // matching what's on screen exactly.
-private const val CROP_MARGIN_FACTOR = 1.10f
+// 2026-09-23: bumped 1.10 -> 1.30. First real live-device data (session 17, S26 Ultra,
+// scan_debug_1790101276039.jpg) showed 1.10 was clearly insufficient — the captured card was
+// clipped on ALL FOUR edges (text cut mid-word left and right, no header/HP visible at top at
+// all), not just header/footer as originally assumed. Still a guess, not measured against the
+// physical card — needs another live scan to confirm 1.30 is enough, not just less wrong.
+private const val CROP_MARGIN_FACTOR = 1.30f
 
 private fun detectCardInFrame(imageProxy: ImageProxy): Boolean {
     val iw = imageProxy.width
@@ -582,6 +587,13 @@ private fun CameraPreview(
     val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
     val mainExecutor = remember { Executor { command -> mainHandler.post(command) } }
+    // Holds the bound ProcessCameraProvider so onRelease (below) can unbind it the moment this
+    // AndroidView leaves composition — bindToLifecycle's own automatic unbind only fires when
+    // LocalLifecycleOwner.current actually stops, which lags navigating away from this composable
+    // by enough to race the PreviewView's SurfaceView teardown (observed as repeated
+    // "BufferQueue has been abandoned" errors: CameraX still pushing frames to a surface Compose
+    // already released).
+    val cameraProviderHolder = remember { arrayOfNulls<ProcessCameraProvider>(1) }
 
     DisposableEffect(Unit) {
         onDispose { analysisExecutor.shutdown() }
@@ -598,6 +610,13 @@ private fun CameraPreview(
             // Monotonically increasing token so a stale, superseded request's late completion
             // can never incorrectly re-lock focus over a newer, still-in-flight request.
             var focusRequestId = 0
+            // True while a triggerFocus() call is still waiting on requestFocusAndMetering to
+            // settle. Guards the edge-triggered auto-refocus below: without it, a flickering
+            // detected/not-detected transition (normal hand jitter while holding a card in frame)
+            // fires a new startFocusAndMetering() before the previous one resolves, which CameraX
+            // cancels outright (observed as repeated "Cancelled by another startFocusAndMetering()"
+            // — up to 9 in under 2s during a single scan).
+            var focusInFlight = false
             // 0L until camera bind actually completes; used to gate presence-reporting below.
             var bindCompletedAtMs = 0L
 
@@ -606,8 +625,12 @@ private fun CameraPreview(
                 focusRequestId++
                 val myRequestId = focusRequestId
                 focusLocked = false
+                focusInFlight = true
                 requestFocusAndMetering(cam, previewView, x, y, mainExecutor, mainHandler) {
-                    if (myRequestId == focusRequestId) focusLocked = true
+                    if (myRequestId == focusRequestId) {
+                        focusLocked = true
+                        focusInFlight = false
+                    }
                 }
             }
 
@@ -656,7 +679,7 @@ private fun CameraPreview(
                         onCardPresenceChanged(detected && focusLocked && !justTransitioned && !withinPostBindDelay)
                         // Edge-triggered refocus: only on the not-detected -> detected transition,
                         // so a card sitting still in frame doesn't spam focus-metering calls.
-                        if (justTransitioned) {
+                        if (justTransitioned && !focusInFlight) {
                             // Guide-frame center is always (width/2, height/2) — the overlay's
                             // GUIDE_FRAME_WIDTH_RATIO/88:63 ratio math isn't needed here since
                             // CameraPreview and CardFrameOverlay are same-sized siblings
@@ -672,6 +695,7 @@ private fun CameraPreview(
             val future = ProcessCameraProvider.getInstance(ctx)
             future.addListener({
                 val provider = future.get()
+                cameraProviderHolder[0] = provider
 
                 // Constrains preview/capture/analysis to one shared field of view via the
                 // PreviewView's own ViewPort, so ImageProxy.cropRect (consumed by
@@ -802,7 +826,8 @@ private fun CameraPreview(
 
             previewView
         },
-        modifier = modifier
+        modifier = modifier,
+        onRelease = { cameraProviderHolder[0]?.unbindAll() }
     )
 }
 
