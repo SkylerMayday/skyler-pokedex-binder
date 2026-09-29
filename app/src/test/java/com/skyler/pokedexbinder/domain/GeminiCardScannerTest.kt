@@ -103,12 +103,12 @@ class GeminiCardScannerTest {
 
     @Test
     fun `scan throws IOException on 500`() = runTest {
-        // MAX_SCAN_RETRIES + 1 = 3 total attempts before the retry budget is exhausted.
-        repeat(3) { server.enqueue(MockResponse().setResponseCode(500)) }
+        // MAX_SCAN_RETRIES + 1 = 4 total attempts before the retry budget is exhausted.
+        repeat(4) { server.enqueue(MockResponse().setResponseCode(500)) }
         var caught: Exception? = null
         try { scanner.scan(bitmap, "test-key") } catch (e: Exception) { caught = e }
         assert(caught is java.io.IOException) { "Expected IOException but got $caught" }
-        assertEquals(3, server.requestCount)
+        assertEquals(4, server.requestCount)
     }
 
     @Test
@@ -154,7 +154,7 @@ class GeminiCardScannerTest {
             .build()
         scanner = GeminiCardScanner(shortTimeoutClient, Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build())
             .also { it.baseUrl = server.url("/").toString() }
-        repeat(3) { server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE)) }
+        repeat(4) { server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE)) }
 
         var caught: Exception? = null
         try { scanner.scan(bitmap, "test-key") } catch (e: Exception) { caught = e }
@@ -163,6 +163,6 @@ class GeminiCardScannerTest {
             "Expected SocketTimeoutException but got $caught",
             caught is java.net.SocketTimeoutException
         )
-        assertEquals(3, server.requestCount)
+        assertEquals(4, server.requestCount)
     }
 }

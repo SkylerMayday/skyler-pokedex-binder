@@ -20,8 +20,12 @@ import javax.inject.Inject
 
 class RateLimitException : IOException("Rate limited by Gemini API")
 
-private const val MAX_SCAN_RETRIES = 2       // extra attempts after the first; 3 total attempts
-private const val SCAN_RETRY_DELAY_MS = 500L // fixed delay between attempts; retune like GUIDE_FRAME_WIDTH_RATIO
+// Bumped from 2 (500ms fixed) after live sessions saw 11/12 requests 503 in one sitting (2026-09-22)
+// and it recurred 2026-09-24 — a fixed 500ms/1.5s total budget doesn't outlast a real overload
+// burst. 3 extra attempts (4 total) with exponential backoff gives ~3.5s worst-case extra wait,
+// acceptable for a manual scan action. Retune like GUIDE_FRAME_WIDTH_RATIO if 503s persist.
+private const val MAX_SCAN_RETRIES = 3
+private const val SCAN_RETRY_BASE_DELAY_MS = 500L
 
 @JsonClass(generateAdapter = true)
 data class GeminiResponse(val candidates: List<GeminiCandidate>? = null)
@@ -108,7 +112,7 @@ class GeminiCardScanner @Inject constructor(
             } catch (e: SocketTimeoutException) {
                 lastTimeout = e
                 if (attempt < MAX_SCAN_RETRIES) {
-                    delay(SCAN_RETRY_DELAY_MS)
+                    delay(backoffDelayMs(attempt))
                     continue
                 }
                 throw e
@@ -117,7 +121,7 @@ class GeminiCardScanner @Inject constructor(
             if (response.code in 500..599) {
                 response.close() // must close before retrying — avoid leaking the connection
                 if (attempt < MAX_SCAN_RETRIES) {
-                    delay(SCAN_RETRY_DELAY_MS)
+                    delay(backoffDelayMs(attempt))
                     continue
                 }
                 throw IOException("Gemini error: ${response.code}")
@@ -127,6 +131,9 @@ class GeminiCardScanner @Inject constructor(
         }
         throw lastTimeout ?: IOException("Gemini scan failed after retries")
     }
+
+    /** Exponential backoff: 500ms, 1000ms, 2000ms for attempts 0/1/2. */
+    private fun backoffDelayMs(attempt: Int): Long = SCAN_RETRY_BASE_DELAY_MS * (1L shl attempt)
 
     private fun bitmapToBase64(bitmap: Bitmap): String {
         val scaled = scaleBitmap(bitmap, maxDim = 1024)
