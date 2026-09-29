@@ -97,7 +97,6 @@ dependencies {
     // Retrofit + Moshi
     implementation(libs.retrofit)
     implementation(libs.retrofit.moshi)
-    implementation(libs.okhttp.logging)
     implementation(libs.moshi.kotlin)
     ksp(libs.moshi.codegen)
 
