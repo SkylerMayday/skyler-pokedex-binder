@@ -47,12 +47,11 @@ Reviewer subagents. Details in `project-overview.md` item 19.
 1. **Live scan** on the S26 Ultra with `adb logcat -s ScannerMatch:*` — confirm `query=` shows on
    the `search candidates=` line, ideally a Castform (dex 351) scan resolving via `dex+number+total`.
    Watch for Reviewer F1: a `dex+number` hit pre-empting a correct `number+total` one.
-2. **Uncommitted, still in the main checkout:** the Gemini retry-budget change
-   (`GeminiCardScanner.kt` + `GeminiCardScannerTest.kt`: 4 attempts, exponential backoff) and
-   `scripts/install_debug.ps1`, `scripts/test_gemini_retry.ps1`, `scripts/scan_capture.log`. The retry
-   change has **not been test-run** (session 18's test run was on the worktree, without it). Run
-   `.\gradlew.bat testDebugUnitTest --rerun-tasks`, then commit. The spec calls it "already
-   shipped" — it is not.
+2. **Gemini retry-budget change (`GeminiCardScanner.kt` + `GeminiCardScannerTest.kt`: 4 attempts,
+   exponential backoff) is committed but has never been test-run** (session 18's test run was on
+   the worktree, without it). Run `.\gradlew.bat testDebugUnitTest --rerun-tasks` in the main
+   folder to confirm. Still untracked: `scripts/install_debug.ps1`, `scripts/test_gemini_retry.ps1`,
+   `scripts/scan_capture.log`.
 3. Carried from session 17, unchanged: confirm `CROP_MARGIN_FACTOR=1.30` with a live scan (pull
    `scan_debug_*.jpg`, check all 4 edges); hash-margin constants still uncalibrated; publish-diff
    confirmation.

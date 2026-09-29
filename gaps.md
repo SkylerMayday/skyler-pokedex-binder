@@ -26,8 +26,8 @@ nothing. Not a full codebase re-audit.
   confusing mockk error.
 - "still tries name before dex" test would also pass on the old order (guards regressions only);
   `name+number` and `broad-dex` labels have no dedicated test (Reviewer F2 + Tester).
-- **The Gemini retry-budget change (4 attempts, exponential backoff) is uncommitted and was never
-  test-run** — see `handoff.md` next step 2. The species-guard spec wrongly calls it "already shipped".
+- **The Gemini retry-budget change (4 attempts, exponential backoff) was committed at Skyler's
+  request without ever being test-run** — see `handoff.md` next step 2.
 - **Project `CLAUDE.md` claims Bash cannot invoke `gradlew.bat`; a Tester subagent ran it from Git
   Bash and Gradle started.** The line looks stale. Left as-is pending Skyler's call.
 - **P2 still open:** whether `number+total` should exist at all — needs live `query=` data.
