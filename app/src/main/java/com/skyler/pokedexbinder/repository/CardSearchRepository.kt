@@ -23,34 +23,38 @@ sealed class SearchProgress {
     data class Complete(val cards: List<TcgCard>) : SearchProgress()
 }
 
+/** [matchedQuery] names which step of the cascade produced [cards], for scanner diagnostics. */
+data class ParsedSearchResult(val cards: List<TcgCard>, val matchedQuery: String)
+
 @Singleton
 class CardSearchRepository @Inject constructor(
     private val api: PokemonTcgApi,
     private val tcgdexApi: TcgdexApi,
     private val tcgcsvApi: TcgcsvApi
 ) {
-    suspend fun searchByParsedInfo(info: ParsedCardInfo): List<TcgCard> = coroutineScope {
+    suspend fun searchByParsedInfo(info: ParsedCardInfo): ParsedSearchResult = coroutineScope {
         val name   = info.cardName
         val number = info.cardNumber
         val total  = info.setTotal
         val dex    = info.dexNumber
 
-        // Specific queries (name+number or dex+number) — run on primary only, return immediately if found
+        // Specific queries, primary only, first non-empty wins. Species-pinned (name, then dex)
+        // before the species-blind number+total, which can match a different Pokémon entirely.
         val specificQueries = buildList {
             if (name != null && number != null && total != null)
-                add("${nameQuery(name)} number:\"$number\" set.total:$total")
+                add("name+number+total" to "${nameQuery(name)} number:\"$number\" set.total:$total")
             if (name != null && number != null)
-                add("${nameQuery(name)} number:\"$number\"")
-            if (number != null && total != null)
-                add("number:\"$number\" set.total:$total")
+                add("name+number" to "${nameQuery(name)} number:\"$number\"")
             if (dex != null && number != null && total != null)
-                add("nationalPokedexNumbers:$dex number:\"$number\" set.total:$total")
+                add("dex+number+total" to "nationalPokedexNumbers:$dex number:\"$number\" set.total:$total")
             if (dex != null && number != null)
-                add("nationalPokedexNumbers:$dex number:\"$number\"")
+                add("dex+number" to "nationalPokedexNumbers:$dex number:\"$number\"")
+            if (number != null && total != null)
+                add("number+total" to "number:\"$number\" set.total:$total")
         }
-        for (query in specificQueries) {
+        for ((label, query) in specificQueries) {
             val results = safeSearch(query)
-            if (results.isNotEmpty()) return@coroutineScope results
+            if (results.isNotEmpty()) return@coroutineScope ParsedSearchResult(results, label)
         }
 
         // Broad name/dex queries — merge both APIs so promo variants aren't missed
@@ -58,13 +62,14 @@ class CardSearchRepository @Inject constructor(
             val primary = async { safeSearch(nameQuery(name)) }
             val secondary = async { tcgdexSearchByName(name) }
             val merged = mergeResults(primary.await(), secondary.await())
-            if (merged.isNotEmpty()) return@coroutineScope merged
+            if (merged.isNotEmpty()) return@coroutineScope ParsedSearchResult(merged, "broad-name")
         }
         if (dex != null) {
             val results = safeSearch("nationalPokedexNumbers:$dex")
-            if (results.isNotEmpty()) return@coroutineScope results
+            if (results.isNotEmpty()) return@coroutineScope ParsedSearchResult(results, "broad-dex")
         }
-        if (number != null) safeSearch("number:\"$number\"") else emptyList()
+        val byNumber = if (number != null) safeSearch("number:\"$number\"") else emptyList()
+        ParsedSearchResult(byNumber, if (byNumber.isNotEmpty()) "broad-number" else "none-matched")
     }
 
     suspend fun searchByNameAndNumber(name: String, number: String): List<TcgCard> =

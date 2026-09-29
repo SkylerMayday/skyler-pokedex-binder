@@ -99,8 +99,12 @@ class ScannerViewModel @Inject constructor(
                     "gemini parsed: name=${parsed.cardName} number=${parsed.cardNumber} " +
                         "setTotal=${parsed.setTotal} dexNumber=${parsed.dexNumber}"
                 )
-                val candidates = cardSearchRepository.searchByParsedInfo(parsed)
-                android.util.Log.i("ScannerMatch", "search candidates=${candidates.size}")
+                val search = cardSearchRepository.searchByParsedInfo(parsed)
+                val candidates = search.cards
+                android.util.Log.i(
+                    "ScannerMatch",
+                    "search candidates=${candidates.size} query=${search.matchedQuery}"
+                )
 
                 if (candidates.isEmpty()) {
                     _state.value = ScannerState.LowConfidence(emptyList())

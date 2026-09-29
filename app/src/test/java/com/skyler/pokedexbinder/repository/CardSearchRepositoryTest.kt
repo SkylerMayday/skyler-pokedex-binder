@@ -2,6 +2,7 @@ package com.skyler.pokedexbinder.repository
 
 import com.skyler.pokedexbinder.data.model.TcgCard
 import com.skyler.pokedexbinder.data.remote.*
+import com.skyler.pokedexbinder.domain.ParsedCardInfo
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.delay
@@ -89,6 +90,110 @@ class CardSearchRepositoryTest {
         val results = repo.searchByName("Pikachu")
 
         assertEquals(2, results.size)
+    }
+
+    // --- searchByParsedInfo (query cascade order) ---
+    // Unstubbed api calls throw inside safeSearch and come back empty, so each test only stubs
+    // the queries it wants to hit.
+
+    private fun cardDto(id: String, name: String, number: String) = TcgCardDto(
+        id = id, name = name, number = number,
+        set = TcgSetDto("Set"),
+        images = TcgImagesDto("https://small.url", "https://large.url")
+    )
+
+    private fun parsed(name: String?, number: String?, total: String?, dex: Int?) =
+        ParsedCardInfo(cardName = name, cardNumber = number, setTotal = total, hp = null, artist = null, dexNumber = dex)
+
+    private fun stub(query: String, vararg cards: TcgCardDto) {
+        coEvery { api.searchCards("$query -set.series:Pocket") } returns
+            TcgCardsResponse(data = cards.toList(), totalCount = cards.size)
+    }
+
+    @Test
+    fun `searchByParsedInfo prefers dex-pinned match over species-blind number+total`() = runTest {
+        // Live 2026-09-24: Castform scan, name queries empty, number+total matched Munna #116.
+        stub("nationalPokedexNumbers:351 number:\"116\" set.total:172", cardDto("x-116", "Castform", "116"))
+        stub("number:\"116\" set.total:172", cardDto("bw-116", "Munna", "116"))
+
+        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
+            parsed("Castform", "116", "172", 351)
+        )
+
+        assertEquals(listOf("x-116"), result.cards.map { it.id })
+        assertEquals("dex+number+total", result.matchedQuery)
+    }
+
+    @Test
+    fun `searchByParsedInfo still tries name before dex`() = runTest {
+        stub("name:*Castform* number:\"116\" set.total:172", cardDto("n-116", "Castform", "116"))
+        stub("nationalPokedexNumbers:351 number:\"116\" set.total:172", cardDto("x-116", "Castform", "116"))
+
+        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
+            parsed("Castform", "116", "172", 351)
+        )
+
+        assertEquals(listOf("n-116"), result.cards.map { it.id })
+        assertEquals("name+number+total", result.matchedQuery)
+    }
+
+    @Test
+    fun `searchByParsedInfo falls back to number+total only after dex queries come up empty`() = runTest {
+        stub("number:\"116\" set.total:172", cardDto("bw-116", "Munna", "116"))
+
+        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
+            parsed(null, "116", "172", 351)
+        )
+
+        assertEquals(listOf("bw-116"), result.cards.map { it.id })
+        assertEquals("number+total", result.matchedQuery)
+    }
+
+    @Test
+    fun `searchByParsedInfo reports none-matched when every query is empty`() = runTest {
+        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
+            parsed(null, "116", null, null)
+        )
+
+        assertTrue(result.cards.isEmpty())
+        assertEquals("none-matched", result.matchedQuery)
+    }
+
+    @Test
+    fun `searchByParsedInfo prefers dex+number over number+total when dex+number+total is empty`() = runTest {
+        stub("nationalPokedexNumbers:351 number:\"116\"", cardDto("x-116", "Castform", "116"))
+        stub("number:\"116\" set.total:172", cardDto("bw-116", "Munna", "116"))
+
+        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
+            parsed(null, "116", "172", 351)
+        )
+
+        assertEquals(listOf("x-116"), result.cards.map { it.id })
+        assertEquals("dex+number", result.matchedQuery)
+    }
+
+    @Test
+    fun `searchByParsedInfo labels broad-name when only a name is available`() = runTest {
+        stub("name:*Castform*", cardDto("x-116", "Castform", "116"))
+
+        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
+            parsed("Castform", null, null, null)
+        )
+
+        assertEquals(listOf("x-116"), result.cards.map { it.id })
+        assertEquals("broad-name", result.matchedQuery)
+    }
+
+    @Test
+    fun `searchByParsedInfo labels broad-number, not none-matched, when number-alone hits`() = runTest {
+        stub("number:\"116\"", cardDto("bw-116", "Munna", "116"))
+
+        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
+            parsed(null, "116", null, null)
+        )
+
+        assertEquals(listOf("bw-116"), result.cards.map { it.id })
+        assertEquals("broad-number", result.matchedQuery)
     }
 
     // --- searchTcgcsvByName (retry-on-empty fallback) ---
