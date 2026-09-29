@@ -599,6 +599,38 @@ confirmed working).
     - Verified: user ran `testDebugUnitTest --rerun-tasks` in the worktree, 331 tests, 0 failures
       (fresh JUnit XML); Reviewer 92/100 ship. Not yet live-device tested.
 
+20. **Still capture was ~1.35x more zoomed than the preview — physical-camera-id selection replaced by
+    logical min zoom** (2026-09-29, session 19, `5c9f27e`; debugging skill, not a full pipeline run).
+    - **Symptom:** card lined up in the on-screen guide, but the saved `scan_debug_*.jpg` showed it
+      filling 100% of the crop width with top (name/HP) and bottom (collector number) cut off. This —
+      not Gemini OCR — is the likely cause of the long-running `number=null` symptom (items 12, 14).
+    - **What was ruled out:** the crop math. Logged `cropRect=[213,0,3868,3060]` on a 4080x3060
+      buffer rot=90 -> viewport 3060x3655, crop 2983x3655 (the 0.816 aspect is `guideFrameImageRect`
+      clamping to the viewport height, harmless). The crop was faithfully cropping a stream that was
+      already too narrow.
+    - **Evidence (paired preview screenshot vs JPEG from the same moment):** preview showed the whole
+      card (~72% of preview width, `116/172` visible); JPEG showed the card overfilling. `adb
+      screencap` in a background loop caught the last preview frame before auto-capture.
+    - **Root cause (likely, not proven at HAL level):** `Camera2Interop.setPhysicalCameraId` on all
+      three use cases did not put the still (`ImageCapture`) on the same lens as the preview.
+      CameraX-team thread reports it unreliable on Samsung multi-lens phones. A session-level
+      `CaptureCallback` diagnostic never received still-capture results (no `intent=2` lines), so the
+      still's lens was never directly observed — only fixed by outcome.
+    - **Fix:** `ultrawideId` forced `null` (plain `DEFAULT_BACK_CAMERA`, no physical id); after bind, a
+      one-shot `ZoomState` observer calls `cameraControl.setZoomRatio(minZoomRatio)` when min < 1.
+      Logical camera 0's zoom range is [0.6, 10] (`dumpsys media.camera`), so 0.6 switches every stream
+      to the ultrawide together. Live log: `zoomState min=0.6`, preview `activePhysicalId=2
+      zoomRatio=0.6 focalLength=2.2`. Live JPEG: full card with margin all round, sharp, upright.
+    - **Kept on purpose:** `selectUltrawidePhysicalCameraId` (+ its unit tests) is now unused; delete
+      after a Gemini-side scan confirms the fix end to end.
+    - **Same session, unrelated:** HttpLoggingInterceptor removed from `NetworkModule.kt` and the
+      `okhttp-logging` dependency dropped (`6a0ff73`, `e101080`) — its BASIC level printed the Gemini
+      URL including `?key=<API key>` into logcat.
+    - **Not yet verified:** Gemini returned 429 (daily quota) on every scan after the fix, so the
+      matching stage — including item 19's `query=` label — was still not exercised live.
+
+**Status as of 2026-09-29 (session 19): item 20 is live-verified on the capture side only (image
+checked); Gemini/matching path unverified (quota). Item 19 still not live-tested.**
 **Status as of 2026-09-29 (session 18): item 19 is unit-tested and merged, not live-device tested.**
 Item 18 was committed in `c9f6519`.
 **Status as of 2026-09-22 (session 17): item 18 is build-verified, not live-device re-tested and

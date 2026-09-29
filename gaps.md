@@ -3,6 +3,48 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
+## Refreshed — 2026-09-29 (session 19 — capture zoom mismatch, key-in-logcat)
+
+**Audit scope note**: touched `ScannerScreen.kt` (bind path), `NetworkModule.kt`, two gradle files;
+read `ImageProxyExt.kt`, `GeminiCardScanner.kt` (grep only). Not a full re-audit.
+
+### Fixed this session
+
+- ~~**Still capture ~1.35x more zoomed than the preview; collector number cut off**~~ **Fixed,
+  live-verified on the saved JPEG only** (`5c9f27e`). Five-whys: number=null -> number not in image
+  -> crop clipped bottom -> stream itself too narrow (crop math proven fine) -> `ImageCapture`
+  not on the preview's lens -> `setPhysicalCameraId` unreliable on Samsung multi-lens (CameraX
+  thread). Fix: logical min zoom. Detail: `project-overview.md` item 20.
+- ~~**Gemini API key printed to logcat** (`HttpLoggingInterceptor.Level.BASIC` logs the URL, key is
+  in `?key=`)~~ **Logging removed** (`6a0ff73`, `e101080`). **The key itself is not fixed** — see below.
+- ~~**Gemini retry-budget change never test-run**~~ Skyler ran the unit tests this session and
+  reported them passing (his report, not a XML I read).
+- ~~**Project `CLAUDE.md` wrongly said Bash cannot run `gradlew.bat`**~~ Corrected earlier in `b6ec0fb`
+  (root `CLAUDE.md` now documents the Bash invocation).
+
+### New, not fixed
+
+- **The Gemini API key is exposed and unrotated.** It appeared in logcat and in this session's
+  transcript (auto-archived to the vault). Why it existed: key sent as a URL query param -> any
+  URL logger leaks it. Rotate it; move to the `x-goog-api-key` header in `GeminiCardScanner.kt:83`.
+- **Dead code: `selectUltrawidePhysicalCameraId` + its `ScannerScreenTest` cases** are unused after
+  the zoom fix. Deliberately kept until a Gemini-side scan confirms the fix; then delete.
+- **No test for the new `ZoomState` observer** (`ScannerScreen.kt`). It runs only against a real
+  bound camera; it is proven by one live scan, not by any automated test.
+- **The still capture's lens was never observed, only inferred from the image.** The session-level
+  `CaptureCallback` diagnostic got no still results. If the fix regresses on another device/OS
+  update, there is no log line that says which lens the still used.
+- **`GUIDE_FRAME_WIDTH_RATIO=0.75` and `CROP_MARGIN_FACTOR=1.30` were tuned against the *broken*
+  capture.** With the preview now on the ultrawide at 0.6x, both may be off; one card (Castform)
+  checked. `CROP_MARGIN_FACTOR=1.30` was never validly calibrated (the 1.10 -> 1.30 bump compensated
+  for the zoom bug).
+- **`okhttp-logging` removal and `NetworkModule` edit** build clean (Skyler's `installDebug`), no
+  behaviour test.
+- **Gradle loopback wall, 5th consecutive session** — 2/2 attempts failed from Claude again (Bash
+  and PowerShell); Skyler ran Gradle himself. Cause still undiagnosed.
+- **Live matching path (`query=`, Castform via `dex+number+total`, Reviewer F1) still not
+  live-tested** — Gemini 429 daily quota blocked every scan this session.
+
 ## Refreshed — 2026-09-29 (session 18 — species-guard query reorder)
 
 **Audit scope note**: touched `CardSearchRepository.kt`, `ScannerViewModel.kt` and

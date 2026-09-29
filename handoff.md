@@ -1,59 +1,60 @@
-# Handoff — Session 18 (2026-09-29)
+# Handoff — Session 19 (2026-09-29)
 
 ## 1. Goals
 
-Build the spec `docs/specs/2026-09-24-search-query-species-guard.md`: stop the scanner's
-species-blind `number+total` query from matching a wrong Pokémon (live: Castform scan → `Munna
-#116`) and make the winning query visible in the `ScannerMatch` log.
+Live-test the scanner after session 18 (species-guard `query=` log, Gemini retry budget, crop
+margin 1.30). Live testing found the real blocker: saved captures were zoomed in vs the preview and
+cut off the collector number. Goal became: make the still match what the preview shows.
 
 ## 2. Current State
 
-**Shipped and merged to `master` (`bd55bfa`, fast-forward): P0 reorder + P1 `query=` logging.**
-Unit-tested (user ran `testDebugUnitTest --rerun-tasks` in the worktree: 331 tests, 0 failures,
-fresh JUnit XML), Reviewer verdict ship 92/100. **Not live-device tested.** P2 (drop `number+total`
-entirely) deliberately not done — needs live data.
-
-Not run as a full pipeline: Planner rejected by Skyler mid-run (spec already was the plan), Coder
-work done inline by the orchestrator, then Tester (BLOCKED by the Gradle loopback wall) and
-Reviewer subagents. Details in `project-overview.md` item 19.
+- **Capture fix is in and live-verified on the image only.** Committed `5c9f27e` (build succeeded
+  on Skyler's machine, `installDebug`). A Castform scan after the fix shows the whole card with
+  margin on all four sides, `116/172` visible.
+- **Nothing downstream of the camera has been live-tested.** Gemini returned 429 ("daily quota") on
+  every scan after the fix, so the `query=` label, Castform via `dex+number+total`, number reading,
+  and the 4-attempt retry are all still unexercised on-device. Skyler says Gemini is back online.
+- Unit tests were run by Skyler earlier this session (passed, before the zoom change). Not re-run
+  since; the zoom change didn't touch tested code paths.
+- Commits this session: `5c9f27e` zoom fix · `6a0ff73` stop logging request URLs · `e101080` drop
+  `okhttp-logging`. Both TEMP diagnostics (crop geometry, stream diag) were added and removed
+  again, never committed.
 
 ## 3. Active Files
 
-- [CardSearchRepository.kt](app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt)
-- [ScannerViewModel.kt](app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModel.kt)
-- [CardSearchRepositoryTest.kt](app/src/test/java/com/skyler/pokedexbinder/repository/CardSearchRepositoryTest.kt) (7 new tests, 20 total)
+- [ScannerScreen.kt](app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreen.kt) — `ultrawideId = null`, `ZoomState` observer after bind; `selectUltrawidePhysicalCameraId` now unused
+- [NetworkModule.kt](app/src/main/java/com/skyler/pokedexbinder/di/NetworkModule.kt) — logging interceptor removed
+- `ScannerScreenTest.kt` — still tests the now-unused `selectUltrawidePhysicalCameraId`
 
 ## 4. Changes Made
 
-- Cascade reordered; `searchByParsedInfo` now returns `ParsedSearchResult(cards, matchedQuery)`;
-  log line gained `query=<label>`.
-- Housekeeping: old `.pipeline/` moved to `.pipeline_archive/2026-09-20-testable-settings-repos/`.
-  Worktree `.claude/worktrees/search-query-species-guard` and branch
-  `claude/search-query-species-guard` still exist (kept, already merged — safe to remove).
-- Worktree was created manually from `master`, not the tool default: `origin/main` is a stale
-  "first commit", so a default worktree would have branched from the wrong base.
+- Physical-camera-id selection disabled; logical camera bound plainly, min zoom (0.6) applied on
+  first `ZoomState`. Detail: `project-overview.md` item 20.
+- Removed OkHttp `HttpLoggingInterceptor` (it logged `?key=<Gemini API key>`), dropped the dependency.
+- Uncommitted, not mine: edits to `CLAUDE.md` / `app/CLAUDE.md`; untracked `scripts/scan_capture.log`.
 
 ## 5. Failed Attempts
 
-- Gradle loopback wall blocked 4/4 runs by the orchestrator and the Tester subagent (including
-  outside the sandbox). Cleared only when Skyler ran the identical command in his own PowerShell.
-  Third consecutive session this has needed his hands.
-- Tester subagent could not run `powershell.exe -File` (harness worktree guard refused it); it ran
-  `gradlew.bat` from Git Bash instead, which does start Gradle. So the project CLAUDE.md line "Bash
-  cannot invoke the wrapper directly" is wrong. **Not edited — Skyler's call.**
+- Gradle loopback wall again: 2/2 from Claude (Bash + PowerShell). Skyler ran Gradle himself. 5th
+  consecutive session needing his hands.
+- First hypothesis (crop aspect 0.816 vs card 0.716 is the bug) was wrong — it's a harmless clamp.
+- Stream-diagnostic `CaptureCallback` never saw still-capture results, so it couldn't show which
+  lens the still used; the fix was validated by outcome (image) instead.
+- Paired preview/JPEG capture failed twice (auto-capture fired before my screencap) until a
+  background `screencap` loop was used.
 
 ## 6. Next Steps
 
-1. **Live scan** on the S26 Ultra with `adb logcat -s ScannerMatch:*` — confirm `query=` shows on
-   the `search candidates=` line, ideally a Castform (dex 351) scan resolving via `dex+number+total`.
-   Watch for Reviewer F1: a `dex+number` hit pre-empting a correct `number+total` one.
-2. **Gemini retry-budget change (`GeminiCardScanner.kt` + `GeminiCardScannerTest.kt`: 4 attempts,
-   exponential backoff) is committed but has never been test-run** (session 18's test run was on
-   the worktree, without it). Run `.\gradlew.bat testDebugUnitTest --rerun-tasks` in the main
-   folder to confirm. Still untracked: `scripts/install_debug.ps1`, `scripts/test_gemini_retry.ps1`,
-   `scripts/scan_capture.log`.
-3. Carried from session 17, unchanged: confirm `CROP_MARGIN_FACTOR=1.30` with a live scan (pull
-   `scan_debug_*.jpg`, check all 4 edges); hash-margin constants still uncalibrated; publish-diff
-   confirmation.
+1. **Scan several cards now that Gemini is back**, with `adb logcat -s ScannerMatch:*` (adb is at
+   `%LOCALAPPDATA%\Android\Sdk\platform-tools`). Confirm: `query=` label on `search candidates=`,
+   Castform (dex 351) resolves via `dex+number+total`, collector number now parses, no
+   `number=null`. Watch Reviewer F1 (`dex+number` pre-empting a correct `number+total`).
+2. **If that scan works:** delete `selectUltrawidePhysicalCameraId` and its tests, run
+   `.\gradlew.bat testDebugUnitTest --rerun-tasks` in his own PowerShell.
+3. **Rotate the Gemini API key** (it was printed in logcat and in this session's transcript), then
+   consider moving it from the URL query to the `x-goog-api-key` header in `GeminiCardScanner.kt`.
+4. Check guide framing on a few cards — `GUIDE_FRAME_WIDTH_RATIO=0.75` was tuned before the preview
+   moved to the ultrawide at 0.6x.
+5. Carried: hash-margin constants uncalibrated; publish-diff confirmation.
 
 Blocked on Skyler: everything above needs the phone or his own PowerShell for Gradle.
