@@ -730,11 +730,14 @@ private fun CameraPreview(
                 // Camera2Interop.setPhysicalCameraId is @RequiresApi(28) — below that level the
                 // whole ultrawide-selection path is skipped and this behaves exactly like "no
                 // ultrawide found" always has (plain DEFAULT_BACK_CAMERA bind).
-                val ultrawideId = if (Build.VERSION.SDK_INT >= 28) {
-                    selectUltrawidePhysicalCameraId(provider)
-                } else {
-                    null
-                }
+                // 2026-09-29: physical-id selection disabled. Live pair (preview vs saved JPEG)
+                // showed the still ~1.35x more zoomed than the preview despite the id on all three
+                // use cases and a shared ViewPort — Camera2Interop.setPhysicalCameraId is reported
+                // unreliable on Samsung multi-lens phones. Instead the min zoom ratio is applied to
+                // the logical camera after bind (see zoomState observer below), which switches every
+                // stream to the ultrawide together. selectUltrawidePhysicalCameraId is kept (still
+                // unit-tested) until that is confirmed live; delete it then.
+                val ultrawideId: String? = null
 
                 var (preview, capture, analysis) = buildUseCases(ultrawideId)
                 onImageCaptureReady(capture)
@@ -808,6 +811,21 @@ private fun CameraPreview(
                     }
                     logCameraAfCapabilities(cam, boundVia, boundPhysicalId)
                     logUltrawideFeasibility(cam)
+
+                    // Logical zoom below 1.0 makes the multi-camera HAL switch to the ultrawide
+                    // for preview, still and analysis at once (this device: range 0.6-10). Applied
+                    // once the first ZoomState arrives — its value is null until the camera opens.
+                    val zoomLive = cam.cameraInfo.zoomState
+                    zoomLive.observe(lifecycleOwner, object : androidx.lifecycle.Observer<ZoomState> {
+                        override fun onChanged(value: ZoomState) {
+                            zoomLive.removeObserver(this)
+                            Log.i(
+                                "ScannerFocus",
+                                "zoomState min=${value.minZoomRatio} max=${value.maxZoomRatio} current=${value.zoomRatio}"
+                            )
+                            if (value.minZoomRatio < 1f) cam.cameraControl.setZoomRatio(value.minZoomRatio)
+                        }
+                    })
                 }
                 // Initial focus once binding completes; deferred via post{} so previewView.width/height
                 // are populated (they may still be 0 at the exact moment bindToLifecycle returns).
