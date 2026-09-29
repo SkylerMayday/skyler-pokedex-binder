@@ -18,7 +18,7 @@ Update all three at session end / `wrapcon`. Spec: `~/.claude/rules/project-file
 
 - **There is no shared "binder" abstraction.** Every nav-drawer section is its own independent entity and table set. Adding a section means seven hand-wired pieces: entity, DAO, repository, ViewModel, Screen, `Screen` route, and drawer item in `ui/navigation/AppNavigation.kt`. Budget for that before proposing one.
 - **Room schema is versioned** (`pokedex_binder.db`). Any entity change needs a migration — check the current version in `project-overview.md` rather than assuming.
-- Gradle build is Windows-only. From a Bash-only context, use a real `.ps1` with `powershell.exe -File`; inline `-Command` mangles `$env:` assignments. See `~/.claude/rules/lessons/no-powershell-tool-in-harness.md`.
+- Gradle build is Windows-only (`gradlew.bat`). From Bash, call it directly with `JAVA_HOME` set inline, or use a real `.ps1` with `powershell.exe -File`; inline `-Command` mangles `$env:` assignments. See `~/.claude/rules/lessons/no-powershell-tool-in-harness.md`.
 - **Verifying another stage's build claim requires `--rerun-tasks`** — a bare `UP-TO-DATE` is the audited stage's own cached result, not confirmation. See `~/.claude/rules/lessons/delete-stale-test-results-dir-before-rerun.md`.
 
 ## Running it
@@ -30,7 +30,8 @@ Update all three at session end / `wrapcon`. Spec: `~/.claude/rules/project-file
 ```
 
 - App id: `com.skyler.pokedexbinder`. `local.properties` is present.
-- **There is no Unix `gradlew` here, only `gradlew.bat`** — Bash cannot invoke the wrapper directly. Use PowerShell, or a `.ps1` invoked with `powershell.exe -File` from a Bash-only context (inline `-Command` mangles `$env:` assignments).
+- **There is no Unix `gradlew` here, only `gradlew.bat`.** From Bash, `JAVA_HOME='D:\jdk17\jdk-17.0.14+7' ./gradlew.bat <task>` does start Gradle (a subagent did this 2026-09-29 when the harness refused `powershell.exe -File` inside a worktree). Otherwise use PowerShell, or a `.ps1` invoked with `powershell.exe -File` (inline `-Command` mangles `$env:` assignments).
+- **Gradle often dies with `Unable to establish loopback connection` when run by Claude or a subagent** (3 sessions running as of 2026-09-29) — this is not a code problem. If it recurs, ask Skyler to run the same command in his own PowerShell.
 - `JAVA_HOME` must be set. Both of these exist on this machine: `D:\jdk17\jdk-17.0.14+7` and `C:\Program Files\Android\Android Studio\jbr`.
 
 ### ⚠️ `build_debug.bat` and `run_build.bat` are broken
