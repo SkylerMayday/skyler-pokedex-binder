@@ -3,6 +3,37 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
+## Refreshed — 2026-09-29 (session 18 — species-guard query reorder)
+
+**Audit scope note**: touched `CardSearchRepository.kt`, `ScannerViewModel.kt` and
+`CardSearchRepositoryTest.kt` only; a `TODO`/`FIXME`/`XXX` grep on the two production files found
+nothing. Not a full codebase re-audit.
+
+### Fixed this session (`bd55bfa`, unit-tested 331/331, Reviewer 92/100; not live-tested)
+
+- ~~**`searchByParsedInfo`'s species-blind `number+total` query ran before the dex-pinned queries,
+  so a wrong-species card could be the single candidate** (Castform → `Munna #116`, live 2026-09-24)~~
+  **Fixed.** Full detail: `project-overview.md` item 19. The single-candidate hash ceiling remains a
+  backstop, no longer the only guard.
+
+### New this session, not fixed
+
+- **`dex+number` (no set total) can pre-empt a correct `number+total` hit** with a same-species card
+  from a different set when the API's dex data is sparse (Reviewer F1). Follows from the spec's
+  mandated order; needs live `query=` data to know if it happens.
+- **`CardSearchRepositoryTest`'s new tests depend on `safeSearch`'s broad `catch (e: Exception)`**
+  swallowing unstubbed strict-mockk calls (Reviewer F3). Narrowing that catch fails all 7 with a
+  confusing mockk error.
+- "still tries name before dex" test would also pass on the old order (guards regressions only);
+  `name+number` and `broad-dex` labels have no dedicated test (Reviewer F2 + Tester).
+- **The Gemini retry-budget change (4 attempts, exponential backoff) is uncommitted and was never
+  test-run** — see `handoff.md` next step 2. The species-guard spec wrongly calls it "already shipped".
+- **Project `CLAUDE.md` claims Bash cannot invoke `gradlew.bat`; a Tester subagent ran it from Git
+  Bash and Gradle started.** The line looks stale. Left as-is pending Skyler's call.
+- **P2 still open:** whether `number+total` should exist at all — needs live `query=` data.
+- **Gradle loopback wall, 4th consecutive orchestrator-level failure, 3rd session running.** Cleared
+  only by Skyler running Gradle himself. Cause still undiagnosed.
+
 ## Refreshed — 2026-09-22 (session 17 — logcat check, direct debugging skill fix)
 
 ### Fixed this session (root-caused via `adb logcat`, not a full pipeline run)
@@ -331,24 +362,18 @@ investigation — no code touched by that half of the session.
   15's entry above; the real fix path is now the hash-margin confidence spec, not further ratio
   tuning.
 
-### New this session — environment/workflow gap, not a codebase bug
+### Fixed (environment/workflow, not a codebase change) — resolved 2026-09-23
 
-- **The Gemini API key configured in the app's Settings shares a Google Cloud project
-  ("Default Gemini Project" on aistudio.google.com) with an unrelated tool, `Claude-mem`** (a
-  separate Claude Code plugin, nothing to do with this app). Confirmed directly from Skyler's own
-  usage dashboard, not guessed: both consumers show real traffic against the same project on the
-  same day, and both hit real errors the same day (`429 TooManyRequests` for pokedex-binder,
-  `503 ServiceUnavailable` for Claude-mem). Live-reproduced tonight: a brand-new API key generated
-  under the same project hit an immediate `429` on its very first request — a fresh key inherits
-  whatever the project's shared quota already used, so minting a new key doesn't help. Root cause
-  of tonight's "Gemini all out after a few photos" confusion: today's combined request volume
-  (Skyler's own testing + Claude-mem's independent background usage, both on the same shared
-  project) crossed the daily/rate limit — not any inefficiency in this app's own Gemini usage
-  (confirmed only one call site exists, `ScannerViewModel.kt:79`, no retry-on-429, auto-capture
-  properly guarded against double-firing). **Fix, if picked up**: create a separate Google Cloud
-  project + API key dedicated to pokedex-binder on aistudio.google.com, so its quota is never
-  shared with whatever else is using the default project. Not done — Skyler's own call whether to
-  bother, since it's a few manual clicks on his end, not app code.
+- ~~**The Gemini API key configured in the app's Settings shares a Google Cloud project
+  ("Default Gemini Project" on aistudio.google.com) with an unrelated tool, `Claude-mem`**~~
+  **Resolved.** Skyler moved `Claude-mem` to its own separate Google Cloud project — same effect
+  as splitting pokedex-binder off would have had (either side moving off the shared project stops
+  the quota contention), simpler since it didn't need any change to this app's stored key/Settings.
+  Original finding, for reference: confirmed directly from Skyler's own usage dashboard that both
+  consumers shared one project's quota and both hit real errors the same day (`429` for
+  pokedex-binder, `503` for Claude-mem) — not any inefficiency in this app's own Gemini usage
+  (only one call site, `ScannerViewModel.kt:79`, no retry-on-429, auto-capture properly guarded
+  against double-firing).
 
 ### New this session, not fixed — deferred, needs Skyler's call
 

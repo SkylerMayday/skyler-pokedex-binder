@@ -578,6 +578,29 @@ confirmed working).
       hash-margin items have a successful scan to verify against yet. Full detail: `gaps.md`'s
       2026-09-22 entry.
 
+19. **Species-blind `number+total` query demoted below dex queries** (2026-09-29, session 18,
+    `bd55bfa`, merged to `master` fast-forward). Spec: `docs/specs/2026-09-24-search-query-species-guard.md`.
+    - **Bug:** `CardSearchRepository.searchByParsedInfo()`'s cascade ran `number+total` (no name, no
+      dex) before the two dex-pinned queries. Live 2026-09-24: Castform scan (dex 351), name queries
+      empty, `number+total` returned `Munna #116` as the single candidate. Only the single-candidate
+      hash ceiling (16) saved it, by luck (distance 23).
+    - **Fix:** cascade is now name+number+total → name+number → dex+number+total → dex+number →
+      number+total (last resort) → broad name / dex / number tail. Return type is now
+      `ParsedSearchResult(cards, matchedQuery)`; `ScannerViewModel`'s `ScannerMatch` line ends with
+      `query=<label>` (`name+number+total`, `name+number`, `dex+number+total`, `dex+number`,
+      `number+total`, `broad-name`, `broad-dex`, `broad-number`, `none-matched`). `ScannerViewModel`
+      is the only caller.
+    - **Deliberate deviation from the spec:** spec said `none-matched` for any broad-tail fall-through;
+      broad hits get `broad-*` labels and `none-matched` means nothing was found (a non-empty result
+      labelled `none-matched` would mislead).
+    - **Known live risk (Reviewer F1):** `dex+number` has no set total, so a correct `number+total`
+      hit can be pre-empted by a same-species card from a different set if the API's dex data is
+      sparse. Watch the `query=` label in live logs.
+    - Verified: user ran `testDebugUnitTest --rerun-tasks` in the worktree, 331 tests, 0 failures
+      (fresh JUnit XML); Reviewer 92/100 ship. Not yet live-device tested.
+
+**Status as of 2026-09-29 (session 18): item 19 is unit-tested and merged, not live-device tested.**
+Item 18 was committed in `c9f6519`.
 **Status as of 2026-09-22 (session 17): item 18 is build-verified, not live-device re-tested and
 not committed.** Items 16 and 17 (session 16) are both shipped, not yet live-tested (item 16) / not
 device-dependent (item 17). Items 1-13 are shipped; items 1-9 are
