@@ -1,0 +1,134 @@
+== check 6: stray debug in diff (added lines) ==
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexApi.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexCardDto.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/di/NetworkModule.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/domain/ParsedCardInfo.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/domain/PerceptualHasher.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreen.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/test/java/com/skyler/pokedexbinder/domain/PerceptualHasherTest.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/test/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCaseTest.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/test/java/com/skyler/pokedexbinder/repository/CardSearchRepositoryTest.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/test/java/com/skyler/pokedexbinder/ui/QuickScanViewModelTest.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerFocusIndependentVerificationTest.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreenTest.kt', LF will be replaced by CRLF the next time Git touches it
+none
+== POKEMONTCG-IO-FALLBACK tags ==
+36:    private val api: PokemonTcgApi, // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
+92:            val ptcg = async { safeSearch(nameQuery(name)) } // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
+100:                .ifEmpty { safeSearch("nationalPokedexNumbers:$dex") } // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
+111:    // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
+136:    // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
+143:    // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01 (no callers)
+150:        val primary = async { safeSearch(nameQuery(name)) } // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
+162:            val ptcg = async { safeSearch(nameQuery(name)) } // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
+183:    // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
+187:    // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01 (no callers)
+195:        val ptcg = async { safeSearch("nationalPokedexNumbers:$dexNumber") } // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
+199:    // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
+287:    // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
+295:    // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
+== ptcg touchpoints (api./safeSearch defs) ==
+144:    suspend fun searchByNameAndNumber(name: String, number: String): List<TcgCard> =
+184:    suspend fun searchByNumber(number: String): List<TcgCard> =
+188:    suspend fun searchByNumberAndTotal(number: String, total: String): List<TcgCard> =
+200:    suspend fun searchPromosByName(name: String): List<TcgCard> =
+288:    private suspend fun safeSearch(query: String): List<TcgCard> = try {
+290:        api.searchCards(query = filtered).data.map { it.toDomain() }
+296:    private fun TcgCardDto.toDomain() = TcgCard(
+== check 7: git status ==
+ M CLAUDE.md
+ M app/CLAUDE.md
+ M app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexApi.kt
+ M app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexCardDto.kt
+ M app/src/main/java/com/skyler/pokedexbinder/di/NetworkModule.kt
+ M app/src/main/java/com/skyler/pokedexbinder/domain/GeminiCardScanner.kt
+ M app/src/main/java/com/skyler/pokedexbinder/domain/ParsedCardInfo.kt
+ M app/src/main/java/com/skyler/pokedexbinder/domain/PerceptualHasher.kt
+ M app/src/main/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCase.kt
+ M app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/manualsearch/ManualSearchViewModel.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/quickscan/QuickScanViewModel.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreen.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModel.kt
+ M app/src/test/java/com/skyler/pokedexbinder/domain/GeminiCardScannerTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/domain/PerceptualHasherTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCaseTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/repository/CardSearchRepositoryTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/ui/QuickScanViewModelTest.kt
+ D app/src/test/java/com/skyler/pokedexbinder/ui/scanner/FocalLengthsKeyTestFixture.kt
+ M app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerFocusIndependentVerificationTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreenTest.kt
+ M gaps.md
+ M handoff.md
+ M project-overview.md
+?? .pipeline-archive/2026-10-01-scanner-art-hash-name-verify/
+?? app/src/main/java/com/skyler/pokedexbinder/domain/ArtHash.kt
+?? app/src/test/java/com/skyler/pokedexbinder/domain/ArtHashTest.kt
+?? scripts/scan_capture.log
+== check 1-5: gradle not run (loopback failure) ==
+== callers ==
+app/src/main/java/com/skyler/pokedexbinder/data/remote/PokemonTcgApi.kt:16:    suspend fun getCard(@Path("id") id: String): TcgCardResponse
+app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexApi.kt:18:    suspend fun filterCards(
+app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexApi.kt:27:    suspend fun getCard(
+app/src/main/java/com/skyler/pokedexbinder/domain/BackfillCardNamesUseCase.kt:33:                val card = api.getCard(cardId).data
+app/src/main/java/com/skyler/pokedexbinder/repository/PersonalCollectionRepository.kt:55:            cardSearchRepository.searchByName(name).forEach { card ->
+app/src/main/java/com/skyler/pokedexbinder/ui/manualsearch/ManualSearchViewModel.kt:48:                            .ifEmpty { cardSearchRepository.searchByNameWithJapanese(trimmed) }
+app/src/main/java/com/skyler/pokedexbinder/ui/manualsearch/ManualSearchViewModel.kt:50:                        else -> cardSearchRepository.searchByNameWithJapanese(trimmed)
+app/src/main/java/com/skyler/pokedexbinder/ui/quickscan/QuickScanViewModel.kt:74:            cardSearchRepository.searchByNameWithJapanese(slotName, dexNumber.takeIf { it > 0 })
+app/src/main/java/com/skyler/pokedexbinder/ui/quickscan/QuickScanViewModel.kt:87:                    .ifEmpty { cardSearchRepository.searchByNameWithJapanese(trimmed) }
+app/src/main/java/com/skyler/pokedexbinder/ui/quickscan/QuickScanViewModel.kt:88:                else -> cardSearchRepository.searchByNameWithJapanese(trimmed)
+
+===== Fix pass 1 (2026-10-01) =====
+--- check 6: stray debug in fix-pass files ---
+none
+--- check 7: git status --short ---
+ M CLAUDE.md
+ M app/CLAUDE.md
+ M app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexApi.kt
+ M app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexCardDto.kt
+ M app/src/main/java/com/skyler/pokedexbinder/di/NetworkModule.kt
+ M app/src/main/java/com/skyler/pokedexbinder/domain/GeminiCardScanner.kt
+ M app/src/main/java/com/skyler/pokedexbinder/domain/ParsedCardInfo.kt
+ M app/src/main/java/com/skyler/pokedexbinder/domain/PerceptualHasher.kt
+ M app/src/main/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCase.kt
+ M app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/manualsearch/ManualSearchViewModel.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/quickscan/QuickScanViewModel.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreen.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModel.kt
+ M app/src/test/java/com/skyler/pokedexbinder/domain/GeminiCardScannerTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/domain/PerceptualHasherTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCaseTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/repository/CardSearchRepositoryTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/ui/QuickScanViewModelTest.kt
+ D app/src/test/java/com/skyler/pokedexbinder/ui/scanner/FocalLengthsKeyTestFixture.kt
+ M app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerFocusIndependentVerificationTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreenTest.kt
+ M gaps.md
+ M handoff.md
+ M project-overview.md
+?? .pipeline-archive/2026-10-01-scanner-art-hash-name-verify/
+?? app/src/main/java/com/skyler/pokedexbinder/domain/ArtHash.kt
+?? app/src/test/java/com/skyler/pokedexbinder/domain/ArtHashTest.kt
+?? scripts/scan_capture.log
+--- call-site grep: normalizeName/bestNameMatch/CancellationException ---
+11:import kotlinx.coroutines.CancellationException
+167:        val names = en.bestNameMatch(name)?.pokemonNames ?: pokemonNamesOf(name)
+176:        }.bestNameMatch(name) ?: return null
+179:        } catch (e: CancellationException) {
+190:    private fun List<TcgCard>.bestNameMatch(name: String): TcgCard? {
+191:        val target = normalizeName(name)
+192:        return firstOrNull { normalizeName(it.name) == target } ?: firstOrNull { namesMatch(it.name, name) }
+380:        val na = normalizeName(a)
+381:        val nb = normalizeName(b)
+385:    private fun normalizeName(raw: String): String = raw.lowercase().filter { it.isLetterOrDigit() }
+410:    } catch (e: CancellationException) {
+434:    } catch (e: CancellationException) {
+--- IDENTITY_PINNED refs ---
+app/src/main/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCase.kt:6:enum class ConfidencePath { NUMBER_MATCH, HASH_MARGIN, SINGLE_CANDIDATE_HASH, IDENTITY_PINNED, NONE }
+app/src/main/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCase.kt:50:            val pinnedNoImage = identityPinned && single.imageUrl.isBlank() && hashMatch != null &&
+app/src/main/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCase.kt:54:            } else if (pinnedNoImage) {
+app/src/main/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCase.kt:55:                SearchConfidence(cards, true, single, ConfidencePath.IDENTITY_PINNED)
+app/src/test/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCaseTest.kt:168:    fun `pinned single card with no image is high confidence via IDENTITY_PINNED`() {
+app/src/test/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCaseTest.kt:174:        assertEquals(ConfidencePath.IDENTITY_PINNED, result.matchPath)

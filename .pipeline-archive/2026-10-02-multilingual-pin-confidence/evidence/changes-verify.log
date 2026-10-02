@@ -1,0 +1,58 @@
+== stray debug in diff (added lines) ==
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexApi.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexCardDto.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/di/NetworkModule.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/domain/ParsedCardInfo.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/domain/PerceptualHasher.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/test/java/com/skyler/pokedexbinder/domain/PerceptualHasherTest.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/test/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCaseTest.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/test/java/com/skyler/pokedexbinder/repository/CardSearchRepositoryTest.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/test/java/com/skyler/pokedexbinder/ui/QuickScanViewModelTest.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerFocusIndependentVerificationTest.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreenTest.kt', LF will be replaced by CRLF the next time Git touches it
+(exit 1)
+== leftover refs ==
+(exit 1)
+== git status ==
+ M CLAUDE.md
+ M app/CLAUDE.md
+ M app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexApi.kt
+ M app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexCardDto.kt
+ M app/src/main/java/com/skyler/pokedexbinder/di/NetworkModule.kt
+ M app/src/main/java/com/skyler/pokedexbinder/domain/GeminiCardScanner.kt
+ M app/src/main/java/com/skyler/pokedexbinder/domain/ParsedCardInfo.kt
+ M app/src/main/java/com/skyler/pokedexbinder/domain/PerceptualHasher.kt
+ M app/src/main/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCase.kt
+ M app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt
+ M app/src/main/java/com/skyler/pokedexbinder/repository/SettingsRepository.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/manualsearch/ManualSearchViewModel.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/quickscan/QuickScanViewModel.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreen.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModel.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/settings/SettingsScreen.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/settings/SettingsViewModel.kt
+ M app/src/test/java/com/skyler/pokedexbinder/domain/GeminiCardScannerTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/domain/PerceptualHasherTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCaseTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/repository/CardSearchRepositoryTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/repository/SettingsRepositoryTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/ui/QuickScanViewModelTest.kt
+ D app/src/test/java/com/skyler/pokedexbinder/ui/scanner/FocalLengthsKeyTestFixture.kt
+ M app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerFocusIndependentVerificationTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreenTest.kt
+ M gaps.md
+ M handoff.md
+ M project-overview.md
+?? .pipeline-archive/2026-10-01-claude-fallback/
+?? .pipeline-archive/2026-10-01-scanner-art-hash-name-verify/
+?? .pipeline-archive/2026-10-01-tcgdex-first-search/
+?? app/src/main/java/com/skyler/pokedexbinder/domain/ArtHash.kt
+?? app/src/main/java/com/skyler/pokedexbinder/domain/CardScanProvider.kt
+?? app/src/main/java/com/skyler/pokedexbinder/domain/CardScanShared.kt
+?? app/src/main/java/com/skyler/pokedexbinder/domain/ClaudeCardScanner.kt
+?? app/src/test/java/com/skyler/pokedexbinder/domain/ArtHashTest.kt
+?? app/src/test/java/com/skyler/pokedexbinder/domain/CardScanProviderTest.kt
+?? app/src/test/java/com/skyler/pokedexbinder/domain/ClaudeCardScannerTest.kt
+?? scripts/claude_scan_bakeoff.py
+?? scripts/scan_capture.log

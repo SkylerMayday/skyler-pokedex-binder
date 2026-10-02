@@ -3,6 +3,112 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
+## Refreshed — 2026-10-03 (session 21 — scanner matching overhaul)
+
+**Audit scope note**: touched `CardSearchRepository.kt`, `SmartThresholdUseCase.kt`, `PerceptualHasher.kt`,
+`ArtHash.kt`, `CardScanProvider.kt`, `ClaudeCardScanner.kt`, `CardScanShared.kt`, `GeminiCardScanner.kt`,
+`ScannerViewModel.kt`, settings files; read `ScannerScreen.kt` (header only). Not a full re-audit.
+Tests 428/428 green; live-verified for Japanese cards on 2026-10-03 (see handoff).
+
+### Fixed this session (verified)
+
+- ~~**Wrong card accepted from species-blind `number+total`** (Black Kyurem → Snorlax)~~ **Fixed**, live-verified:
+  Black Kyurem resolves to `SV7a-011`. Five-whys: wrong card shown -> weak step ran last with no name check ->
+  name was only a search filter, never verified -> cascade assumed English numbering -> language was never
+  detected. Root fix = language detection + name/printedName verification.
+- ~~**8x8 whole-crop hash worse than random**~~ **Replaced** with art-crop DCT (`ArtHash.kt`); 2 samples, not a
+  statistical calibration.
+- ~~**Japanese / other-language cards unfindable**~~ **Fixed for ja** (live), implemented but not live-tested
+  for ko/zh-tw/th/id.
+- ~~**Gemini 429 blocks scanning**~~ **Mitigated** by Claude fallback; live-verified 7 of 8 scans on 2026-10-01.
+
+### New, not fixed
+
+- **`pokemontcg.io` shuts down 2027-03-01; `searchByName` (Personal Collection) is still ptcg-first.** Five-whys:
+  ids are source-prefixed strings -> owned/collection state keys on them -> swapping source changes identity ->
+  needs an id remap. Plan before the deadline.
+- **The art hash cannot discriminate in the 20–45 band.** Correct scans scored 8–34; wrong/absent cards 24–30.
+  Identity therefore rests on metadata, with 45 only a sanity ceiling. Root: no labelled calibration set, and the
+  capture art box assumes the physical card fills the guide frame (unmeasured). Collect `ranked=` log lines.
+- **TCGdex data gaps.** zh-cn `CSV9C`/`CSV9.5C` have 0 cards; ko (239 cards) and zh-cn (877) have no images; newest
+  JA set `M6` has no images; JA Black Kyurem ex has no `dexId`; list filters are substring matches (client-side
+  exact filtering is mandatory). Coverage varies by language; a paid/other source would be the only fix.
+- **TEMP DIAGNOSTIC debug-capture save still ships** (`ScannerViewModel.kt`, "never meant to ship"): ~2-3 MB JPEG
+  per scan into the app's external files dir; ~100 MB had accumulated.
+- **Gemini quota cause unconfirmed** (free-tier daily vs per-minute); 429 body is not logged. Gemini is still
+  tried first on every scan, so after quota exhaustion each scan pays one failed call; no circuit breaker. A
+  Gemini reply with all-null fields does not fall back to Claude.
+- **TCGdex call budget:** worst case on a total miss is 11 requests (zh) / 8 (others), above the spec's 7 / 5.
+- **`lowConfidenceCards` tail filter uses card equality, not id** (`ScannerViewModel.kt`); harmless while the
+  cascade de-dupes by id.
+- **`AppSettings` holds both API keys** — any future log/`toString` of the object leaks them. `executeWithRetry`
+  does not close the `Response` on the 429 / non-2xx branches (inherited from Gemini).
+- **Claude's English name can be wrong** (read Klawf as "Crabominable"); `printedName` + number + total saved
+  the match. `nameVerified` uses a substring test (ミュウ could match ミュウツー; needs exact number+total too).
+- **`normalizeName` keeps combining marks:** NFC vs NFD accents could mismatch (both sources emit NFC today).
+- **`ScannerViewModel`'s generic `catch (Exception)` swallows `CancellationException`** (pre-existing); its
+  `NoApiKeyException` → state mapping has no JVM test (needs camera objects).
+- **Saved card Language is not pre-filled from the detected language** (out of scope; touches 4+ assign flows).
+- **The cross-language header was never seen on screen**, only its log flag.
+- **`scripts/claude_scan_bakeoff.py` never run** (Skyler's Python lacks `anyio`); prices in it are from the
+  claude-api skill's cached table (2026-06-04) and the per-scan cost (~$0.002 Haiku / ~$0.006 Sonnet) is an
+  estimate, not measured.
+- **Gemini API key still unrotated** (carried from session 20).
+
+## Parked — 2026-09-30 (session 20, from the security/dependency pass) — circle back after the current fixes are test-green
+
+Read-only pass (manifest + `libs.versions.toml`); no CVE database lookups were run.
+
+- **`security-crypto` is deprecated.** Project is on `1.1.0-alpha06`; Google deprecated the library
+  in `1.1.0-alpha07` (Reddit post quoting the release; the Jetpack releases page does not list
+  it), so no further fixes. It backs the Gemini key, GitHub PAT and Discord webhook
+  (`SecurityPrefsModule.kt`, `SettingsRepository`, `PublishSettingsRepository`). Works today, no
+  known vulnerability. Option when picked up: Keystore AES-GCM (or Tink) behind the existing
+  DataStore/SharedPreferences seams, with a migration for the three secrets. Risk: a migration
+  bug could wipe stored keys, so plan it (`planning` + pipeline), don't quick-edit.
+- **Stale dependencies, no audit cadence.** `navigation-compose` 2.7.7, `room` 2.6.1, `coil` 2.6.0,
+  `coreKtx` 1.13.1, `accompanist-permissions` 0.34.0, `lifecycle` 2.8.3 are behind. `okhttp`
+  4.12.0 is current for 4.x. Each bump needs a Gradle build and carries regression risk; no known
+  payoff. Run `dependency-management` when a bump is actually wanted.
+- ~~**Inert physical-camera-id plumbing in `CameraPreview`**~~ **Removed session 20** (uncompiled):
+  `ultrawideId`, `buildUseCases(physicalCameraId)`, `boundPhysicalId`, the fallback-bind branch,
+  `logCameraAfCapabilities`' `requestedPhysicalId`, `actualBoundCameraId`, and the `Camera2Interop`
+  / `Build` imports. `boundVia` is now always `"default-back-camera"`.
+- ~~**`CardFrameOverlay` float geometry**~~ **Not a gap, closed.** Ratios are already shared
+  constants; the remainder is a two-line float multiplication in draw code.
+- **Session 20's code changes are unit-test-green, not live-tested.** Skyler ran the build/tests
+  (`BUILD SUCCESSFUL`); fresh XML read by me: 324 tests, 0 failures, 0 skipped. Live matching path
+  and the `x-goog-api-key` header against the real Gemini API are still unexercised — if the
+  header were rejected, every scan would fail with 400/401/403, visible on the first scan.
+
+## Refreshed — 2026-09-30 (session 20 — cleanup batch)
+
+**Audit scope note**: touched `GeminiCardScanner.kt`, `ScannerScreen.kt` (geometry helpers,
+`CameraPreview` bind path, focus logging), `CardSearchRepositoryTest.kt`, two scanner test files;
+read `CardSearchRepository.kt`, manifest, `libs.versions.toml`. Not a full re-audit.
+
+### Fixed this session (unit tests 324/324, not live-tested)
+
+- ~~**Gemini API key in the URL query** (`GeminiCardScanner.kt:83`)~~ **Moved to the
+  `x-goog-api-key` header**, one new test. **The key itself is still unrotated** (Skyler's action).
+- ~~**Dead code `selectUltrawidePhysicalCameraId` + tests**~~ **Deleted**, with the inert
+  physical-id plumbing in `CameraPreview` (see the parked section above for the itemised list).
+- ~~**`detectCardInFrame` duplicates `guideFrameImageRect` geometry** (deferred 3 times)~~ **Shared**
+  via `guideFrameSize`/`displayToImage`; existing geometry tests unchanged and green.
+- ~~**`CardSearchRepositoryTest` depended on `safeSearch`'s broad catch (F3); "name before dex" test
+  passed on the old order and `name+number`/`broad-dex` labels untested (F2)**~~ **Fixed.**
+
+### New, not fixed
+
+- **Root cause of why these sat open so long:** they were gated on live-device evidence Skyler's
+  phone/Gemini quota kept blocking (sessions 18-19). The gated items (live `query=` data, Reviewer
+  F1, hash-margin calibration, `GUIDE_FRAME_WIDTH_RATIO`/`CROP_MARGIN_FACTOR` re-tune) are still
+  open and unchanged — see session 19's list below.
+- **The `x-goog-api-key` header is unverified against the real API** (unit test uses MockWebServer
+  only). Documented Gemini behaviour, but not exercised on-device.
+- **No test covers `CameraPreview`'s simplified bind path** (compose + real camera only); the
+  fallback-bind branch it used to have is gone, so a failed bind now yields no camera and a log line.
+
 ## Refreshed — 2026-09-29 (session 19 — capture zoom mismatch, key-in-logcat)
 
 **Audit scope note**: touched `ScannerScreen.kt` (bind path), `NetworkModule.kt`, two gradle files;
@@ -27,8 +133,8 @@ read `ImageProxyExt.kt`, `GeminiCardScanner.kt` (grep only). Not a full re-audit
 - **The Gemini API key is exposed and unrotated.** It appeared in logcat and in this session's
   transcript (auto-archived to the vault). Why it existed: key sent as a URL query param -> any
   URL logger leaks it. Rotate it; move to the `x-goog-api-key` header in `GeminiCardScanner.kt:83`.
-- **Dead code: `selectUltrawidePhysicalCameraId` + its `ScannerScreenTest` cases** are unused after
-  the zoom fix. Deliberately kept until a Gemini-side scan confirms the fix; then delete.
+- ~~**Dead code: `selectUltrawidePhysicalCameraId` + its `ScannerScreenTest` cases**~~ **Deleted
+  session 20.**
 - **No test for the new `ZoomState` observer** (`ScannerScreen.kt`). It runs only against a real
   bound camera; it is proven by one live scan, not by any automated test.
 - **The still capture's lens was never observed, only inferred from the image.** The session-level

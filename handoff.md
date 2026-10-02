@@ -1,60 +1,63 @@
-# Handoff — Session 19 (2026-09-29)
+# Handoff — Session 21 (2026-10-01 → 10-03)
 
 ## 1. Goals
 
-Live-test the scanner after session 18 (species-guard `query=` log, Gemini retry budget, crop
-margin 1.30). Live testing found the real blocker: saved captures were zoomed in vs the preview and
-cut off the collector number. Goal became: make the still match what the preview shows.
+Live-test the scanner on the phone, then fix what it showed: wrong cards for Japanese/other-language
+cards, a useless art hash, and Gemini's free-tier quota blocking scans.
 
 ## 2. Current State
 
-- **Capture fix is in and live-verified on the image only.** Committed `5c9f27e` (build succeeded
-  on Skyler's machine, `installDebug`). A Castform scan after the fix shows the whole card with
-  margin on all four sides, `116/172` visible.
-- **Nothing downstream of the camera has been live-tested.** Gemini returned 429 ("daily quota") on
-  every scan after the fix, so the `query=` label, Castform via `dex+number+total`, number reading,
-  and the 4-attempt retry are all still unexercised on-device. Skyler says Gemini is back online.
-- Unit tests were run by Skyler earlier this session (passed, before the zoom change). Not re-run
-  since; the zoom change didn't touch tested code paths.
-- Commits this session: `5c9f27e` zoom fix · `6a0ff73` stop logging request URLs · `e101080` drop
-  `okhttp-logging`. Both TEMP diagnostics (crop geometry, stream diag) were added and removed
-  again, never committed.
+- **Unit tests 428/428 green** (Skyler ran `testDebugUnitTest --rerun-tasks` after each stage; fresh XML
+  read by me: 0 failures, 0 errors, 0 skipped).
+- **Latest build is on the phone** (installed 2026-10-03 00:32). Live-verified that night: Mega Malamar ex
+  (`M6-048`), Klawf (`SV1S-088`), Black Kyurem (`SV7a-011`), Wishiwashi ex (`M6-021`) all accepted
+  automatically; a Simplified-Chinese Palafin ex fell to the English fallback, forced low confidence
+  (`path=CROSS_LANGUAGE`). Gemini answered all five (quota had reset).
+- **Not live-tested:** Castform/Furfrou under the new confidence rule, any Thai / Indonesian / Korean /
+  Traditional-Chinese card, manual search with the extra languages, whether the "closest English
+  printings" header actually renders (only the log line `crossLanguage=true` was seen).
+- Committed in two commits this wrapcon (code+tests, then docs/scripts/pipeline archives). Skyler's own
+  `CLAUDE.md` / `app/CLAUDE.md` edits and `scripts/scan_capture.log` were deliberately left out.
 
 ## 3. Active Files
 
-- [ScannerScreen.kt](app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreen.kt) — `ultrawideId = null`, `ZoomState` observer after bind; `selectUltrawidePhysicalCameraId` now unused
-- [NetworkModule.kt](app/src/main/java/com/skyler/pokedexbinder/di/NetworkModule.kt) — logging interceptor removed
-- `ScannerScreenTest.kt` — still tests the now-unused `selectUltrawidePhysicalCameraId`
+- `repository/CardSearchRepository.kt` — TCGdex-first cascade, language handling, name verification, cross-language flag
+- `domain/` — `ArtHash.kt` (new), `PerceptualHasher.kt`, `SmartThresholdUseCase.kt`, `CardScanProvider.kt` / `ClaudeCardScanner.kt` / `CardScanShared.kt` (new), `GeminiCardScanner.kt`
+- `data/remote/TcgdexApi.kt` (+ DTO, `NetworkModule.kt`), `ui/scanner/ScannerViewModel.kt` / `ScannerScreen.kt`, settings (Anthropic key field)
+- `scripts/claude_scan_bakeoff.py` — Haiku-vs-Sonnet accuracy/cost test; **never run** (see Failed Attempts)
+- Pipeline archives for the four runs: `.pipeline-archive/2026-10-01-*`, `2026-10-02-*`
 
 ## 4. Changes Made
 
-- Physical-camera-id selection disabled; logical camera bound plainly, min zoom (0.6) applied on
-  first `ZoomState`. Detail: `project-overview.md` item 20.
-- Removed OkHttp `HttpLoggingInterceptor` (it logged `?key=<Gemini API key>`), dropped the dependency.
-- Uncommitted, not mine: edits to `CLAUDE.md` / `app/CLAUDE.md`; untracked `scripts/scan_capture.log`.
+| # | Change | Why (evidence) |
+|---|---|---|
+| 1 | Name verification on `number+total` / `broad-number` (`matchingParsedName`) | Black Kyurem 11/64 resolved to Jungle Snorlax #11 via the species-blind query |
+| 2 | Art-region DCT pHash (`ArtHash.kt`, 63 bits) replaces 8x8 whole-image hash; capture art rect via `cardRectInCrop` | Whole-crop hash ranked the true card 84th/75th of 100 (it hashed the hand/background); art-crop ranked it 2nd/1st |
+| 3 | TCGdex is the primary source; `pokemontcg.io` kept as a fallback tagged `POKEMONTCG-IO-FALLBACK: remove before 2027-03-01` | `pokemontcg.io` shuts down 2027-03-01 (docs.pokemontcg.io); it has no Japanese cards |
+| 4 | Gemini/Claude return `language` + `printedName`; six languages queried (ja, ko, zh-tw, zh-cn, th, id); ids `tcgdex_<lang>_<id>`, set names `<SET> (<LANG>)` | Japanese cards were absent or wrong |
+| 5 | Confidence: `IDENTITY_PINNED` (dex+number+total), `IDENTITY_PINNED_NAME` (printedName-verified), ceiling `PINNED_HASH_CONTRADICTION_DISTANCE=45`, single-candidate hash limit 16→20 | Correct cards scored hash 8–34, wrong 24–30: the hash cannot discriminate, identity rests on metadata |
+| 6 | Dual provider: Gemini first, any non-cancellation error → Claude Sonnet (`claude-sonnet-4-6`); Anthropic key field in Settings | Free-tier Gemini 429'd after ~17 scans; 7 of 8 scans then ran on Claude fine |
+| 7 | `crossLanguage` flag: an Asian-language scan with only English results is forced low confidence, labelled, hash-ordered | A stand-in English printing is not the card owned; never auto-accept |
+| 8 | TCG Pocket (`/tcgp/`) cards dropped from TCGdex results | Mobile-game cards polluted candidates |
+
+Docs: `gaps.md` (session 21 section), `project-overview.md` (new "Scanner Matching Pipeline" section).
 
 ## 5. Failed Attempts
 
-- Gradle loopback wall again: 2/2 from Claude (Bash + PowerShell). Skyler ran Gradle himself. 5th
-  consecutive session needing his hands.
-- First hypothesis (crop aspect 0.816 vs card 0.716 is the bug) was wrong — it's a harmless clamp.
-- Stream-diagnostic `CaptureCallback` never saw still-capture results, so it couldn't show which
-  lens the still used; the fix was validated by outcome (image) instead.
-- Paired preview/JPEG capture failed twice (auto-capture fired before my screencap) until a
-  background `screencap` loop was used.
+- **Gradle loopback wall again** (7th session): Claude could not build; Skyler ran every build.
+- **SIFT feature matching** tested as an alternative to the hash: no better (Furfrou rank 2, wrong card on top) and would need OpenCV. Dropped.
+- **TCGdex zh-cn set `CSV9C`/`CSV9.5C`** exist with `official: 208` but contain 0 cards, so Palafin cannot be matched there. No code fix possible.
+- `scripts/claude_scan_bakeoff.py` failed on Skyler's Python (`ModuleNotFoundError: anyio`); fix is `python -m pip install --upgrade anthropic pillow`. Not rerun.
+- Coder agent hit the Claude session rate limit once mid-task; the retry resumed from the partial tree.
+- Git Bash mangles `/storage/...` adb paths (needs `MSYS_NO_PATHCONV=1`).
 
 ## 6. Next Steps
 
-1. **Scan several cards now that Gemini is back**, with `adb logcat -s ScannerMatch:*` (adb is at
-   `%LOCALAPPDATA%\Android\Sdk\platform-tools`). Confirm: `query=` label on `search candidates=`,
-   Castform (dex 351) resolves via `dex+number+total`, collector number now parses, no
-   `number=null`. Watch Reviewer F1 (`dex+number` pre-empting a correct `number+total`).
-2. **If that scan works:** delete `selectUltrawidePhysicalCameraId` and its tests, run
-   `.\gradlew.bat testDebugUnitTest --rerun-tasks` in his own PowerShell.
-3. **Rotate the Gemini API key** (it was printed in logcat and in this session's transcript), then
-   consider moving it from the URL query to the `x-goog-api-key` header in `GeminiCardScanner.kt`.
-4. Check guide framing on a few cards — `GUIDE_FRAME_WIDTH_RATIO=0.75` was tuned before the preview
-   moved to the ultrawide at 0.6x.
-5. Carried: hash-margin constants uncalibrated; publish-diff confirmation.
+1. **Live-scan the untested cases** (see Current State) and read `adb logcat -s ScannerMatch:*`. Confirm the cross-language header renders on screen.
+2. **Rotate the Gemini API key** (printed in logcat and archived transcripts earlier; still unrotated). Blocked on Skyler.
+3. **Plan the `pokemontcg.io` removal before 2027-03-01.** `searchByName` is still ptcg-first because Personal Collection stores owned status by card id; switching sources changes ids (`xyevo-25` → `tcgdex_xyevo-25`) and would drop Skyler's owned toggles. Needs an id-remap migration (`planning` + pipeline).
+4. **Remove the TEMP DIAGNOSTIC debug-capture save** in `ScannerViewModel.kt` (every scan writes a 2-3 MB JPEG; 47 files / ~100 MB had accumulated) once calibration scans are done.
+5. Optional: run the bake-off (needs `ANTHROPIC_API_KEY` in Skyler's own shell) to choose Haiku vs Sonnet on cost.
+6. Small fixes parked in `gaps.md`: `lowConfidenceCards` filters tail by equality not id; trim the dex step's language fan-out if misses feel slow.
 
-Blocked on Skyler: everything above needs the phone or his own PowerShell for Gradle.
+Blocked on Skyler: items 1–2, and the decision on item 3's scope (should Personal Collection include non-English printings?).

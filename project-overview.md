@@ -621,14 +621,33 @@ confirmed working).
       Logical camera 0's zoom range is [0.6, 10] (`dumpsys media.camera`), so 0.6 switches every stream
       to the ultrawide together. Live log: `zoomState min=0.6`, preview `activePhysicalId=2
       zoomRatio=0.6 focalLength=2.2`. Live JPEG: full card with margin all round, sharp, upright.
-    - **Kept on purpose:** `selectUltrawidePhysicalCameraId` (+ its unit tests) is now unused; delete
-      after a Gemini-side scan confirms the fix end to end.
+    - **Removed session 20 (item 21):** `selectUltrawidePhysicalCameraId`, its tests, and the
+      physical-id plumbing in `CameraPreview`. (Item 9's "Lens selection" bullet above describes the
+      removed mechanism; kept as history.)
     - **Same session, unrelated:** HttpLoggingInterceptor removed from `NetworkModule.kt` and the
       `okhttp-logging` dependency dropped (`6a0ff73`, `e101080`) — its BASIC level printed the Gemini
       URL including `?key=<API key>` into logcat.
     - **Not yet verified:** Gemini returned 429 (daily quota) on every scan after the fix, so the
       matching stage — including item 19's `query=` label — was still not exercised live.
 
+21. **Cleanup batch** (2026-09-30, session 20; inline, not a pipeline run; unit tests 324/324 green
+    on Skyler's machine, fresh XML; no live scan).
+    - **Gemini key moved to the `x-goog-api-key` header** (`GeminiCardScanner.kt`); the URL is just
+      `baseUrl`. Why: a key in `?key=` leaks into any URL logger (item 20's logcat leak). New test
+      asserts header present and no `key=` in the path. Key still needs rotating (Skyler).
+    - **Shared guide geometry:** `guideFrameSize(dispW)` and `displayToImage(...)` in
+      `ScannerScreen.kt` are used by both `detectCardInFrame` (live sampling) and
+      `guideFrameImageRect` (capture crop). Math unchanged. `CardFrameOverlay` keeps its own float
+      draw math on the shared ratio constants.
+    - **Deleted dead code:** `selectUltrawidePhysicalCameraId` + 10 tests + `FocalLengthsKeyTestFixture`;
+      `CameraPreview`'s `ultrawideId`/`boundPhysicalId`/fallback-bind, `requestedPhysicalId` logging,
+      `actualBoundCameraId`. `boundVia` is now always `"default-back-camera"`.
+    - **`CardSearchRepositoryTest`:** default-empty mocks (no reliance on `safeSearch`'s broad catch),
+      tighter "name before dex" test, new `name+number` and `broad-dex` label tests.
+    - **Parked, see `gaps.md`:** `security-crypto` deprecated (alpha06), stale dependencies.
+
+**Status as of 2026-09-30 (session 20): item 21 is test-green, not live-tested; item 20 remains
+live-verified on the capture side only.**
 **Status as of 2026-09-29 (session 19): item 20 is live-verified on the capture side only (image
 checked); Gemini/matching path unverified (quota). Item 19 still not live-tested.**
 **Status as of 2026-09-29 (session 18): item 19 is unit-tested and merged, not live-device tested.**
@@ -818,6 +837,35 @@ bug class on the TCGCSV merge path) — reused, not reinvented.
   sandbox (`"Failed to receive the UTP test results"`, a UTP↔Gradle IPC glitch, reproduced twice) —
   read `app/build/outputs/androidTest-results/connected/debug/.../test-result.textproto` directly
   to check real per-test results, don't trust Gradle's exit code alone. Full detail: `gaps.md`.
+
+## Scanner Matching Pipeline (2026-10-01 → 10-03, session 21)
+
+How a photo becomes a card. Decisions and their evidence live in `handoff.md` §4 and `gaps.md`; this is the shape.
+
+1. **Capture** → 1.30x guide-frame crop (`ImageProxyExt.toCroppedBitmap`). The crop contains hand/background; the card
+   is ~1/1.30 of its width (`cardRectInCrop` in `ScannerScreen.kt`).
+2. **Read the card** — `CardScanProvider` tries Gemini Flash (`GeminiCardScanner`), and on **any** non-cancellation
+   error falls back to Claude Sonnet (`ClaudeCardScanner`, raw OkHttp, model constant `claude-sonnet-4-6`). Both use one
+   shared prompt (`CardScanShared.kt`) returning name, number, setTotal, dexNumber, hp, artist, **language**,
+   **printedName**. Keys live in the encrypted settings store; never logged.
+3. **Search** — `CardSearchRepository.searchByParsedInfo`: TCGdex first, in the detected language(s)
+   (`tcgdexLangsFor`: ja, ko, zh-tw, zh-cn, th, id, then en), pinning by `dexId` + exact `localId` + exact
+   `set.cardCount.official`; then name+number+total, then a printedName-verified number+total step; then the old
+   `pokemontcg.io` cascade (**delete before 2027-03-01**, tagged `POKEMONTCG-IO-FALLBACK`); then broad steps.
+   TCGdex filters are substring matches (`eq:` for dex/total; `localId` exact-filtered client-side). TCG Pocket
+   (`/tcgp/`) cards are dropped. Non-English ids are `tcgdex_<lang>_<id>`, set names `<SET> (<LANG>)`.
+4. **Verify** — `PerceptualHasher` compares the capture's **art region** (x 6.5–93.5%, y 11–49%) to each candidate's art
+   with a 32x32 DCT pHash (`ArtHash.kt`, pure JVM). **The hash is noisy** (correct 8–34, wrong 24–30), so
+   `SmartThresholdUseCase` accepts a single candidate when metadata pins it (`IDENTITY_PINNED` /
+   `IDENTITY_PINNED_NAME`) unless the hash exceeds 45; otherwise hash ≤ 20.
+5. **Cross-language guard** — an Asian-language scan whose results are all English printings is forced low confidence
+   (`CROSS_LANGUAGE`), labelled "closest English printings", hash-ordered. A stand-in printing is not the card owned.
+
+**Why TCGdex, not pokemontcg.io / Scrydex:** `pokemontcg.io` has no Japanese data and shuts down 2027-03-01; Scrydex
+has no free tier ($29/mo minimum); TCGdex is free, already integrated, and has ja/ko/zh/th/id data (coverage uneven).
+**Why a Claude fallback:** the Gemini free tier 429'd after ~17 scans in a day; Sonnet is ~$0.006/scan (estimate).
+**Don't re-litigate:** the hash is a sanity check, not the identifier — do not tighten the threshold without a labelled
+calibration set. `searchByName` (Personal Collection) stays ptcg-first until an id-remap migration is planned.
 
 ## Conventions
 

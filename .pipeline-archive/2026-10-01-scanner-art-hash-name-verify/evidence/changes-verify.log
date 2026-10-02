@@ -1,0 +1,51 @@
+== gradle: NOT RUN (harness loopback failure; Skyler runs testDebugUnitTest) ==
+== callers of computeHash/findBestMatch/HashMatchResult/cardRectInCrop ==
+app/src/main/java/com/skyler/pokedexbinder/domain/ArtHash.kt:4:internal data class ArtRect(val left: Int, val top: Int, val right: Int, val bottom: Int) {
+app/src/main/java/com/skyler/pokedexbinder/domain/ArtHash.kt:27:    fun artRect(card: ArtRect): ArtRect = ArtRect(
+app/src/main/java/com/skyler/pokedexbinder/domain/PerceptualHasher.kt:6:import com.skyler.pokedexbinder.ui.scanner.cardRectInCrop
+app/src/main/java/com/skyler/pokedexbinder/domain/PerceptualHasher.kt:14:data class HashMatchResult(
+app/src/main/java/com/skyler/pokedexbinder/domain/PerceptualHasher.kt:35:    fun computeHash(bitmap: Bitmap): Long = computeHash(bitmap, null)
+app/src/main/java/com/skyler/pokedexbinder/domain/PerceptualHasher.kt:38:    internal fun computeHash(bitmap: Bitmap, card: ArtRect?): Long {
+app/src/main/java/com/skyler/pokedexbinder/domain/PerceptualHasher.kt:39:        val cardRect = card ?: ArtRect(0, 0, bitmap.width, bitmap.height)
+app/src/main/java/com/skyler/pokedexbinder/domain/PerceptualHasher.kt:57:    suspend fun findBestMatch(candidates: List<TcgCard>, capturedBitmap: Bitmap): HashMatchResult? {
+app/src/main/java/com/skyler/pokedexbinder/domain/PerceptualHasher.kt:59:        val crop = cardRectInCrop(capturedBitmap.width, capturedBitmap.height)
+app/src/main/java/com/skyler/pokedexbinder/domain/PerceptualHasher.kt:60:        val capturedHash = computeHash(capturedBitmap, ArtRect(crop.left, crop.top, crop.right, crop.bottom))
+app/src/main/java/com/skyler/pokedexbinder/domain/PerceptualHasher.kt:65:                val distance = cardBitmap?.let { hammingDistance(capturedHash, computeHash(it)) }
+app/src/main/java/com/skyler/pokedexbinder/domain/PerceptualHasher.kt:73:            HashMatchResult(best.first, best.second, margin, ranked)
+app/src/main/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCase.kt:62:        // failed (PerceptualHasher.findBestMatch()'s documented fallback) — the margin is an
+app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreen.kt:223:internal fun cardRectInCrop(cropWidth: Int, cropHeight: Int): ImageRect {
+app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModel.kt:114:                val hashMatch = perceptualHasher.findBestMatch(candidates, bitmap)
+app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModel.kt:211:// Gemini + slot assignment", 2026-05-20) introduced perceptualHasher.findBestMatch and, in the
+app/src/test/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCaseTest.kt:18:        HashMatchResult(card, distance, margin)
+app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreenTest.kt:107:    // ---- cardRectInCrop ----
+app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreenTest.kt:112:    fun `cardRectInCrop centres a guide-width card inside the crop`() {
+app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreenTest.kt:113:        assertEquals(ImageRect(112, 157, 861, 1203), cardRectInCrop(974, 1361))
+app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreenTest.kt:117:    fun `cardRectInCrop clamps card height to a crop shorter than the card aspect implies`() {
+app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreenTest.kt:118:        val rect = cardRectInCrop(974, 900)
+== android imports in ArtHash ==
+none
+== '64' in hasher/threshold ==
+none
+== stray debug in my files ==
+none
+== git status ==
+ M CLAUDE.md
+ M app/CLAUDE.md
+ M app/src/main/java/com/skyler/pokedexbinder/domain/GeminiCardScanner.kt
+ M app/src/main/java/com/skyler/pokedexbinder/domain/PerceptualHasher.kt
+ M app/src/main/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCase.kt
+ M app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreen.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModel.kt
+ M app/src/test/java/com/skyler/pokedexbinder/domain/GeminiCardScannerTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/domain/PerceptualHasherTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/repository/CardSearchRepositoryTest.kt
+ D app/src/test/java/com/skyler/pokedexbinder/ui/scanner/FocalLengthsKeyTestFixture.kt
+ M app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerFocusIndependentVerificationTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreenTest.kt
+ M gaps.md
+ M handoff.md
+ M project-overview.md
+?? app/src/main/java/com/skyler/pokedexbinder/domain/ArtHash.kt
+?? app/src/test/java/com/skyler/pokedexbinder/domain/ArtHashTest.kt
+?? scripts/scan_capture.log
