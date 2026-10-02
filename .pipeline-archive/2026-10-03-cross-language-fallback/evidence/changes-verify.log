@@ -1,0 +1,34 @@
+== stray debug in changed files ==
+(Log.i ScannerMatch lines pre-existing; no key/URL logged)
+== API key in logs ==
+== call sites ==
+app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt:28:data class ParsedSearchResult(
+app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt:106:                    return@coroutineScope ParsedSearchResult(
+app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt:115:                return@coroutineScope ParsedSearchResult(results, "tcgdex-en+name+number+total")
+app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt:125:                    return@coroutineScope ParsedSearchResult(
+app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt:133:            if (results.isNotEmpty()) return@coroutineScope ParsedSearchResult(results, "tcgdex-en+number+total")
+app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt:143:            if (merged.isNotEmpty()) return@coroutineScope ParsedSearchResult(merged, "broad-name")
+app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt:150:            if (results.isNotEmpty()) return@coroutineScope ParsedSearchResult(results, "broad-dex")
+app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt:179:            if (results.isNotEmpty()) return ParsedSearchResult(results, label)
+app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt:189:        return ParsedSearchResult(byNumber, if (byNumber.isNotEmpty()) "broad-number" else "none-matched")
+app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreen.kt:913:                    CardSelectionList(
+app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreen.kt:992:private fun CardSelectionList(
+app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModel.kt:37:    data class LowConfidence(val cards: List<TcgCard>, val crossLanguage: Boolean = false) : ScannerState()
+app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModel.kt:106:                    _state.value = ScannerState.LowConfidence(emptyList())
+app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModel.kt:119:                val confidence = smartThresholdUseCase.evaluate(
+app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModel.kt:131:                    ScannerState.LowConfidence(
+app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModel.kt:204:// Determines the (name, number) pair passed to SmartThresholdUseCase.evaluate() to disambiguate
+== git status (short, untracked tail) ==
+?? .pipeline-archive/2026-10-01-claude-fallback/
+?? .pipeline-archive/2026-10-01-scanner-art-hash-name-verify/
+?? .pipeline-archive/2026-10-01-tcgdex-first-search/
+?? .pipeline-archive/2026-10-02-multilingual-pin-confidence/
+?? app/src/main/java/com/skyler/pokedexbinder/domain/ArtHash.kt
+?? app/src/main/java/com/skyler/pokedexbinder/domain/CardScanProvider.kt
+?? app/src/main/java/com/skyler/pokedexbinder/domain/CardScanShared.kt
+?? app/src/main/java/com/skyler/pokedexbinder/domain/ClaudeCardScanner.kt
+?? app/src/test/java/com/skyler/pokedexbinder/domain/ArtHashTest.kt
+?? app/src/test/java/com/skyler/pokedexbinder/domain/CardScanProviderTest.kt
+?? app/src/test/java/com/skyler/pokedexbinder/domain/ClaudeCardScannerTest.kt
+?? scripts/claude_scan_bakeoff.py
+?? scripts/scan_capture.log
