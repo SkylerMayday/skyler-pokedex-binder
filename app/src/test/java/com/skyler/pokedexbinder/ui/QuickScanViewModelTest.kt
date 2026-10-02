@@ -189,7 +189,7 @@ class QuickScanViewModelTest {
         fastSearch.captured.invoke()
 
         coVerify { cardSearchRepository.searchByNumber("SWSH001") }
-        coVerify(exactly = 0) { cardSearchRepository.searchByName(any()) }
+        coVerify(exactly = 0) { cardSearchRepository.searchByNameWithJapanese(any(), any()) }
     }
 
     @Test
@@ -198,12 +198,12 @@ class QuickScanViewModelTest {
         every { cardSearchRepository.searchStreaming(any(), capture(fastSearch)) } returns
             flowOf(SearchProgress.Complete(emptyList()))
         coEvery { cardSearchRepository.searchByNumber("SWSH001") } returns emptyList()
-        coEvery { cardSearchRepository.searchByName("SWSH001") } returns listOf(card("fallback"))
+        coEvery { cardSearchRepository.searchByNameWithJapanese("SWSH001") } returns listOf(card("fallback"))
 
         viewModel().search("SWSH001")
         fastSearch.captured.invoke()
 
-        coVerify { cardSearchRepository.searchByName("SWSH001") }
+        coVerify { cardSearchRepository.searchByNameWithJapanese("SWSH001") }
     }
 
     @Test
@@ -211,12 +211,12 @@ class QuickScanViewModelTest {
         val fastSearch = slot<suspend () -> List<TcgCard>>()
         every { cardSearchRepository.searchStreaming(any(), capture(fastSearch)) } returns
             flowOf(SearchProgress.Complete(emptyList()))
-        coEvery { cardSearchRepository.searchByName("Pikachu") } returns listOf(card("pika"))
+        coEvery { cardSearchRepository.searchByNameWithJapanese("Pikachu") } returns listOf(card("pika"))
 
         viewModel().search("Pikachu")
         fastSearch.captured.invoke()
 
-        coVerify { cardSearchRepository.searchByName("Pikachu") }
+        coVerify { cardSearchRepository.searchByNameWithJapanese("Pikachu") }
     }
 
     // --- init block: auto-search triggered by constructing the ViewModel with a non-blank slotId ---

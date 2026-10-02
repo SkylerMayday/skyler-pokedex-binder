@@ -32,6 +32,8 @@ fun SettingsScreen(
     val publishConfig by viewModel.publishConfig.collectAsState()
     var apiKeyText by remember(settings.geminiApiKey) { mutableStateOf(settings.geminiApiKey) }
     var apiKeyVisible by remember { mutableStateOf(false) }
+    var anthropicKeyText by remember(settings.anthropicApiKey) { mutableStateOf(settings.anthropicApiKey) }
+    var anthropicKeyVisible by remember { mutableStateOf(false) }
 
     var githubOwnerText by remember(publishConfig.githubOwner) { mutableStateOf(publishConfig.githubOwner) }
     var githubRepoText by remember(publishConfig.githubRepo) { mutableStateOf(publishConfig.githubRepo) }
@@ -144,7 +146,7 @@ fun SettingsScreen(
 
             SettingToggleItem(
                 title = "Enable Camera Scanner",
-                description = "Automatically identify cards using the camera. Requires a Gemini API Key.",
+                description = "Automatically identify cards using the camera. Requires a Gemini or Anthropic API key.",
                 checked = settings.useCameraScanner,
                 onCheckedChange = { viewModel.setUseCameraScanner(it) }
             )
@@ -165,6 +167,29 @@ fun SettingsScreen(
                         Icon(
                             if (apiKeyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                             contentDescription = if (apiKeyVisible) "Hide key" else "Show key"
+                        )
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            OutlinedTextField(
+                value = anthropicKeyText,
+                onValueChange = { anthropicKeyText = it; viewModel.setAnthropicApiKey(it) },
+                label = { Text("Anthropic API Key (fallback)") },
+                supportingText = { Text("Used when Gemini fails. console.anthropic.com") },
+                enabled = settings.useCameraScanner,
+                visualTransformation = if (anthropicKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton(
+                        onClick = { anthropicKeyVisible = !anthropicKeyVisible },
+                        enabled = settings.useCameraScanner
+                    ) {
+                        Icon(
+                            if (anthropicKeyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = if (anthropicKeyVisible) "Hide key" else "Show key"
                         )
                     }
                 },

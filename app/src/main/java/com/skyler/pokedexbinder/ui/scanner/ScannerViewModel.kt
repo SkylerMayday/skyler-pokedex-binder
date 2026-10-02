@@ -10,14 +10,14 @@ import com.skyler.pokedexbinder.data.local.SecondaryBinderDao
 import com.skyler.pokedexbinder.data.local.SecondaryBinderEntry
 import com.skyler.pokedexbinder.data.model.TcgCard
 import com.skyler.pokedexbinder.domain.AssignCardUseCase
-import com.skyler.pokedexbinder.domain.GeminiCardScanner
+import com.skyler.pokedexbinder.domain.CardScanProvider
+import com.skyler.pokedexbinder.domain.NoApiKeyException
 import com.skyler.pokedexbinder.domain.ParsedCardInfo
 import com.skyler.pokedexbinder.domain.PerceptualHasher
 import com.skyler.pokedexbinder.domain.RateLimitException
 import com.skyler.pokedexbinder.domain.SmartThresholdUseCase
 import com.skyler.pokedexbinder.repository.BinderRepository
 import com.skyler.pokedexbinder.repository.CardSearchRepository
-import com.skyler.pokedexbinder.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,7 +34,7 @@ sealed class ScannerState {
     object NoApiKey : ScannerState()
     data class RateLimited(val consecutiveHits: Int) : ScannerState()
     data class HighConfidence(val card: TcgCard) : ScannerState()
-    data class LowConfidence(val cards: List<TcgCard>) : ScannerState()
+    data class LowConfidence(val cards: List<TcgCard>, val crossLanguage: Boolean = false) : ScannerState()
     data class Error(val message: String) : ScannerState()
     data class Success(val card: TcgCard, val slotName: String) : ScannerState()
 }
@@ -42,14 +42,13 @@ sealed class ScannerState {
 @HiltViewModel
 class ScannerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val geminiCardScanner: GeminiCardScanner,
+    private val cardScanProvider: CardScanProvider,
     private val cardSearchRepository: CardSearchRepository,
     private val perceptualHasher: PerceptualHasher,
     private val smartThresholdUseCase: SmartThresholdUseCase,
     private val assignCardUseCase: AssignCardUseCase,
     private val binderRepository: BinderRepository,
     private val secondaryBinderDao: SecondaryBinderDao,
-    private val settingsRepository: SettingsRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -67,11 +66,6 @@ class ScannerViewModel @Inject constructor(
         _state.value = ScannerState.Scanning
         viewModelScope.launch {
             try {
-                val apiKey = settingsRepository.getGeminiApiKey()
-                if (apiKey.isBlank()) {
-                    _state.value = ScannerState.NoApiKey
-                    return@launch
-                }
                 val bitmap = imageProxy.toCroppedBitmap()
                 capturedBitmap = bitmap
                 // Diagnostic-only, mirrors ScannerScreen.kt's existing "ScannerFocus" logging
@@ -93,17 +87,19 @@ class ScannerViewModel @Inject constructor(
                     android.util.Log.i("ScannerMatch", "debug capture saved: ${file.absolutePath}")
                 }
 
-                val parsed = geminiCardScanner.scan(bitmap, apiKey)
+                val parsed = cardScanProvider.scan(bitmap)
                 android.util.Log.i(
                     "ScannerMatch",
-                    "gemini parsed: name=${parsed.cardName} number=${parsed.cardNumber} " +
-                        "setTotal=${parsed.setTotal} dexNumber=${parsed.dexNumber}"
+                    "scan parsed: name=${parsed.cardName} number=${parsed.cardNumber} " +
+                        "setTotal=${parsed.setTotal} dexNumber=${parsed.dexNumber} " +
+                        "language=${parsed.language} printedName=${parsed.printedName}"
                 )
                 val search = cardSearchRepository.searchByParsedInfo(parsed)
                 val candidates = search.cards
                 android.util.Log.i(
                     "ScannerMatch",
-                    "search candidates=${candidates.size} query=${search.matchedQuery}"
+                    "search candidates=${candidates.size} query=${search.matchedQuery} pinned=${search.identityPinned} " +
+                        "nameVerified=${search.nameVerified} crossLanguage=${search.crossLanguage}"
                 )
 
                 if (candidates.isEmpty()) {
@@ -116,10 +112,14 @@ class ScannerViewModel @Inject constructor(
                 android.util.Log.i(
                     "ScannerMatch",
                     "perceptualHasher best=${best.name} #${best.number} distance=${hashMatch?.distance} " +
-                        "margin=${hashMatch?.margin} (from ${candidates.size} candidates)"
+                        "margin=${hashMatch?.margin} (from ${candidates.size} candidates) " +
+                        "ranked=${hashMatch?.ranked}"
                 )
                 val (checkName, checkNumber) = confidenceCheckInputs(parsed, best)
-                val confidence = smartThresholdUseCase.evaluate(candidates, checkName, checkNumber, hashMatch)
+                val confidence = smartThresholdUseCase.evaluate(
+                    candidates, checkName, checkNumber, hashMatch, search.identityPinned,
+                    search.nameVerified, search.crossLanguage
+                )
                 android.util.Log.i(
                     "ScannerMatch",
                     "confidence isHigh=${confidence.isHighConfidence} path=${confidence.matchPath} " +
@@ -128,8 +128,13 @@ class ScannerViewModel @Inject constructor(
                 _state.value = if (confidence.isHighConfidence && confidence.topCard != null) {
                     ScannerState.HighConfidence(confidence.topCard)
                 } else {
-                    ScannerState.LowConfidence(candidates)
+                    ScannerState.LowConfidence(
+                        lowConfidenceCards(candidates, hashMatch?.ranked, search.crossLanguage),
+                        search.crossLanguage
+                    )
                 }
+            } catch (e: NoApiKeyException) {
+                _state.value = ScannerState.NoApiKey
             } catch (e: RateLimitException) {
                 consecutiveRateLimits++
                 _state.value = ScannerState.RateLimited(consecutiveRateLimits)
@@ -215,3 +220,20 @@ class ScannerViewModel @Inject constructor(
 // against what Gemini read off the card.
 internal fun confidenceCheckInputs(parsed: ParsedCardInfo, best: TcgCard): Pair<String, String?> =
     (parsed.cardName ?: best.name) to parsed.cardNumber
+
+// Cross-language stand-ins: closest art first. Only the top-5 `ranked` hashes are known, so those
+// (finite distance, ascending) lead; failed downloads and unranked cards trail in original order.
+// Always a permutation of `candidates`; non-cross or no hash data leaves the order unchanged.
+internal fun lowConfidenceCards(
+    candidates: List<TcgCard>,
+    ranked: List<Pair<String, Int>>?,
+    crossLanguage: Boolean
+): List<TcgCard> {
+    if (!crossLanguage || ranked.isNullOrEmpty()) return candidates
+    val byId = candidates.associateBy { it.id }
+    val head = ranked.filter { it.second != Int.MAX_VALUE }
+        .sortedBy { it.second }
+        .mapNotNull { byId[it.first] }
+        .distinct()
+    return head + candidates.filter { it !in head }
+}

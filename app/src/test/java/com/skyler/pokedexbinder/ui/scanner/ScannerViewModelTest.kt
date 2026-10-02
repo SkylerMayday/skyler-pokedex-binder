@@ -65,4 +65,47 @@ class ScannerViewModelTest {
         assertEquals("Pikachu", checkName)
         assertEquals("25", checkNumber)
     }
+
+    // --- lowConfidenceCards ---
+
+    private fun cards(vararg ids: String) = ids.map { card(it, "1") }
+    private fun ids(list: List<TcgCard>) = list.map { it.name }
+
+    @Test
+    fun `cross-language orders ranked cards by ascending distance`() {
+        val c = cards("a", "b", "c")
+        val out = lowConfidenceCards(c, listOf("b-1" to 26, "a-1" to 30, "c-1" to 34), true)
+        assertEquals(listOf("b", "a", "c"), ids(out))
+    }
+
+    @Test
+    fun `failed downloads and unranked cards trail in original order`() {
+        val c = cards("a", "b", "c", "d")
+        val out = lowConfidenceCards(c, listOf("a-1" to Int.MAX_VALUE, "c-1" to 40), true)
+        assertEquals(listOf("c", "a", "b", "d"), ids(out))
+    }
+
+    @Test
+    fun `ranked ids missing from candidates are ignored and result is a permutation`() {
+        val c = cards("a", "b")
+        val out = lowConfidenceCards(c, listOf("zzz" to 1, "b-1" to 5), true)
+        assertEquals(listOf("b", "a"), ids(out))
+        assertEquals(c.toSet(), out.toSet())
+        assertEquals(c.size, out.size)
+    }
+
+    @Test
+    fun `equal distances keep ranked order`() {
+        val c = cards("a", "b")
+        val out = lowConfidenceCards(c, listOf("b-1" to 10, "a-1" to 10), true)
+        assertEquals(listOf("b", "a"), ids(out))
+    }
+
+    @Test
+    fun `no ranked data or non-cross leaves order unchanged`() {
+        val c = cards("a", "b", "c")
+        assertEquals(c, lowConfidenceCards(c, null, true))
+        assertEquals(c, lowConfidenceCards(c, emptyList(), true))
+        assertEquals(c, lowConfidenceCards(c, listOf("c-1" to 1), false))
+    }
 }

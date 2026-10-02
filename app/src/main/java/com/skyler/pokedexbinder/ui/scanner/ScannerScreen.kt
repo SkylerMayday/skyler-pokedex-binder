@@ -1,13 +1,11 @@
 package com.skyler.pokedexbinder.ui.scanner
 
 import android.Manifest
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.MotionEvent
 import androidx.camera.camera2.interop.Camera2CameraInfo
-import androidx.camera.camera2.interop.Camera2Interop
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -85,6 +83,24 @@ private const val CARD_ASPECT_RATIO = 88f / 63f
 // physical card — needs another live scan to confirm 1.30 is enough, not just less wrong.
 private const val CROP_MARGIN_FACTOR = 1.30f
 
+// Guide-frame (width, height) in display-space pixels for a display of the given width. Single
+// source for detectCardInFrame's sampling geometry and guideFrameImageRect's crop geometry.
+private fun guideFrameSize(dispW: Int): Pair<Int, Int> {
+    val guideW = (dispW * GUIDE_FRAME_WIDTH_RATIO).toInt()
+    return guideW to (guideW * CARD_ASPECT_RATIO).toInt()
+}
+
+// Maps a display-space (portrait) point to raw image-space for a frame of rawWidth x rawHeight
+// delivered at the given CameraX rotationDegrees. A point transform: pass real pixel coordinates,
+// not exclusive bounds.
+private fun displayToImage(dx: Int, dy: Int, rotationDegrees: Int, rawWidth: Int, rawHeight: Int): Pair<Int, Int> =
+    when (rotationDegrees) {
+        90 -> Pair(dy, rawHeight - 1 - dx)
+        270 -> Pair(rawWidth - 1 - dy, dx)
+        180 -> Pair(rawWidth - 1 - dx, rawHeight - 1 - dy)
+        else -> Pair(dx, dy)
+    }
+
 private fun detectCardInFrame(imageProxy: ImageProxy): Boolean {
     val iw = imageProxy.width
     val ih = imageProxy.height
@@ -98,8 +114,7 @@ private fun detectCardInFrame(imageProxy: ImageProxy): Boolean {
     val dispH = if (isRotated) iw else ih   // display-space height
 
     // Guide frame in display space (portrait card ratio 63:88)
-    val guideW = (dispW * GUIDE_FRAME_WIDTH_RATIO).toInt()
-    val guideH = (guideW * CARD_ASPECT_RATIO).toInt()
+    val (guideW, guideH) = guideFrameSize(dispW)
     if (guideH >= dispH) return false
 
     val dLeft  = (dispW - guideW) / 2
@@ -112,18 +127,10 @@ private fun detectCardInFrame(imageProxy: ImageProxy): Boolean {
     val rowStride = plane.rowStride
     val pixStride = plane.pixelStride
 
-    // Map display (dx, dy) → image (ix, iy) based on rotation
-    fun toImage(dx: Int, dy: Int): Pair<Int, Int> = when (rotation) {
-        90  -> Pair(dy,          ih - 1 - dx)
-        270 -> Pair(iw - 1 - dy, dx)
-        180 -> Pair(iw - 1 - dx, ih - 1 - dy)
-        else -> Pair(dx, dy)
-    }
-
     fun luma(dx: Int, dy: Int): Int {
         val cx = dx.coerceIn(0, dispW - 1)
         val cy = dy.coerceIn(0, dispH - 1)
-        val (ix, iy) = toImage(cx, cy)
+        val (ix, iy) = displayToImage(cx, cy, rotation, iw, ih)
         val idx = iy.coerceIn(0, ih - 1) * rowStride + ix.coerceIn(0, iw - 1) * pixStride
         return if (idx in 0 until buffer.limit()) buffer[idx].toInt() and 0xFF else 0
     }
@@ -165,19 +172,17 @@ internal data class ImageRect(val left: Int, val top: Int, val right: Int, val b
 }
 
 // Computes the guide-frame rect in raw image-space (pre-rotation) pixel coordinates, for an
-// image of the given raw width/height and CameraX rotationDegrees. Shared by
-// detectCardInFrame's live analysis-space sampling geometry (duplicated above, not refactored
-// to call this — see Task 4's note) and ImageProxyExt's post-capture crop — both must agree on
-// the same guide geometry CardFrameOverlay draws, or a captured photo's crop won't match what
-// the user aimed at. `internal` (not private) for JVM-unit-test access from ScannerScreenTest.kt
+// image of the given raw width/height and CameraX rotationDegrees. Shares guideFrameSize and
+// displayToImage with detectCardInFrame's live sampling; ImageProxyExt's post-capture crop calls
+// this directly — all must agree on the same guide geometry CardFrameOverlay draws, or a
+// captured photo's crop won't match what the user aimed at. `internal` (not private) for JVM-unit-test access from ScannerScreenTest.kt
 // and for use from ImageProxyExt.kt (same package).
 internal fun guideFrameImageRect(rawWidth: Int, rawHeight: Int, rotationDegrees: Int): ImageRect {
     val isRotated = rotationDegrees == 90 || rotationDegrees == 270
     val dispW = if (isRotated) rawHeight else rawWidth
     val dispH = if (isRotated) rawWidth else rawHeight
 
-    val guideW = (dispW * GUIDE_FRAME_WIDTH_RATIO).toInt()
-    val guideH = (guideW * CARD_ASPECT_RATIO).toInt()
+    val (guideW, guideH) = guideFrameSize(dispW)
     val boxW = (guideW * CROP_MARGIN_FACTOR).toInt()
     val boxH = (guideH * CROP_MARGIN_FACTOR).toInt()
     val dLeft = (dispW - boxW) / 2
@@ -185,12 +190,7 @@ internal fun guideFrameImageRect(rawWidth: Int, rawHeight: Int, rotationDegrees:
     val dRight = dLeft + boxW
     val dBot = dTop + boxH
 
-    fun toImage(dx: Int, dy: Int): Pair<Int, Int> = when (rotationDegrees) {
-        90 -> Pair(dy, rawHeight - 1 - dx)
-        270 -> Pair(rawWidth - 1 - dy, dx)
-        180 -> Pair(rawWidth - 1 - dx, rawHeight - 1 - dy)
-        else -> Pair(dx, dy)
-    }
+    fun toImage(dx: Int, dy: Int) = displayToImage(dx, dy, rotationDegrees, rawWidth, rawHeight)
 
     // Map all 4 corners, not just top-left/bottom-right — a 90/270 rotation swaps which raw-image
     // axis corresponds to display-width vs -height, so the mapped rect must be re-normalized
@@ -214,6 +214,18 @@ internal fun guideFrameImageRect(rawWidth: Int, rawHeight: Int, rotationDegrees:
     val right = (corners.maxOf { it.first } + 1).coerceIn(0, rawWidth)
     val bottom = (corners.maxOf { it.second } + 1).coerceIn(0, rawHeight)
     return ImageRect(left, top, right, bottom)
+}
+
+// Card rect inside a guideFrameImageRect-sized, upright crop bitmap. Assumes the physical card fills
+// the guide frame. Width derives from the crop: cropW = guideW*CROP_MARGIN_FACTOR -> guideW = cropW/factor;
+// height = guideW*CARD_ASPECT_RATIO (NOT cropH/factor: boxH is clamped to the frame on 4:3 sensors, so
+// cropH is unreliable). Used by PerceptualHasher to locate the art window in a captured photo.
+internal fun cardRectInCrop(cropWidth: Int, cropHeight: Int): ImageRect {
+    val cardW = (cropWidth / CROP_MARGIN_FACTOR).toInt().coerceAtMost(cropWidth)
+    val cardH = (cardW * CARD_ASPECT_RATIO).toInt().coerceAtMost(cropHeight)
+    val left = (cropWidth - cardW) / 2
+    val top = (cropHeight - cardH) / 2
+    return ImageRect(left, top, left + cardW, top + cardH)
 }
 
 // Repositions an ImageRect computed relative to a crop region's own (0,0) origin into that
@@ -313,16 +325,11 @@ private const val POST_BIND_DETECTION_DELAY_MS = 2000L
 // Diagnostic only — logs the bound (logical) camera's real AF hardware capability, so "focus
 // never locks" (isFocusSuccessful=false in requestFocusAndMetering's logs) can be told apart from
 // "this lens has no usable close-range AF at all." Camera2CameraInfo is an experimental CameraX
-// interop API, opted into only for this narrow diagnostic use, not the whole file.
-//
-// minFocusDistance above is always the LOGICAL camera's own
-// floor — a session-level physical-camera-id option (see selectUltrawidePhysicalCameraId's doc
-// comment) never changes which CameraInfo the bound Camera exposes, so this alone would report
-// the main lens's ~18-20cm floor even when the ultrawide is genuinely bound. When a physical
-// camera id was requested, also read that physical camera's OWN characteristics — off its own
-// CameraInfo, not the logical one — so the actual close-focus floor is visible next to it.
+// interop API, opted into only for this narrow diagnostic use, not the whole file. Note this
+// reads the LOGICAL camera's characteristics; when the ultrawide is active via min zoom, its own
+// (closer) focus floor is not reflected here.
 @androidx.annotation.OptIn(ExperimentalCamera2Interop::class)
-private fun logCameraAfCapabilities(camera: Camera, boundVia: String, requestedPhysicalId: String?) {
+private fun logCameraAfCapabilities(camera: Camera, boundVia: String) {
     runCatching {
         val info = Camera2CameraInfo.from(camera.cameraInfo)
         val chars = info.getCameraCharacteristic(
@@ -331,102 +338,17 @@ private fun logCameraAfCapabilities(camera: Camera, boundVia: String, requestedP
         val afModes = info.getCameraCharacteristic(
             android.hardware.camera2.CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES
         )
-        val requestedPhysicalMinFocusDistance = requestedPhysicalId?.let { reqId ->
-            camera.cameraInfo.getPhysicalCameraInfos()
-                .firstOrNull { physicalInfo ->
-                    runCatching { Camera2CameraInfo.from(physicalInfo).cameraId == reqId }.getOrDefault(false)
-                }
-                ?.let { physicalInfo ->
-                    runCatching {
-                        Camera2CameraInfo.from(physicalInfo).getCameraCharacteristic(
-                            android.hardware.camera2.CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE
-                        )
-                    }.getOrNull()
-                }
-        }
         Log.i(
             "ScannerFocus",
             "camera id=${info.cameraId} boundVia=$boundVia minFocusDistance=$chars (0 or null = " +
-                "fixed-focus lens, cannot focus at all) afAvailableModes=${afModes?.toList()}" +
-                (if (requestedPhysicalId != null) {
-                    " requestedPhysicalId=$requestedPhysicalId requestedPhysicalMinFocusDistance=$requestedPhysicalMinFocusDistance"
-                } else {
-                    ""
-                })
+                "fixed-focus lens, cannot focus at all) afAvailableModes=${afModes?.toList()}"
         )
     }.onFailure { Log.w("ScannerFocus", "could not read camera AF characteristics", it) }
 }
 
-// Reads back the LOGICAL camera id CameraX bound — this is NOT the physical camera id a caller
-// may have requested via Camera2Interop.Extender.setPhysicalCameraId. A session-level physical
-// camera id selects which physical stream is opened per output config; it never changes which
-// (logical) CameraDevice is opened, so Camera2CameraInfo.from(camera.cameraInfo).cameraId always
-// reads back the logical id (see CameraGraphConfigProvider.kt / CameraInfoAdapter.kt — the two id
-// namespaces are structurally disjoint). Comparing this against a requested physical id can never
-// be true; it exists purely for informational logging, not as a pass/fail verdict. Never throws;
-// null just means "couldn't determine."
-@androidx.annotation.OptIn(ExperimentalCamera2Interop::class)
-private fun actualBoundCameraId(camera: Camera): String? =
-    runCatching { Camera2CameraInfo.from(camera.cameraInfo).cameraId }.getOrNull()
-
 // Threshold matching Task 0 spike's own filter: a physical camera whose focal length is
 // under this value (mm) is treated as an ultrawide candidate for close-range focus.
 private const val ULTRAWIDE_FOCAL_LENGTH_THRESHOLD_MM = 20f
-
-// Finds the S26 Ultra's (or any device's) physical ultrawide camera id on the logical back
-// camera, per docs/specs/2026-09-02-scanner-macro-focus.md's approved Decision — ultrawide
-// physical-lens selection, reusing the same mechanism Samsung's own stock camera app uses
-// ("Focus Enhancer") for close-range focus below the main lens's minimum focus distance.
-//
-// Returns the physical camera id String, NOT a CameraSelector — CameraSelector.setPhysicalCameraId
-// is only honored by CameraX's concurrent-dual-camera bind overload, which this project doesn't
-// use; the bindToLifecycle overload actually called (CameraPreview below) never reads a selector's
-// physical id at all, so a selector carrying it would bind successfully onto the *logical* camera
-// while silently ignoring the id (verified against camera-camera2-1.6.1's real source — see
-// LifecycleCameraProviderImpl.kt). The only mechanism that works with the overload this project
-// calls is applying Camera2Interop.Extender(builder).setPhysicalCameraId(id) to each use-case
-// builder before build() (also RequiresApi(28) — see CameraPreview's SDK_INT guard), then binding
-// with the plain CameraSelector.DEFAULT_BACK_CAMERA.
-//
-// Returns null (never throws) on any device/state that doesn't cleanly support this, so the
-// caller's fallback to plain default-back-camera behavior is always safe. `internal` (not
-// private) solely for JVM-unit-test access from ScannerScreenTest.kt — no external caller
-// outside this package needs it.
-//
-// Pre-bind query behavior is unverified against Task 0's proven post-bind case (see spec's
-// Open Questions) — the one-line log below lets a real-device run confirm whether
-// getPhysicalCameraInfos() returns the same data pre-bind as Task 0's spike found post-bind.
-@androidx.annotation.OptIn(ExperimentalCamera2Interop::class)
-internal fun selectUltrawidePhysicalCameraId(provider: ProcessCameraProvider): String? =
-    runCatching {
-        val backCameraInfos = CameraSelector.DEFAULT_BACK_CAMERA.filter(provider.availableCameraInfos)
-        val logicalInfo = backCameraInfos.firstOrNull() ?: return@runCatching null
-        if (!logicalInfo.isLogicalMultiCameraSupported()) return@runCatching null
-        val physicalInfos = logicalInfo.getPhysicalCameraInfos()
-        Log.i(
-            "ScannerFocus",
-            "pre-bind physicalCameraInfos count=${physicalInfos.size} (compare against Task 0's " +
-                "post-bind logUltrawideFeasibility log — see spec's Open Questions)"
-        )
-        physicalInfos.firstNotNullOfOrNull { physicalInfo ->
-            runCatching {
-                val camera2Info = Camera2CameraInfo.from(physicalInfo)
-                val focalLengths = camera2Info.getCameraCharacteristic(
-                    android.hardware.camera2.CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS
-                )
-                if (focalLengths?.any { it < ULTRAWIDE_FOCAL_LENGTH_THRESHOLD_MM } == true) {
-                    // getCameraId() (method), not the .cameraId JvmField, deliberately — only the
-                    // method is interceptable by mockk in ScannerScreenTest.kt; both return the
-                    // identical value (Camera2CameraInfo.kt: getCameraId() = cameraId).
-                    camera2Info.getCameraId()
-                } else {
-                    null
-                }
-            }.getOrNull()
-        }
-    }.onFailure {
-        Log.w("ScannerFocus", "selectUltrawidePhysicalCameraId failed, falling back to default back camera", it)
-    }.getOrNull()
 
 // Diagnostic only (Task 0 feasibility spike, docs/specs/2026-09-02-scanner-macro-focus.md) —
 // before building any of that spec's real ultrawide-lens-selection behavior, confirms whether
@@ -571,11 +493,6 @@ private fun requestFocusAndMetering(
 
 // ------- Camera preview -------------------------------------------------------
 
-// ExperimentalCamera2Interop: Camera2Interop.Extender is how a physical camera id is actually
-// applied to a use-case builder (see selectUltrawidePhysicalCameraId's comment for why the
-// CameraSelector-level API this file used before doesn't work with bindToLifecycle's non-
-// concurrent overload).
-@androidx.annotation.OptIn(ExperimentalCamera2Interop::class)
 @Composable
 private fun CameraPreview(
     modifier: Modifier,
@@ -634,28 +551,12 @@ private fun CameraPreview(
                 }
             }
 
-            // Builds a fresh Preview/ImageCapture/ImageAnalysis trio, optionally carrying a
-            // physical-camera id via Camera2Interop.Extender (applied to ALL three builders —
-            // CameraX throws IllegalArgumentException if use cases bound together in one
-            // bindToLifecycle call carry different physical camera ids). This is the only
-            // mechanism the bindToLifecycle overload this project calls actually honors — see
-            // selectUltrawidePhysicalCameraId's comment. A separate, freshly-built trio (built
-            // with physicalCameraId=null) is needed for a genuine fallback bind, since the
-            // physical-camera-id option is baked into a use case's config at build() time and
-            // can't be cleared from an already-built instance.
-            fun buildUseCases(physicalCameraId: String?): Triple<Preview, ImageCapture, ImageAnalysis> {
+            // Builds a fresh Preview/ImageCapture/ImageAnalysis trio on the default back camera.
+            fun buildUseCases(): Triple<Preview, ImageCapture, ImageAnalysis> {
                 val previewBuilder = Preview.Builder()
                 val captureBuilder = ImageCapture.Builder()
                 val analysisBuilder = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                // Build.VERSION.SDK_INT check kept here too (not just at the caller that computes
-                // ultrawideId) so this @RequiresApi(28) call is guarded in a form Android Lint's
-                // static analysis can actually verify at this call site.
-                if (physicalCameraId != null && Build.VERSION.SDK_INT >= 28) {
-                    Camera2Interop.Extender(previewBuilder).setPhysicalCameraId(physicalCameraId)
-                    Camera2Interop.Extender(captureBuilder).setPhysicalCameraId(physicalCameraId)
-                    Camera2Interop.Extender(analysisBuilder).setPhysicalCameraId(physicalCameraId)
-                }
                 val previewUseCase = previewBuilder.build().also {
                     it.setSurfaceProvider(previewView.surfaceProvider)
                 }
@@ -727,89 +628,28 @@ private fun CameraPreview(
                     }
                 }
 
-                // Camera2Interop.setPhysicalCameraId is @RequiresApi(28) — below that level the
-                // whole ultrawide-selection path is skipped and this behaves exactly like "no
-                // ultrawide found" always has (plain DEFAULT_BACK_CAMERA bind).
-                // 2026-09-29: physical-id selection disabled. Live pair (preview vs saved JPEG)
-                // showed the still ~1.35x more zoomed than the preview despite the id on all three
-                // use cases and a shared ViewPort — Camera2Interop.setPhysicalCameraId is reported
-                // unreliable on Samsung multi-lens phones. Instead the min zoom ratio is applied to
-                // the logical camera after bind (see zoomState observer below), which switches every
-                // stream to the ultrawide together. selectUltrawidePhysicalCameraId is kept (still
-                // unit-tested) until that is confirmed live; delete it then.
-                val ultrawideId: String? = null
-
-                var (preview, capture, analysis) = buildUseCases(ultrawideId)
+                // Physical-camera-id selection was removed (2026-09-29/30): a live pair (preview vs
+                // saved JPEG) showed the still ~1.35x more zoomed than the preview despite the id
+                // on all three use cases and a shared ViewPort — Camera2Interop.setPhysicalCameraId
+                // is reported unreliable on Samsung multi-lens phones. Instead the min zoom ratio
+                // is applied to the logical camera after bind (see zoomState observer below), which
+                // switches every stream to the ultrawide together.
+                val (preview, capture, analysis) = buildUseCases()
                 onImageCaptureReady(capture)
-
-                // Tracks which physical camera id is actually baked into the use cases CURRENTLY
-                // bound — starts as the requested ultrawide id, nulled the moment the fallback
-                // path (no physical id) engages. Distinct from ultrawideId, which stays the
-                // original request even after falling back: boundVia/logCameraAfCapabilities must
-                // report what's actually bound, not what was merely attempted (specs.md's own
-                // requirement — a diagnostic that reports the attempt regardless of outcome is the
-                // same class of bug this file's boundVia fix already had to correct once).
-                var boundPhysicalId = ultrawideId
 
                 provider.unbindAll()
                 camera = runCatching {
                     bindPreviewCaptureAnalysis(preview, capture, analysis)
-                }.getOrElse { firstError ->
-                    if (ultrawideId == null) {
-                        // Nothing left to retry differently — log and degrade to no camera rather
-                        // than letting this throw escape the Runnable posted to the main Looper
-                        // (an uncaught throwable there is a process crash).
-                        Log.w("ScannerFocus", "default-back-camera bind threw", firstError)
-                        null
-                    } else {
-                        Log.w(
-                            "ScannerFocus",
-                            "ultrawide physical-camera bind threw, falling back to plain default back camera",
-                            firstError
-                        )
-                        // Fresh use cases WITHOUT the physical camera id — the ones above already
-                        // have it baked into their config from build(), so they can't be reused
-                        // for a clean fallback. unbindAll() again immediately before this retry:
-                        // LifecycleCamera's internal bound-session-config state is assigned before
-                        // a throwing bind call with no rollback, so a stale partial record could
-                        // otherwise merge into this retry's use cases.
-                        val fallback = buildUseCases(null)
-                        preview = fallback.first; capture = fallback.second; analysis = fallback.third
-                        boundPhysicalId = null
-                        onImageCaptureReady(capture)
-                        provider.unbindAll()
-                        runCatching {
-                            bindPreviewCaptureAnalysis(preview, capture, analysis)
-                        }.getOrElse { secondError ->
-                            Log.w("ScannerFocus", "fallback default-back-camera bind also threw", secondError)
-                            null
-                        }
-                    }
+                }.getOrElse { error ->
+                    // Log and degrade to no camera rather than letting this throw escape the
+                    // Runnable posted to the main Looper (an uncaught throwable there is a
+                    // process crash).
+                    Log.w("ScannerFocus", "default-back-camera bind threw", error)
+                    null
                 }
                 bindCompletedAtMs = System.currentTimeMillis()
                 camera?.let { cam ->
-                    // NOT outcome-based, deliberately: actualId (the bound LOGICAL camera id) and
-                    // boundPhysicalId (the REQUESTED PHYSICAL camera id, null if the fallback
-                    // engaged) live in structurally disjoint id namespaces — see
-                    // actualBoundCameraId's doc comment above. actualId == boundPhysicalId can
-                    // never be true, on any device, regardless of whether the physical-camera-id
-                    // bind actually took effect, so this can only log what was requested and what
-                    // the logical id is — it cannot assert a match/mismatch verdict from that
-                    // comparison. (Asserting a verdict the code can't actually observe is exactly
-                    // what made this diagnostic lie before this fix — first by always claiming
-                    // success, then by always claiming failure.) requestedPhysicalMinFocusDistance,
-                    // logged alongside this in logCameraAfCapabilities, is the physical camera's own
-                    // hardware capability (a fixed constant) — a useful data point, but it does NOT
-                    // confirm the physical stream actually engaged; nothing in this log does.
-                    val actualId = actualBoundCameraId(cam)
-                    val boundVia = if (boundPhysicalId == null) {
-                        "default-back-camera"
-                    } else {
-                        "ultrawide-physical-requested (requested physical id=$boundPhysicalId; bound " +
-                            "logical camera id=$actualId — expected to differ, a physical id does " +
-                            "not change the logical id, this is not a failure signal)"
-                    }
-                    logCameraAfCapabilities(cam, boundVia, boundPhysicalId)
+                    logCameraAfCapabilities(cam, "default-back-camera")
                     logUltrawideFeasibility(cam)
 
                     // Logical zoom below 1.0 makes the multi-camera HAL switch to the ultrawide
@@ -979,7 +819,7 @@ fun ScannerScreen(
                 }
                 is ScannerState.NoApiKey -> {
                     ScannerMessage(
-                        message = "No Gemini API key set. Add your free key in Settings to use the scanner.",
+                        message = "No API key set. Add a Gemini or Anthropic key in Settings to use the scanner.",
                         primaryLabel = "Go to Settings",
                         onPrimary = onNavigateToSettings,
                         secondaryLabel = "Search Manually",
@@ -1074,7 +914,10 @@ fun ScannerScreen(
                         cards = s.cards,
                         onSelect = { viewModel.confirmCard(it) },
                         onSearchManually = onSearchManually,
-                        onBack = { viewModel.reset() }
+                        onBack = { viewModel.reset() },
+                        header = if (s.crossLanguage) {
+                            "No card found in this language - closest English printings of ${s.cards.firstOrNull()?.name ?: "this card"}"
+                        } else null
                     )
                 }
                 is ScannerState.Error -> {
@@ -1150,9 +993,13 @@ private fun CardSelectionList(
     cards: List<TcgCard>,
     onSelect: (TcgCard) -> Unit,
     onSearchManually: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    header: String? = null
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
+        if (header != null && cards.isNotEmpty()) {
+            Text(header, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(16.dp))
+        }
         if (cards.isEmpty()) {
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text("No cards found — try scanning again or search manually")

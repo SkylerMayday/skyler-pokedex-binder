@@ -45,9 +45,9 @@ class ManualSearchViewModel @Inject constructor(
                 val fastSearch: suspend () -> List<TcgCard> = {
                     when {
                         isPromoNumber(trimmed) -> cardSearchRepository.searchByNumber(trimmed)
-                            .ifEmpty { cardSearchRepository.searchByName(trimmed) }
+                            .ifEmpty { cardSearchRepository.searchByNameWithJapanese(trimmed) }
                         _promoOnly.value -> cardSearchRepository.searchPromosByName(trimmed)
-                        else -> cardSearchRepository.searchByName(trimmed)
+                        else -> cardSearchRepository.searchByNameWithJapanese(trimmed)
                     }
                 }
                 cardSearchRepository.searchStreaming(trimmed, fastSearch).collect { progress ->

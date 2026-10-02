@@ -79,6 +79,17 @@ class GeminiCardScannerTest {
     }
 
     @Test
+    fun `scan sends api key as header and never in the URL`() = runTest {
+        server.enqueue(MockResponse().setBody(SUCCESS_BODY.trimIndent()))
+
+        scanner.scan(bitmap, "test-key")
+
+        val request = server.takeRequest()
+        assertEquals("test-key", request.getHeader("x-goog-api-key"))
+        assertTrue(!request.path!!.contains("key="))
+    }
+
+    @Test
     fun `scan returns nulls for missing fields`() = runTest {
         server.enqueue(MockResponse().setBody("""
             {"candidates":[{"content":{"parts":[{"text":"{\"name\":\"Pikachu\",\"number\":null,\"setTotal\":null,\"hp\":null,\"artist\":null}"}]}}]}
@@ -91,6 +102,31 @@ class GeminiCardScannerTest {
         assertNull(result.setTotal)
         assertNull(result.hp)
         assertNull(result.artist)
+        assertNull(result.language)
+        assertNull(result.printedName)
+    }
+
+    @Test
+    fun `scan lowercases language and keeps printedName`() = runTest {
+        server.enqueue(MockResponse().setBody("""
+            {"candidates":[{"content":{"parts":[{"text":"{\"name\":\"Malamar\",\"language\":\" JA \",\"printedName\":\"メガカラマネロex\"}"}]}}]}
+        """.trimIndent()))
+
+        val result = scanner.scan(bitmap, "test-key")
+
+        assertEquals("ja", result.language)
+        assertEquals("メガカラマネロex", result.printedName)
+    }
+
+    @Test
+    fun `scan lowercases a zh-CN language to zh-cn`() = runTest {
+        server.enqueue(MockResponse().setBody("""
+            {"candidates":[{"content":{"parts":[{"text":"{\"name\":\"Palafin\",\"language\":\"zh-CN\"}"}]}}]}
+        """.trimIndent()))
+
+        val result = scanner.scan(bitmap, "test-key")
+
+        assertEquals("zh-cn", result.language)
     }
 
     @Test

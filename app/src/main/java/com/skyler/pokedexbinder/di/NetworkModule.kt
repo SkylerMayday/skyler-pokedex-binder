@@ -53,7 +53,7 @@ object NetworkModule {
     @Singleton
     @Named("tcgdex")
     fun provideTcgdexRetrofit(okHttp: OkHttpClient, moshi: Moshi): Retrofit = Retrofit.Builder()
-        .baseUrl("https://api.tcgdex.net/v2/en/")
+        .baseUrl("https://api.tcgdex.net/v2/")
         .client(okHttp)
         .addConverterFactory(MoshiConverterFactory.create(moshi))
         .build()

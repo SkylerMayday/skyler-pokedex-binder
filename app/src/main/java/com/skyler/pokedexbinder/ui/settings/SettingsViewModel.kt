@@ -32,6 +32,7 @@ class SettingsViewModel @Inject constructor(
     fun setUseCameraScanner(v: Boolean) = viewModelScope.launch { settingsRepository.setUseCameraScanner(v) }
     fun setDarkMode(v: Boolean) = viewModelScope.launch { settingsRepository.setDarkMode(v) }
     fun setGeminiApiKey(key: String) = viewModelScope.launch { settingsRepository.setGeminiApiKey(key) }
+    fun setAnthropicApiKey(key: String) = viewModelScope.launch { settingsRepository.setAnthropicApiKey(key) }
 
     fun setGithubOwner(v: String) = viewModelScope.launch { publishSettingsRepository.setGithubOwner(v) }
     fun setGithubRepo(v: String) = viewModelScope.launch { publishSettingsRepository.setGithubRepo(v) }

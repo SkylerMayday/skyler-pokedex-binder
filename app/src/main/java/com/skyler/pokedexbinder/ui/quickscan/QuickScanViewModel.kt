@@ -60,16 +60,19 @@ class QuickScanViewModel @Inject constructor(
                 val slot = binderRepository.getSlotByPokemonId(targetSlotId)
                 if (slot != null) {
                     targetSlotName = slot.name
-                    searchForSlot(slot.effectiveSearchName)
+                    searchForSlot(slot.effectiveSearchName, slot.dexNumber)
                 }
             }
         }
     }
 
     /** Auto-search triggered by tapping a slot. Receives effectiveSearchName from DB lookup. */
-    private fun searchForSlot(slotName: String) {
+    private fun searchForSlot(slotName: String, dexNumber: Int) {
         lastQuery = slotName
-        runSearch(tcgcsvQuery = slotName) { cardSearchRepository.searchByName(slotName) }
+        // dexNumber 0 = unset; only forward a real dex so the repository can skip the lookup.
+        runSearch(tcgcsvQuery = slotName) {
+            cardSearchRepository.searchByNameWithJapanese(slotName, dexNumber.takeIf { it > 0 })
+        }
     }
 
     fun search(query: String) {
@@ -81,8 +84,8 @@ class QuickScanViewModel @Inject constructor(
             when {
                 dexNum != null -> cardSearchRepository.searchByDexNumber(dexNum)
                 isPromoNumber(trimmed) -> cardSearchRepository.searchByNumber(trimmed)
-                    .ifEmpty { cardSearchRepository.searchByName(trimmed) }
-                else -> cardSearchRepository.searchByName(trimmed)
+                    .ifEmpty { cardSearchRepository.searchByNameWithJapanese(trimmed) }
+                else -> cardSearchRepository.searchByNameWithJapanese(trimmed)
             }
         }
     }

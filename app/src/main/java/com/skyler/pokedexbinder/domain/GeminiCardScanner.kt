@@ -1,31 +1,17 @@
 package com.skyler.pokedexbinder.domain
 
 import android.graphics.Bitmap
-import android.util.Base64
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
 import org.json.JSONObject
-import java.io.ByteArrayOutputStream
 import java.io.IOException
-import java.net.SocketTimeoutException
 import javax.inject.Inject
-
-class RateLimitException : IOException("Rate limited by Gemini API")
-
-// Bumped from 2 (500ms fixed) after live sessions saw 11/12 requests 503 in one sitting (2026-09-22)
-// and it recurred 2026-09-24 — a fixed 500ms/1.5s total budget doesn't outlast a real overload
-// burst. 3 extra attempts (4 total) with exponential backoff gives ~3.5s worst-case extra wait,
-// acceptable for a manual scan action. Retune like GUIDE_FRAME_WIDTH_RATIO if 503s persist.
-private const val MAX_SCAN_RETRIES = 3
-private const val SCAN_RETRY_BASE_DELAY_MS = 500L
 
 @JsonClass(generateAdapter = true)
 data class GeminiResponse(val candidates: List<GeminiCandidate>? = null)
@@ -46,7 +32,9 @@ data class GeminiCardResult(
     val setTotal: String? = null,
     val hp: String? = null,
     val artist: String? = null,
-    val dexNumber: Int? = null
+    val dexNumber: Int? = null,
+    val language: String? = null,
+    val printedName: String? = null
 )
 
 // gemini-2.5-flash was retired 2026-09-10: any API key/project created after that date gets a
@@ -69,22 +57,15 @@ class GeminiCardScanner @Inject constructor(
     private val cardResultAdapter by lazy { moshi.adapter(GeminiCardResult::class.java) }
 
     suspend fun scan(bitmap: Bitmap, apiKey: String): ParsedCardInfo = withContext(Dispatchers.IO) {
-        val base64 = bitmapToBase64(bitmap)
-        val prompt = "Analyze this Pokémon TCG card. The card may be in any language. " +
-                "Return ONLY a JSON object with no markdown:\n" +
-                "{\"name\":\"Pokémon name in English regardless of card language, or null\"," +
-                "\"number\":\"card number without leading zeros or null\"," +
-                "\"setTotal\":\"total cards in set or null\"," +
-                "\"hp\":\"HP value as digits only or null\"," +
-                "\"artist\":\"illustrator name or null\"," +
-                "\"dexNumber\":\"National Pokédex number as integer or null\"}"
-        val body = buildRequestJson(prompt, base64)
+        val base64 = bitmapToJpegBase64(bitmap)
+        val body = buildRequestJson(CARD_SCAN_PROMPT, base64)
         val request = Request.Builder()
-            .url("$baseUrl?key=$apiKey")
+            .url(baseUrl)
+            .header("x-goog-api-key", apiKey)
             .post(body.toRequestBody("application/json".toMediaType()))
             .build()
 
-        val response = executeWithRetry(request)
+        val response = okHttpClient.executeWithRetry(request, "Gemini")
 
         val geminiResponse = responseAdapter.fromJson(response.body!!.string())
             ?: throw IOException("Empty Gemini response")
@@ -93,62 +74,7 @@ class GeminiCardScanner @Inject constructor(
             ?: throw IOException("No text in Gemini response")
 
         val result = runCatching { cardResultAdapter.fromJson(text) }.getOrNull() ?: GeminiCardResult()
-        ParsedCardInfo(
-            cardName = result.name,
-            cardNumber = result.number,
-            setTotal = result.setTotal,
-            hp = result.hp,
-            artist = result.artist,
-            dexNumber = result.dexNumber
-        )
-    }
-
-    /** Retries only on a 5xx response or a client-side [SocketTimeoutException]; 429 and other failures fail immediately. */
-    private suspend fun executeWithRetry(request: Request): Response {
-        var lastTimeout: SocketTimeoutException? = null
-        for (attempt in 0..MAX_SCAN_RETRIES) {
-            val response = try {
-                okHttpClient.newCall(request).execute()
-            } catch (e: SocketTimeoutException) {
-                lastTimeout = e
-                if (attempt < MAX_SCAN_RETRIES) {
-                    delay(backoffDelayMs(attempt))
-                    continue
-                }
-                throw e
-            }
-            if (response.code == 429) throw RateLimitException()
-            if (response.code in 500..599) {
-                response.close() // must close before retrying — avoid leaking the connection
-                if (attempt < MAX_SCAN_RETRIES) {
-                    delay(backoffDelayMs(attempt))
-                    continue
-                }
-                throw IOException("Gemini error: ${response.code}")
-            }
-            if (!response.isSuccessful) throw IOException("Gemini error: ${response.code}")
-            return response
-        }
-        throw lastTimeout ?: IOException("Gemini scan failed after retries")
-    }
-
-    /** Exponential backoff: 500ms, 1000ms, 2000ms for attempts 0/1/2. */
-    private fun backoffDelayMs(attempt: Int): Long = SCAN_RETRY_BASE_DELAY_MS * (1L shl attempt)
-
-    private fun bitmapToBase64(bitmap: Bitmap): String {
-        val scaled = scaleBitmap(bitmap, maxDim = 1024)
-        val out = ByteArrayOutputStream()
-        scaled.compress(Bitmap.CompressFormat.JPEG, 80, out)
-        if (scaled !== bitmap) scaled.recycle()
-        return Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
-    }
-
-    private fun scaleBitmap(bitmap: Bitmap, maxDim: Int): Bitmap {
-        val w = bitmap.width
-        val h = bitmap.height
-        if (w <= maxDim && h <= maxDim) return bitmap
-        val scale = maxDim.toFloat() / maxOf(w, h)
-        return Bitmap.createScaledBitmap(bitmap, (w * scale).toInt(), (h * scale).toInt(), true)
+        result.toParsedCardInfo()
     }
 
     private fun buildRequestJson(prompt: String, base64: String): String =

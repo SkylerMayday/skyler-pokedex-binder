@@ -1,166 +1,10 @@
 package com.skyler.pokedexbinder.ui.scanner
 
-import android.hardware.camera2.CameraCharacteristics
-import android.util.Log
-import androidx.camera.camera2.interop.Camera2CameraInfo
-import androidx.camera.core.CameraInfo
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.impl.CameraInfoInternal
-import androidx.camera.lifecycle.ProcessCameraProvider
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.mockkObject
-import io.mockk.mockkStatic
-import io.mockk.unmockkObject
-import io.mockk.unmockkStatic
-import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 
 class ScannerScreenTest {
-
-    private lateinit var provider: ProcessCameraProvider
-
-    // Reflective static-field override needed to make selectUltrawidePhysicalCameraId's happy
-    // path reachable under the Android unit-test stub jar — see FocalLengthsKeyTestFixture's own
-    // doc comment for why.
-    private lateinit var focalLengthsKey: CameraCharacteristics.Key<FloatArray>
-
-    @Before
-    fun setUp() {
-        provider = mockk()
-        // Camera2CameraInfo.from(...) is a @JvmStatic companion function — Kotlin-to-Kotlin
-        // calls (both here and in ScannerScreen.kt's production code) dispatch through the
-        // companion object itself, not the Java-interop static bridge, so mockkObject on the
-        // Companion (not mockkStatic on the class) is what actually intercepts it.
-        mockkObject(Camera2CameraInfo.Companion)
-        mockkStatic(Log::class)
-        every { Log.i(any(), any()) } returns 0
-        every { Log.w(any(), any<String>()) } returns 0
-        every { Log.w(any(), any<String>(), any()) } returns 0
-
-        focalLengthsKey = mockk()
-        FocalLengthsKeyTestFixture.set(focalLengthsKey)
-    }
-
-    @After
-    fun tearDown() {
-        FocalLengthsKeyTestFixture.set(null)
-        unmockkObject(Camera2CameraInfo.Companion)
-        unmockkStatic(Log::class)
-    }
-
-    // CameraSelector.DEFAULT_BACK_CAMERA.filter(...) — the real, unmocked CameraX implementation
-    // selectUltrawidePhysicalCameraId calls — requires each CameraInfo to be an instance of
-    // androidx.camera.core.impl.CameraInfoInternal (it downcasts internally); a plain
-    // mockk<CameraInfo>() fails that check. Only the LOGICAL (back-camera) CameraInfo passes
-    // through .filter(), so only it needs to be a CameraInfoInternal mock.
-    private fun backCameraInfo(
-        multiCameraSupported: Boolean,
-        physicalInfos: Set<CameraInfo> = emptySet()
-    ): CameraInfoInternal {
-        val info = mockk<CameraInfoInternal>()
-        every { info.lensFacing } returns CameraSelector.LENS_FACING_BACK
-        every { info.isLogicalMultiCameraSupported() } returns multiCameraSupported
-        every { info.physicalCameraInfos } returns physicalInfos
-        return info
-    }
-
-    // Physical CameraInfos are only ever passed to the (fully mocked, via mockkStatic)
-    // Camera2CameraInfo.from(...), never to CameraSelector.filter(), so a plain CameraInfo mock
-    // is sufficient here — no CameraInfoInternal requirement.
-    private fun physicalCamera(
-        id: String,
-        focalLengths: FloatArray?,
-        throwsOnRead: Boolean = false
-    ): CameraInfo {
-        val physicalInfo = mockk<CameraInfo>()
-        val camera2Info = mockk<Camera2CameraInfo>()
-        every { Camera2CameraInfo.from(physicalInfo) } returns camera2Info
-        // Matched against the reflectively-injected focalLengthsKey (see setUp) — production
-        // code will read that same (now non-null) static field value at runtime.
-        if (throwsOnRead) {
-            every {
-                camera2Info.getCameraCharacteristic(focalLengthsKey)
-            } throws IllegalStateException("characteristic read failed")
-        } else {
-            every {
-                camera2Info.getCameraCharacteristic(focalLengthsKey)
-            } returns focalLengths
-            every { camera2Info.getCameraId() } returns id
-        }
-        return physicalInfo
-    }
-
-    // ---- selectUltrawidePhysicalCameraId ----
-
-    @Test
-    fun `no back camera in availableCameraInfos returns null`() {
-        every { provider.availableCameraInfos } returns emptyList()
-        assertNull(selectUltrawidePhysicalCameraId(provider))
-    }
-
-    @Test
-    fun `back camera found but multi-camera not supported returns null`() {
-        val logical = backCameraInfo(multiCameraSupported = false)
-        every { provider.availableCameraInfos } returns listOf(logical)
-        assertNull(selectUltrawidePhysicalCameraId(provider))
-    }
-
-    @Test
-    fun `multi-camera supported but no physical camera under focal length threshold returns null`() {
-        val mainLens = physicalCamera("1", floatArrayOf(24f))
-        val telephoto = physicalCamera("6", floatArrayOf(70f))
-        val logical = backCameraInfo(
-            multiCameraSupported = true,
-            physicalInfos = setOf(mainLens, telephoto)
-        )
-        every { provider.availableCameraInfos } returns listOf(logical)
-        assertNull(selectUltrawidePhysicalCameraId(provider))
-    }
-
-    @Test
-    fun `exactly one qualifying physical camera is selected`() {
-        // Mirrors the real S26 Ultra's actual 4-camera data (spec, Task 0 spike): id=2 at 2.2mm
-        // qualifies, id=5/6/7 at 6.5/7.0/18.6mm don't.
-        val ultrawide = physicalCamera("2", floatArrayOf(2.2f))
-        val wide = physicalCamera("5", floatArrayOf(6.5f))
-        val main = physicalCamera("6", floatArrayOf(7.0f))
-        val tele = physicalCamera("7", floatArrayOf(18.6f))
-        val logical = backCameraInfo(
-            multiCameraSupported = true,
-            physicalInfos = setOf(ultrawide, wide, main, tele)
-        )
-        every { provider.availableCameraInfos } returns listOf(logical)
-
-        val result = selectUltrawidePhysicalCameraId(provider)
-
-        assertEquals("2", result)
-    }
-
-    @Test
-    fun `a candidate whose characteristic read throws is skipped, later candidate still found`() {
-        val broken = physicalCamera("3", focalLengths = null, throwsOnRead = true)
-        val ultrawide = physicalCamera("2", floatArrayOf(2.2f))
-        val logical = backCameraInfo(
-            multiCameraSupported = true,
-            physicalInfos = linkedSetOf(broken, ultrawide)
-        )
-        every { provider.availableCameraInfos } returns listOf(logical)
-
-        val result = selectUltrawidePhysicalCameraId(provider)
-
-        assertEquals("2", result)
-    }
-
-    @Test
-    fun `provider availableCameraInfos throwing returns null instead of propagating`() {
-        every { provider.availableCameraInfos } throws IllegalStateException("camera service dead")
-        assertNull(selectUltrawidePhysicalCameraId(provider))
-    }
 
     // ---- guideFrameImageRect (pure function, hand-computed expected values) ----
 
@@ -258,5 +102,21 @@ class ScannerScreenTest {
         assertEquals(rect.bottom + 200, shifted.bottom)
         assertEquals(rect.width, shifted.width)
         assertEquals(rect.height, shifted.height)
+    }
+
+    // ---- cardRectInCrop ----
+
+    // 974x1361 is the guideFrameImageRect(1000, 2000, 0) crop. cardW = (974/1.30f).toInt() = 749,
+    // cardH = (749*88f/63f).toInt() = 1046, left = (974-749)/2 = 112, top = (1361-1046)/2 = 157.
+    @Test
+    fun `cardRectInCrop centres a guide-width card inside the crop`() {
+        assertEquals(ImageRect(112, 157, 861, 1203), cardRectInCrop(974, 1361))
+    }
+
+    @Test
+    fun `cardRectInCrop clamps card height to a crop shorter than the card aspect implies`() {
+        val rect = cardRectInCrop(974, 900)
+        assertEquals(ImageRect(112, 0, 861, 900), rect)
+        assertTrue(rect.bottom <= 900)
     }
 }

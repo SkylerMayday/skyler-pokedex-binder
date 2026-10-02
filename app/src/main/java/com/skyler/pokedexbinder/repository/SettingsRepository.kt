@@ -24,7 +24,8 @@ data class AppSettings(
     val showGmax: Boolean = false,
     val useCameraScanner: Boolean = false,
     val darkMode: Boolean = false,
-    val geminiApiKey: String = ""
+    val geminiApiKey: String = "",
+    val anthropicApiKey: String = ""
 )
 
 /**
@@ -52,6 +53,7 @@ class SettingsRepository @Inject constructor(
 
     private object SecureKeys {
         const val GEMINI_API_KEY = "gemini_api_key"
+        const val ANTHROPIC_API_KEY = "anthropic_api_key"
     }
 
     private val migrationMutex = Mutex()
@@ -93,7 +95,8 @@ class SettingsRepository @Inject constructor(
             showGmax = prefs[Keys.SHOW_GMAX] ?: false,
             useCameraScanner = prefs[Keys.USE_CAMERA_SCANNER] ?: false,
             darkMode = prefs[Keys.DARK_MODE] ?: false,
-            geminiApiKey = securePrefs.getString(SecureKeys.GEMINI_API_KEY, "") ?: ""
+            geminiApiKey = securePrefs.getString(SecureKeys.GEMINI_API_KEY, "") ?: "",
+            anthropicApiKey = securePrefs.getString(SecureKeys.ANTHROPIC_API_KEY, "") ?: ""
         )
     }
 
@@ -132,6 +135,16 @@ class SettingsRepository @Inject constructor(
         migrateGeminiKeyIfNeeded()
         withContext(Dispatchers.IO) {
             securePrefs.edit().putString(SecureKeys.GEMINI_API_KEY, key).apply()
+        }
+    }
+
+    suspend fun getAnthropicApiKey(): String = withContext(Dispatchers.IO) {
+        securePrefs.getString(SecureKeys.ANTHROPIC_API_KEY, "") ?: ""
+    }
+
+    suspend fun setAnthropicApiKey(key: String) {
+        withContext(Dispatchers.IO) {
+            securePrefs.edit().putString(SecureKeys.ANTHROPIC_API_KEY, key).apply()
         }
     }
 }

@@ -93,4 +93,16 @@ class SettingsRepositoryTest {
         assertFalse(settings.useCameraScanner)
         assertFalse(settings.darkMode)
     }
+
+    @Test
+    fun `anthropic key round-trips independently of the gemini key`() = runTest {
+        assertEquals("", repository.getAnthropicApiKey())
+
+        repository.setAnthropicApiKey("anthropic-key")
+        repository.setGeminiApiKey("gemini-key")
+
+        assertEquals("anthropic-key", repository.getAnthropicApiKey())
+        assertEquals("gemini-key", repository.getGeminiApiKey())
+        assertEquals("anthropic-key", repository.settings.first().anthropicApiKey)
+    }
 }
