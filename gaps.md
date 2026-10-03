@@ -35,6 +35,11 @@ Opus lenses (89 / 94 / 94 on the second pass). Unit tests **505/505 green**, `co
 - **`MAX_AUTO_IDS` ceiling:** the auto sync checks the first 400 blank ids (ko / zh-cn last); if >400 ja/en blanks never
   resolve, later ones are starved until a manual sync.
 - **`TcgdexSetCatalog.englishNames()` does not remember a failure** (retries `/sets` per English step, ≤6 per scan).
+- **Sync result wording is misleading, and English has no backup resolver.** Settings shows "Still missing N (TCGdex has
+  no image yet)" but N counts cards where neither TCGdex NOR the Japan TCGCSV resolver had an image (phone log 2026-10-03
+  13:40 shows the backup did resolve M6-021 and M6-048). `JapanTcgcsvResolver` returns null for non-`ja`, so an English
+  card TCGdex lacks an image for gets no sync fallback (search-time TCGCSV English merge can still patch it). Skyler
+  (2026-10-03): "working well for now"; reword the label and consider an English resolver only if he reports misses.
 - **Weak tests:** "second refresh never touches owned entries" (PC) cannot fail; "two newest groups" asserts
   `getJapanProducts(1)` not called, which also passes with `take(3)`; share-sheet rotation gate is only tested at
   ViewModel level; the concurrent-sync test fails by timeout, not assertion.
