@@ -76,7 +76,7 @@ class AppNavigationScreenTest {
             settingsRepository.setUseCameraScanner(false)
 
             // P1-2: PersonalCollectionViewModel.init runs `if (repository.cacheCount() == 0)
-            // refreshAll()`, which fans out real pokemontcg.io/TCGdex network calls and renders
+            // refreshAll()`, which fans out real TCGdex network calls and renders
             // an indefinite CircularProgressIndicator while in flight -- a fresh (in-memory,
             // per FakeDatabaseModule) database always has an empty cache, so this always fired
             // before. Seeding one cache row per section makes cacheCount() != 0, so refreshAll()

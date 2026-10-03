@@ -38,6 +38,7 @@ class SettingsViewModel @Inject constructor(
     fun setGithubRepo(v: String) = viewModelScope.launch { publishSettingsRepository.setGithubRepo(v) }
     fun setGithubPat(v: String) = viewModelScope.launch { publishSettingsRepository.setGithubPat(v) }
     fun setDiscordWebhookUrl(v: String) = viewModelScope.launch { publishSettingsRepository.setDiscordWebhookUrl(v) }
+    fun setPostToDiscord(v: Boolean) = viewModelScope.launch { publishSettingsRepository.setPostToDiscord(v) }
     fun setPublishPokedex(v: Boolean) = viewModelScope.launch { publishSettingsRepository.setPublishPokedex(v) }
     fun setPublishCardHistory(v: Boolean) = viewModelScope.launch { publishSettingsRepository.setPublishCardHistory(v) }
 }

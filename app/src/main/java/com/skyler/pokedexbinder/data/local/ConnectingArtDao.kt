@@ -78,4 +78,12 @@ interface ConnectingArtDao {
 
     @Query("UPDATE connecting_art_slot SET language = :language WHERE id = :slotId")
     suspend fun updateLanguage(slotId: Int, language: String)
+
+    /** Distinct card ids whose image URL is blank (NULL or ''), for the image sync. */
+    @Query("SELECT DISTINCT cardId FROM connecting_art_slot WHERE cardId IS NOT NULL AND (cardImageUrl IS NULL OR cardImageUrl = '')")
+    suspend fun blankImageCardIds(): List<String>
+
+    /** Fills a blank image URL only; never overwrites an existing one. Returns rows changed. */
+    @Query("UPDATE connecting_art_slot SET cardImageUrl = :url WHERE cardId = :cardId AND (cardImageUrl IS NULL OR cardImageUrl = '')")
+    suspend fun fillBlankImage(cardId: String, url: String): Int
 }

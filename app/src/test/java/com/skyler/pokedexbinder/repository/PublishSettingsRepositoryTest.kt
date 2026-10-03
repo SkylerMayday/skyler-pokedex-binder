@@ -35,6 +35,16 @@ class PublishSettingsRepositoryTest {
         assertEquals("", config.discordWebhookUrl)
         assertEquals(true, config.publishPokedex)
         assertEquals(false, config.publishCardHistory)
+        assertEquals(false, config.postToDiscord)
+    }
+
+    @Test
+    fun `setPostToDiscord round-trips through getConfig`() = runTest {
+        repository.setPostToDiscord(true)
+        assertEquals(true, repository.getConfig().postToDiscord)
+
+        repository.setPostToDiscord(false)
+        assertEquals(false, repository.getConfig().postToDiscord)
     }
 
     @Test

@@ -4,13 +4,15 @@ import android.content.Context
 import app.cash.turbine.test
 import com.skyler.pokedexbinder.data.model.PokemonSlot
 import com.skyler.pokedexbinder.data.model.SlotType
-import com.skyler.pokedexbinder.domain.BackfillCardNamesUseCase
+import com.skyler.pokedexbinder.domain.SyncCardImagesUseCase
 import com.skyler.pokedexbinder.repository.AppSettings
 import com.skyler.pokedexbinder.repository.BinderRepository
 import com.skyler.pokedexbinder.repository.SettingsRepository
 import com.skyler.pokedexbinder.ui.mainbinder.BinderDisplayItem
 import com.skyler.pokedexbinder.ui.mainbinder.MainBinderViewModel
+import io.mockk.coEvery
 import io.mockk.coJustRun
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +28,7 @@ class MainBinderViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
     private val binderRepo = mockk<BinderRepository>(relaxed = true)
     private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
-    private val backfillCardNamesUseCase = mockk<BackfillCardNamesUseCase>(relaxed = true)
+    private val imageSync = mockk<SyncCardImagesUseCase>(relaxed = true)
     private val context = mockk<Context>()
 
     @Before fun setUpSettings() {
@@ -42,7 +44,7 @@ class MainBinderViewModelTest {
         every { binderRepo.observeSlots() } returns flowOf(listOf(slot))
         coJustRun { binderRepo.seedIfEmpty(context) }
 
-        val vm = MainBinderViewModel(binderRepo, settingsRepo, backfillCardNamesUseCase, context)
+        val vm = MainBinderViewModel(binderRepo, settingsRepo, imageSync, context)
         vm.displayItems.test {
             val items = awaitItem()
             assertTrue(items.any { it is BinderDisplayItem.Header && (it as BinderDisplayItem.Header).title == "Generation I" })
@@ -58,7 +60,7 @@ class MainBinderViewModelTest {
         every { binderRepo.observeSlots() } returns flowOf(listOf(bulbasaur, charmander))
         coJustRun { binderRepo.seedIfEmpty(context) }
 
-        val vm = MainBinderViewModel(binderRepo, settingsRepo, backfillCardNamesUseCase, context)
+        val vm = MainBinderViewModel(binderRepo, settingsRepo, imageSync, context)
         vm.setSearch("char")
         vm.displayItems.test {
             val items = awaitItem()
@@ -76,7 +78,7 @@ class MainBinderViewModelTest {
         every { binderRepo.observeSlots() } returns flowOf(listOf(bulbasaur, charmander))
         coJustRun { binderRepo.seedIfEmpty(context) }
 
-        val vm = MainBinderViewModel(binderRepo, settingsRepo, backfillCardNamesUseCase, context)
+        val vm = MainBinderViewModel(binderRepo, settingsRepo, imageSync, context)
         vm.setSearch("4")
         vm.displayItems.test {
             val items = awaitItem()
@@ -85,5 +87,20 @@ class MainBinderViewModelTest {
             assertEquals("charmander", slot.pokemonSlot.id)
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    @Test
+    fun `init runs the daily image sync and survives its failure`() = runTest {
+        every { binderRepo.observeSlots() } returns flowOf(emptyList())
+        coJustRun { binderRepo.seedIfEmpty(context) }
+        coEvery { imageSync.syncIfDue(any()) } throws IllegalStateException("boom")
+
+        val vm = MainBinderViewModel(binderRepo, settingsRepo, imageSync, context)
+        vm.displayItems.test {
+            assertTrue(awaitItem().isEmpty())
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        coVerify(exactly = 1) { imageSync.syncIfDue(any()) }
     }
 }

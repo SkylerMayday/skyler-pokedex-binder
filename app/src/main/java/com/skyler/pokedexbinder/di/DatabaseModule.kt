@@ -84,4 +84,7 @@ object DatabaseModule {
 
     @Provides
     fun provideUnownBinderDao(db: PokedexDatabase): UnownBinderDao = db.unownBinderDao()
+
+    @Provides
+    fun provideCollectionResetDao(db: PokedexDatabase): CollectionResetDao = db.collectionResetDao()
 }

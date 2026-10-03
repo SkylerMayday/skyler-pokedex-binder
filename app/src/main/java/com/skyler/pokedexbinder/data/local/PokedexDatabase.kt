@@ -24,6 +24,7 @@ abstract class PokedexDatabase : RoomDatabase() {
     abstract fun connectingArtDao(): ConnectingArtDao
     abstract fun personalCollectionDao(): PersonalCollectionDao
     abstract fun unownBinderDao(): UnownBinderDao
+    abstract fun collectionResetDao(): CollectionResetDao
 
     companion object {
         /** Single source of truth for the DB schema version — kept in sync with the [Database] annotation above. */

@@ -33,4 +33,12 @@ interface UnownBinderDao {
         WHERE letterId = :letterId
     """)
     suspend fun updateDetails(letterId: String, language: String, remarks: String?, isLocked: Boolean)
+
+    /** Distinct card ids whose image URL is blank (NULL or ''), for the image sync. */
+    @Query("SELECT DISTINCT assignedCardId FROM unown_binder WHERE assignedCardId IS NOT NULL AND (assignedCardImageUrl IS NULL OR assignedCardImageUrl = '')")
+    suspend fun blankImageCardIds(): List<String>
+
+    /** Fills a blank image URL only; never overwrites an existing one. Returns rows changed. */
+    @Query("UPDATE unown_binder SET assignedCardImageUrl = :url WHERE assignedCardId = :cardId AND (assignedCardImageUrl IS NULL OR assignedCardImageUrl = '')")
+    suspend fun fillBlankImage(cardId: String, url: String): Int
 }

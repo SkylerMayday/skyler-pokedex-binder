@@ -218,7 +218,7 @@ class PublishRepositoryTest {
     @Test
     fun `webhook not configured succeeds without discord call`() = runTest {
         val entries = listOf(entry("bulbasaur", "Bulbasaur", 1, cardId = "xy1-1"))
-        coEvery { publishSettingsRepository.getConfig() } returns defaultConfig.copy(discordWebhookUrl = "")
+        coEvery { publishSettingsRepository.getConfig() } returns defaultConfig.copy(discordWebhookUrl = "", postToDiscord = true)
         coEvery { binderRepository.getAllEntries() } returns entries
         coEvery { gitHubApi.getContent(any(), any(), any(), eq("binder.json"), any()) } returns notFound()
         coEvery { gitHubApi.putContent(any(), any(), any(), eq("binder.json"), any()) } returns
@@ -536,9 +536,33 @@ class PublishRepositoryTest {
     }
 
     @Test
+    fun `toggle off with webhook configured uploads binder and changelog but never calls discord`() = runTest {
+        val baselineEntries = listOf(entry("bulbasaur", "Bulbasaur", 1, cardId = null))
+        val entries = listOf(entry("bulbasaur", "Bulbasaur", 1, cardId = "xy1-1"))
+        val baselineSnapshot = repository.buildSnapshot(baselineEntries, emptyList(), defaultConfig)
+        coEvery { publishSettingsRepository.getConfig() } returns
+            defaultConfig.copy(discordWebhookUrl = "https://discord.com/api/webhooks/x/y", postToDiscord = false)
+        coEvery { binderRepository.getAllEntries() } returns entries
+        coEvery { gitHubApi.getContent(any(), any(), any(), eq("binder.json"), any()) } returns
+            contentResponse(baselineSnapshot)
+        coEvery { gitHubApi.putContent(any(), any(), any(), eq("binder.json"), any()) } returns
+            Response.success(GitHubPutResponse(content = null, commit = null))
+        coEvery { gitHubApi.getContent(any(), any(), any(), eq("changelog.json"), any()) } returns notFound()
+        coEvery { gitHubApi.putContent(any(), any(), any(), eq("changelog.json"), any()) } returns
+            Response.success(GitHubPutResponse(content = null, commit = null))
+
+        val result = repository.publish {}
+
+        assertTrue(result is PublishResult.Success)
+        coVerify(exactly = 1) { gitHubApi.putContent(any(), any(), any(), eq("binder.json"), any()) }
+        coVerify(exactly = 1) { gitHubApi.putContent(any(), any(), any(), eq("changelog.json"), any()) }
+        coVerify(exactly = 0) { discordApi.sendWebhook(any(), any()) }
+    }
+
+    @Test
     fun `changelog PUT failure is a hard failure without webhook even though binder json already succeeded`() = runTest {
         val entries = listOf(entry("bulbasaur", "Bulbasaur", 1, cardId = "xy1-1"))
-        coEvery { publishSettingsRepository.getConfig() } returns defaultConfig.copy(discordWebhookUrl = "https://discord.com/api/webhooks/x/y")
+        coEvery { publishSettingsRepository.getConfig() } returns defaultConfig.copy(discordWebhookUrl = "https://discord.com/api/webhooks/x/y", postToDiscord = true)
         coEvery { binderRepository.getAllEntries() } returns entries
         coEvery { gitHubApi.getContent(any(), any(), any(), eq("binder.json"), any()) } returns notFound()
         coEvery { gitHubApi.putContent(any(), any(), any(), eq("binder.json"), any()) } returns
@@ -559,7 +583,7 @@ class PublishRepositoryTest {
         val entries = listOf(entry("bulbasaur", "Bulbasaur", 1, cardId = "xy1-1"))
         val baselineSnapshot = repository.buildSnapshot(entries, emptyList(), defaultConfig)
         coEvery { publishSettingsRepository.getConfig() } returns
-            defaultConfig.copy(discordWebhookUrl = "https://discord.com/api/webhooks/x/y")
+            defaultConfig.copy(discordWebhookUrl = "https://discord.com/api/webhooks/x/y", postToDiscord = true)
         coEvery { binderRepository.getAllEntries() } returns entries
         coEvery { gitHubApi.getContent(any(), any(), any(), eq("binder.json"), any()) } returns
             contentResponse(baselineSnapshot)
@@ -586,7 +610,7 @@ class PublishRepositoryTest {
         val entries = listOf(entry("bulbasaur", "Bulbasaur", 1, cardId = "xy1-1"))
         val baselineSnapshot = repository.buildSnapshot(baselineEntries, emptyList(), defaultConfig)
         coEvery { publishSettingsRepository.getConfig() } returns
-            defaultConfig.copy(discordWebhookUrl = "https://discord.com/api/webhooks/x/y")
+            defaultConfig.copy(discordWebhookUrl = "https://discord.com/api/webhooks/x/y", postToDiscord = true)
         coEvery { binderRepository.getAllEntries() } returns entries
         coEvery { gitHubApi.getContent(any(), any(), any(), eq("binder.json"), any()) } returns
             contentResponse(baselineSnapshot)
@@ -613,7 +637,7 @@ class PublishRepositoryTest {
     fun `first publish with zero owned cards uploads binder json but skips changelog and discord`() = runTest {
         val entries = listOf(entry("bulbasaur", "Bulbasaur", 1, cardId = null))
         coEvery { publishSettingsRepository.getConfig() } returns
-            defaultConfig.copy(discordWebhookUrl = "https://discord.com/api/webhooks/x/y")
+            defaultConfig.copy(discordWebhookUrl = "https://discord.com/api/webhooks/x/y", postToDiscord = true)
         coEvery { binderRepository.getAllEntries() } returns entries
         coEvery { gitHubApi.getContent(any(), any(), any(), eq("binder.json"), any()) } returns notFound()
         coEvery { gitHubApi.putContent(any(), any(), any(), eq("binder.json"), any()) } returns

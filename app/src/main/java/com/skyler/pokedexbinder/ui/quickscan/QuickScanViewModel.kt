@@ -91,7 +91,7 @@ class QuickScanViewModel @Inject constructor(
     }
 
     /**
-     * Runs [fastSearch] (pokemontcg.io + TCGdex) and TCGCSV concurrently via
+     * Runs [fastSearch] (TCGdex) and TCGCSV concurrently via
      * [CardSearchRepository.searchStreaming]. Fast results (if any) render immediately with
      * [QuickScanState.CardSelection.stillSearching] = true; if the fast source finds nothing,
      * the plain [QuickScanState.Searching] spinner stays up rather than jumping to

@@ -1,12 +1,15 @@
 package com.skyler.pokedexbinder.repository
 
 import com.skyler.pokedexbinder.data.model.TcgCard
-import com.skyler.pokedexbinder.data.remote.PokemonTcgApi
-import com.skyler.pokedexbinder.data.remote.TcgCardDto
+import com.skyler.pokedexbinder.data.remote.TCGDEX_ASIAN_LANGS
+import com.skyler.pokedexbinder.data.remote.FetchBudget
 import com.skyler.pokedexbinder.data.remote.TcgcsvApi
+import com.skyler.pokedexbinder.data.remote.TcgcsvJapanSource
 import com.skyler.pokedexbinder.data.remote.TcgcsvProductDto
 import com.skyler.pokedexbinder.data.remote.TcgdexApi
 import com.skyler.pokedexbinder.data.remote.TcgdexCardBriefDto
+import com.skyler.pokedexbinder.data.remote.TcgdexIds
+import com.skyler.pokedexbinder.data.remote.TcgdexSetCatalog
 import com.skyler.pokedexbinder.domain.ParsedCardInfo
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
@@ -14,14 +17,38 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
 sealed class SearchProgress {
-    /** pokemontcg.io + TCGdex results — rendered immediately. */
+    /** TCGdex results — rendered immediately. */
     data class Fast(val cards: List<TcgCard>) : SearchProgress()
     /** Fast results merged with the completed TCGCSV scan (appends + image backfill). */
     data class Complete(val cards: List<TcgCard>) : SearchProgress()
+}
+
+/** Every TCGdex call of a search failed and nothing else answered: "no results" would be a lie. */
+class TcgdexUnavailableException :
+    Exception("Card database (TCGdex) unreachable. Check your connection and try again.")
+
+private const val JAPAN_IMAGE_FETCHES_PER_SEARCH = 3
+
+/** Per-search tally of TCGdex call outcomes (concurrent callers share one instance). */
+internal class CallStats {
+    private val ok = AtomicInteger()
+    private val failed = AtomicInteger()
+    /** Product-list downloads the Japanese image fill may start in this search. */
+    val japanBudget = FetchBudget(JAPAN_IMAGE_FETCHES_PER_SEARCH)
+    fun succeeded() { ok.incrementAndGet() }
+    fun failed() { failed.incrementAndGet() }
+    fun allSucceeded(): Boolean = failed.get() == 0
+
+    /** Returns [result]; throws only when it is empty AND every TCGdex call this search made failed. */
+    fun <T> check(result: List<T>): List<T> {
+        if (result.isEmpty() && failed.get() > 0 && ok.get() == 0) throw TcgdexUnavailableException()
+        return result
+    }
 }
 
 /** [matchedQuery] names which step of the cascade produced [cards], for scanner diagnostics. */
@@ -36,8 +63,11 @@ data class ParsedSearchResult(
     val crossLanguage: Boolean = false
 )
 
-/** TCGdex non-English languages; also the manual-search append order. */
-internal val TCGDEX_ASIAN_LANGS = listOf("ja", "ko", "zh-tw", "zh-cn", "th", "id")
+/**
+ * [complete] is false when any TCGdex call of the search failed (e.g. the dex lookup or one
+ * language), so [cards] may be missing printings and must not replace a stored full list.
+ */
+data class NameSearchResult(val cards: List<TcgCard>, val complete: Boolean)
 
 /** Cap on languages tried in any one cascade step. */
 internal const val MAX_TCGDEX_LANGS = 3
@@ -60,8 +90,6 @@ internal fun tcgdexLangsFor(language: String?): List<String> {
     }
 }
 
-private fun isNonEnglishTcgdexId(id: String) = TCGDEX_ASIAN_LANGS.any { id.startsWith("tcgdex_${it}_") }
-
 private val CROSS_LANGUAGE_BASES = setOf("ja", "ko", "zh", "th", "id")
 
 /**
@@ -71,48 +99,52 @@ private val CROSS_LANGUAGE_BASES = setOf("ja", "ko", "zh", "th", "id")
  */
 internal fun isCrossLanguageFallback(language: String?, cards: List<TcgCard>): Boolean {
     val base = language?.trim()?.lowercase()?.replace('_', '-')?.substringBefore('-').orEmpty()
-    return base in CROSS_LANGUAGE_BASES && cards.isNotEmpty() && cards.none { isNonEnglishTcgdexId(it.id) }
+    return base in CROSS_LANGUAGE_BASES && cards.isNotEmpty() && cards.none { TcgdexIds.isNonEnglish(it.id) }
 }
 
 @Singleton
 class CardSearchRepository @Inject constructor(
-    private val api: PokemonTcgApi, // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
     private val tcgdexApi: TcgdexApi,
-    private val tcgcsvApi: TcgcsvApi
+    private val tcgcsvApi: TcgcsvApi,
+    private val setCatalog: TcgdexSetCatalog,
+    private val japanImages: TcgcsvJapanSource
 ) {
     suspend fun searchByParsedInfo(info: ParsedCardInfo): ParsedSearchResult {
-        val result = resolveParsed(info).let { it.copy(crossLanguage = isCrossLanguageFallback(info.language, it.cards)) }
+        val stats = CallStats()
+        val result = resolveParsed(info, stats).let { it.copy(crossLanguage = isCrossLanguageFallback(info.language, it.cards)) }
+        stats.check(result.cards)
+        val filled = result.copy(cards = result.cards.withJapanImages(stats))
         // Scanner ja results: confirmCard's global-scan slot match compares English slot names, so
         // seed pokemonNames from Gemini's English name instead of the Japanese card name.
-        val names = info.cardName?.let { pokemonNamesOf(it) } ?: return result
-        return result.copy(cards = result.cards.map {
-            if (isNonEnglishTcgdexId(it.id)) it.copy(pokemonNames = names) else it
+        val names = info.cardName?.let { pokemonNamesOf(it) } ?: return filled
+        return filled.copy(cards = filled.cards.map {
+            if (TcgdexIds.isNonEnglish(it.id)) it.copy(pokemonNames = names) else it
         })
     }
 
-    private suspend fun resolveParsed(info: ParsedCardInfo): ParsedSearchResult = coroutineScope {
+    private suspend fun resolveParsed(info: ParsedCardInfo, stats: CallStats): ParsedSearchResult {
         val name   = info.cardName
         val number = info.cardNumber
         val total  = info.setTotal?.let { sendableTotal(it) }
         val dex    = info.dexNumber
         val langs  = tcgdexLangsFor(info.language)
 
-        // TCGdex first: species-pinned (dex, then name) before the species-blind number+total steps.
+        // Species-pinned (dex, then name) before the species-blind number+total steps.
         // Every TCGdex step is exact-number filtered (the API's localId filter is a substring match).
         if (dex != null && number != null && total != null) {
             for (lang in langs) {
-                val results = tcgdexFilter(lang, number, total, dex, null)
+                val results = tcgdexFilter(lang, number, total, dex, null, stats)
                 if (results.isNotEmpty()) {
-                    return@coroutineScope ParsedSearchResult(
+                    return ParsedSearchResult(
                         results, "tcgdex-$lang+dex+number+total", identityPinned = results.size == 1
                     )
                 }
             }
         }
         if (name != null && number != null && total != null) {
-            val results = tcgdexFilter("en", number, total, null, name)
+            val results = tcgdexFilter("en", number, total, null, name, stats)
             if (results.isNotEmpty()) {
-                return@coroutineScope ParsedSearchResult(results, "tcgdex-en+name+number+total")
+                return ParsedSearchResult(results, "tcgdex-en+name+number+total")
             }
         }
         // Non-English names are only comparable to the printed name, never Gemini's English
@@ -120,128 +152,96 @@ class CardSearchRepository @Inject constructor(
         val printedName = info.printedName
         if (printedName != null && number != null && total != null) {
             for (lang in langs.filter { it != "en" }) {
-                val results = tcgdexFilter(lang, number, total, null, null).matchingParsedName(printedName)
+                val results = tcgdexFilter(lang, number, total, null, null, stats).matchingParsedName(printedName)
                 if (results.isNotEmpty()) {
-                    return@coroutineScope ParsedSearchResult(
+                    return ParsedSearchResult(
                         results, "tcgdex-$lang+number+total", nameVerified = results.size == 1
                     )
                 }
             }
         }
         if (number != null && total != null) {
-            val results = tcgdexFilter("en", number, total, null, null).matchingParsedName(name)
-            if (results.isNotEmpty()) return@coroutineScope ParsedSearchResult(results, "tcgdex-en+number+total")
+            val results = tcgdexFilter("en", number, total, null, null, stats).matchingParsedName(name)
+            if (results.isNotEmpty()) return ParsedSearchResult(results, "tcgdex-en+number+total")
         }
 
-        ptcgSpecificCascade(name, number, info.setTotal, dex)?.let { return@coroutineScope it }
+        // Looser steps for when the scan missed the set total (or the total filter matched nothing).
+        if (name != null && number != null) {
+            val results = tcgdexFilter("en", number, null, null, name, stats)
+            if (results.isNotEmpty()) return ParsedSearchResult(results, "tcgdex-en+name+number")
+        }
+        if (dex != null && number != null) {
+            for (lang in langs) {
+                val results = tcgdexFilter(lang, number, null, dex, null, stats)
+                if (results.isNotEmpty()) return ParsedSearchResult(results, "tcgdex-$lang+dex+number")
+            }
+        }
 
-        // Broad name/dex queries: TCGdex first, pokemontcg.io merged in so promo variants aren't missed.
+        // Broad name/dex queries.
         if (name != null) {
-            val tcgdex = async { tcgdexSearchByName(name) }
-            val ptcg = async { safeSearch(nameQuery(name)) } // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
-            val merged = mergeResults(tcgdex.await(), ptcg.await())
-            if (merged.isNotEmpty()) return@coroutineScope ParsedSearchResult(merged, "broad-name")
+            val results = tcgdexSearchByName(name, stats)
+            if (results.isNotEmpty()) return ParsedSearchResult(results, "broad-name")
         }
         if (dex != null) {
             // Not name-filtered: the dex already pins species. A dex hit proves the species, not the
             // card, so all same-species candidates go to the hasher and SmartThresholdUseCase decides.
-            val results = firstNonEmptyByDex(langs, dex)
-                .ifEmpty { safeSearch("nationalPokedexNumbers:$dex") } // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
-            if (results.isNotEmpty()) return@coroutineScope ParsedSearchResult(results, "broad-dex")
+            val results = firstNonEmptyByDex(langs, dex, stats)
+            if (results.isNotEmpty()) return ParsedSearchResult(results, "broad-dex")
         }
-        ptcgBroadNumber(name, number)
+        // Number alone is thousands of cards on TCGdex: only usable when a name can verify it.
+        if (number != null && name != null) {
+            val results = tcgdexFilter("en", number, null, null, null, stats).matchingParsedName(name)
+            if (results.isNotEmpty()) return ParsedSearchResult(results, "broad-number")
+        }
+        return ParsedSearchResult(emptyList(), "none-matched")
     }
 
     /**
-     * The original pokemontcg.io specific-query cascade, verbatim. Species-pinned (name, then dex)
-     * before the species-blind number+total, which is name-verified against the parsed name;
-     * a miss falls through instead of offering a same-numbered different card.
+     * Manual search + Quick Scan: TCGdex en first, then every non-English printing of the species
+     * (ja, ko, zh-tw, zh-cn, th, id). [dexNumber] skips the detail-endpoint dex lookup when the caller already knows it.
      */
-    // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
-    private suspend fun ptcgSpecificCascade(
-        name: String?, number: String?, total: String?, dex: Int?
-    ): ParsedSearchResult? {
-        val specificQueries = buildList {
-            if (name != null && number != null && total != null)
-                add("name+number+total" to "${nameQuery(name)} number:\"$number\" set.total:$total")
-            if (name != null && number != null)
-                add("name+number" to "${nameQuery(name)} number:\"$number\"")
-            if (dex != null && number != null && total != null)
-                add("dex+number+total" to "nationalPokedexNumbers:$dex number:\"$number\" set.total:$total")
-            if (dex != null && number != null)
-                add("dex+number" to "nationalPokedexNumbers:$dex number:\"$number\"")
-            if (number != null && total != null)
-                add("number+total" to "number:\"$number\" set.total:$total")
+    suspend fun searchByNameWithJapanese(name: String, dexNumber: Int? = null): List<TcgCard> =
+        searchByNameAllLanguages(name, dexNumber).cards
+
+    /** [searchByNameWithJapanese] plus whether every call succeeded (see [NameSearchResult.complete]). */
+    suspend fun searchByNameAllLanguages(name: String, dexNumber: Int? = null): NameSearchResult {
+        val stats = CallStats()
+        val en = tcgdexSearchByName(name, stats)
+        val dex = dexNumber ?: resolveDex(en, name, stats)
+        val result = if (dex == null) en else {
+            val names = en.bestNameMatch(name)?.pokemonNames ?: pokemonNamesOf(name)
+            val nonEnglish = tcgdexAllLangsByDex(dex, stats).map { it.copy(pokemonNames = names) }
+            (en + nonEnglish).distinctBy { it.id }
         }
-        for ((label, query) in specificQueries) {
-            val raw = safeSearch(query)
-            val results = if (label == "number+total") raw.matchingParsedName(name) else raw
-            if (results.isNotEmpty()) return ParsedSearchResult(results, label)
-        }
-        return null
-    }
-
-    /** Last-resort pokemontcg.io number-only lookup, name-verified. */
-    // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
-    private suspend fun ptcgBroadNumber(name: String?, number: String?): ParsedSearchResult {
-        val byNumber = (if (number != null) safeSearch("number:\"$number\"") else emptyList())
-            .matchingParsedName(name)
-        return ParsedSearchResult(byNumber, if (byNumber.isNotEmpty()) "broad-number" else "none-matched")
-    }
-
-    // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01 (no callers)
-    suspend fun searchByNameAndNumber(name: String, number: String): List<TcgCard> =
-        safeSearch("${nameQuery(name)} number:\"$number\"")
-            .ifEmpty { safeSearch(nameQuery(name)) }
-
-    /** pokemontcg.io-first on purpose: PersonalCollectionRepository keys owned state by cardId. */
-    suspend fun searchByName(name: String): List<TcgCard> = coroutineScope {
-        val primary = async { safeSearch(nameQuery(name)) } // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
-        val secondary = async { tcgdexSearchByName(name) }
-        mergeResults(primary.await(), secondary.await())
-    }
-
-    /**
-     * Manual search + Quick Scan: TCGdex en first, ptcg merged as fallback, then ja printings of
-     * the species (ja, ko, zh-tw, zh-cn, th, id). [dexNumber] skips the detail-endpoint dex lookup when the caller already knows it.
-     */
-    suspend fun searchByNameWithJapanese(name: String, dexNumber: Int? = null): List<TcgCard> {
-        val en = coroutineScope {
-            val tcgdex = async { tcgdexSearchByName(name) }
-            val ptcg = async { safeSearch(nameQuery(name)) } // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
-            mergeResults(tcgdex.await(), ptcg.await())
-        }
-        val dex = dexNumber ?: resolveDex(en, name) ?: return en
-        val names = en.bestNameMatch(name)?.pokemonNames ?: pokemonNamesOf(name)
-        val nonEnglish = tcgdexAllLangsByDex(dex).map { it.copy(pokemonNames = names) }
-        return (en + nonEnglish).distinctBy { it.id }
+        return NameSearchResult(stats.check(result).withJapanImages(stats), stats.allSucceeded())
     }
 
     /** All [TCGDEX_ASIAN_LANGS] printings of a species, in list order (6 parallel, each exception-safe). */
-    private suspend fun tcgdexAllLangsByDex(dex: Int): List<TcgCard> = coroutineScope {
-        TCGDEX_ASIAN_LANGS.map { lang -> async { tcgdexFilter(lang, null, null, dex, null) } }
+    private suspend fun tcgdexAllLangsByDex(dex: Int, stats: CallStats): List<TcgCard> = coroutineScope {
+        TCGDEX_ASIAN_LANGS.map { lang -> async { tcgdexFilter(lang, null, null, dex, null, stats) } }
             .awaitAll().flatten()
     }
 
     /** First language in [langs] with any card of species [dex]; empty when none has one. */
-    private suspend fun firstNonEmptyByDex(langs: List<String>, dex: Int): List<TcgCard> {
+    private suspend fun firstNonEmptyByDex(langs: List<String>, dex: Int, stats: CallStats): List<TcgCard> {
         for (lang in langs) {
-            val results = tcgdexFilter(lang, null, null, dex, null)
+            val results = tcgdexFilter(lang, null, null, dex, null, stats)
             if (results.isNotEmpty()) return results
         }
         return emptyList()
     }
 
     /** Species dex from the TCGdex detail endpoint, via the en TCGdex card best matching [name]. */
-    private suspend fun resolveDex(en: List<TcgCard>, name: String): Int? {
-        val card = en.filter {
-            it.id.startsWith(TCGDEX_EN_ID_PREFIX) && !isNonEnglishTcgdexId(it.id)
-        }.bestNameMatch(name) ?: return null
+    private suspend fun resolveDex(en: List<TcgCard>, name: String, stats: CallStats): Int? {
+        val card = en.filter { TcgdexIds.parse(it.id)?.lang == "en" }.bestNameMatch(name) ?: return null
+        val tcgdexId = TcgdexIds.parse(card.id)?.id ?: return null
         return try {
-            tcgdexApi.getCard("en", card.id.removePrefix(TCGDEX_EN_ID_PREFIX)).dexId?.firstOrNull()
+            tcgdexApi.getCard("en", tcgdexId).dexId?.firstOrNull()
+                .also { stats.succeeded() }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            stats.failed()
             null
         }
     }
@@ -255,25 +255,36 @@ class CardSearchRepository @Inject constructor(
         return firstOrNull { normalizeName(it.name) == target } ?: firstOrNull { namesMatch(it.name, name) }
     }
 
-    // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
-    suspend fun searchByNumber(number: String): List<TcgCard> =
-        safeSearch("number:\"$number\"")
-
-    // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01 (no callers)
-    suspend fun searchByNumberAndTotal(number: String, total: String): List<TcgCard> =
-        safeSearch("number:\"$number\" set.total:$total")
-            .ifEmpty { safeSearch("number:\"$number\"") }
-
-    suspend fun searchByDexNumber(dexNumber: Int): List<TcgCard> = coroutineScope {
-        val en = async { tcgdexFilter("en", null, null, dexNumber, null) }
-        val nonEnglish = async { tcgdexAllLangsByDex(dexNumber) }
-        val ptcg = async { safeSearch("nationalPokedexNumbers:$dexNumber") } // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
-        mergeResults(en.await() + nonEnglish.await(), ptcg.await())
+    /**
+     * Promo / set-prefixed number lookup ("SWSH260", "SVP208", "MEP001"). TCGdex's localId filter is a
+     * substring match, exact-filtered here; SVP/MEP numbers are the bare digits inside their set, so
+     * they fall back to a set-scoped query.
+     */
+    suspend fun searchByNumber(query: String): List<TcgCard> {
+        val stats = CallStats()
+        val number = query.trim().uppercase()
+        val direct = tcgdexFilter("en", number, null, null, null, stats)
+        val promo = SET_PREFIXED_PROMO.matchEntire(number)
+        val result = if (direct.isNotEmpty() || promo == null) direct else {
+            val (prefix, digits) = promo.destructured
+            tcgdexCards("en", stats) { tcgdexApi.cardsInSet("en", "eq:${prefix.lowercase()}", digits) }
+        }
+        return stats.check(result)
     }
 
-    // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
-    suspend fun searchPromosByName(name: String): List<TcgCard> =
-        safeSearch("${nameQuery(name)} rarity:Promo")
+    suspend fun searchByDexNumber(dexNumber: Int): List<TcgCard> = coroutineScope {
+        val stats = CallStats()
+        val en = async { tcgdexFilter("en", null, null, dexNumber, null, stats) }
+        val nonEnglish = async { tcgdexAllLangsByDex(dexNumber, stats) }
+        val result = en.await() + nonEnglish.await()
+        stats.check(result).withJapanImages(stats)
+    }
+
+    suspend fun searchPromosByName(name: String): List<TcgCard> {
+        val stats = CallStats()
+        val result = tcgdexCards("en", stats) { tcgdexApi.searchPromos(name) }
+        return stats.check(result)
+    }
 
     /**
      * Retry-on-empty fallback source: TCGCSV has no name-search endpoint, so this fetches all
@@ -323,13 +334,15 @@ class CardSearchRepository @Inject constructor(
     }
 
     /**
-     * Progressive search: runs the caller-supplied fast source (pokemontcg.io + TCGdex, already
-     * merged) and the TCGCSV 217-group scan concurrently. Emits [SearchProgress.Fast] as soon as the
-     * fast source resolves, then [SearchProgress.Complete] once TCGCSV finishes and its cards have been
-     * merged/back-filled into the fast list.
+     * Progressive search: runs the caller-supplied fast source (TCGdex) and the TCGCSV 217-group scan
+     * concurrently. Emits [SearchProgress.Fast] as soon as the fast source resolves, then
+     * [SearchProgress.Complete] once TCGCSV finishes and its cards have been merged/back-filled into
+     * the fast list. If the fast source throws (e.g. [TcgdexUnavailableException]) the TCGCSV scan
+     * still runs: a non-empty scan is emitted as the only [SearchProgress.Complete], else the
+     * fast source's exception is rethrown.
      *
      * @param tcgcsvQuery the name to scan TCGCSV for (the raw trimmed user query).
-     * @param fastSearch  produces the fast (pokemontcg.io + TCGdex) result list.
+     * @param fastSearch  produces the fast (TCGdex) result list.
      *
      * Cancellation: collecting coroutine cancelled -> flow's [coroutineScope] cancels the in-flight
      * TCGCSV scan via structured concurrency. No manual teardown needed.
@@ -340,10 +353,24 @@ class CardSearchRepository @Inject constructor(
     ): Flow<SearchProgress> = flow {
         coroutineScope {
             // Both start immediately -> the 10-13s TCGCSV cost overlaps the fast search + user reading.
-            val fastDeferred = async { fastSearch() }
+            // The failure is carried as a Result: a throwing async child would cancel its sibling scan.
+            val fastDeferred = async {
+                try {
+                    Result.success(fastSearch())
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Result.failure<List<TcgCard>>(e)
+                }
+            }
             val tcgcsvDeferred = async { searchTcgcsvByName(tcgcsvQuery) }
 
-            val fast = fastDeferred.await()
+            val fast = fastDeferred.await().getOrElse { failure ->
+                val tcgcsv = tcgcsvDeferred.await()
+                if (tcgcsv.isEmpty()) throw failure
+                emit(SearchProgress.Complete(tcgcsv))
+                return@coroutineScope
+            }
             emit(SearchProgress.Fast(fast))
 
             val tcgcsv = tcgcsvDeferred.await()
@@ -351,47 +378,7 @@ class CardSearchRepository @Inject constructor(
         }
     }
 
-    private fun nameQuery(name: String): String {
-        val sanitized = name.trim()
-            .replace(" ", "*")
-            .replace("-", "*")
-            .replace(":", "*")
-        return "name:*$sanitized*"
-    }
-
-    // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
-    private suspend fun safeSearch(query: String): List<TcgCard> = try {
-        val filtered = if (query.isBlank()) POCKET_EXCLUSION.trim() else "$query $POCKET_EXCLUSION"
-        api.searchCards(query = filtered).data.map { it.toDomain() }
-    } catch (e: Exception) {
-        emptyList()
-    }
-
-    // POKEMONTCG-IO-FALLBACK: remove before 2027-03-01
-    private fun TcgCardDto.toDomain() = TcgCard(
-        id = id,
-        name = name,
-        number = number,
-        setName = set.name,
-        imageUrl = images.large,
-        pokemonNames = name.split(" & ").map { it.substringBefore(" ").trim() },
-        hp = hp,
-        artist = artist,
-        setReleaseDate = set.releaseDate
-    )
-
     // ---- Merge helpers ----
-
-    /**
-     * Combines primary and secondary results, deduplicating cross-source by physical-card identity
-     * (name + number, setName-agnostic — see isSameCard) rather than exact string match, since the
-     * two sources format setName differently for the same physical card. Primary results come first;
-     * TCGdex fills in cards the primary API is missing.
-     */
-    private fun mergeResults(primary: List<TcgCard>, secondary: List<TcgCard>): List<TcgCard> {
-        val newFromSecondary = secondary.filter { s -> primary.none { p -> isSameCard(p, s) } }
-        return primary + newFromSecondary
-    }
 
     private fun dedupeKey(card: TcgCard) =
         "${card.name.lowercase()}|${card.number.lowercase()}|${card.setName.lowercase()}"
@@ -456,7 +443,7 @@ class CardSearchRepository @Inject constructor(
     /**
      * Number equality tolerant of cross-source formatting differences:
      *  - TCGCSV numbers arrive as "030/034" (slash fraction) or "SVP208" (promo prefix).
-     *  - TCGdex/pokemontcg.io give "208", "58", "SVP208", etc.
+     *  - TCGdex gives "208", "58", "SVP208", etc.
      * Strategy: take the part before '/', keep alphanumerics, lowercase, drop leading zeros; compare.
      * If those differ, fall back to comparing the digit-only portions (so "svp208" == "208").
      */
@@ -473,23 +460,17 @@ class CardSearchRepository @Inject constructor(
     private fun normalizeNumber(raw: String): String =
         raw.substringBefore('/').filter { it.isLetterOrDigit() }.lowercase().trimStart('0')
 
-    private suspend fun tcgdexSearchByName(name: String): List<TcgCard> = try {
-        // TCG Pocket (mobile game) cards live under /tcgp/ and are not physical cards.
-        tcgdexApi.searchCards(name).filterNot { it.image?.contains("/tcgp/") == true }.map { it.toDomain() }
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        emptyList()
-    }
+    private suspend fun tcgdexSearchByName(name: String, stats: CallStats): List<TcgCard> =
+        tcgdexCards("en", stats) { tcgdexApi.searchCards(name) }
 
     /**
      * TCGdex filtered list query. [total] must already be sendable (see [sendableTotal]). Drops
      * TCG Pocket cards and exact-filters [number], since the API's localId filter is a substring match.
-     * Never throws: any failure is an empty list so the cascade falls through.
+     * Never throws: a failure is counted in [stats] and yields an empty list so the cascade falls through.
      */
     private suspend fun tcgdexFilter(
-        lang: String, number: String?, total: String?, dex: Int?, name: String?
-    ): List<TcgCard> = try {
+        lang: String, number: String?, total: String?, dex: Int?, name: String?, stats: CallStats
+    ): List<TcgCard> = tcgdexCards(lang, stats) {
         tcgdexApi.filterCards(
             lang,
             number?.trimStart('0')?.ifEmpty { "0" },
@@ -497,13 +478,38 @@ class CardSearchRepository @Inject constructor(
             dex?.let { "eq:$it" },
             name
         )
-            .filterNot { it.image?.contains("/tcgp/") == true }
-            .map { it.toDomain(lang) }
-            .filter { number == null || numbersMatch(it.number, number) }
+    }.filter { number == null || numbersMatch(it.number, number) }
+
+    /** Runs a TCGdex list [call], tallies the outcome in [stats], and maps to cards; failures yield empty. */
+    private suspend fun tcgdexCards(
+        lang: String, stats: CallStats, call: suspend () -> List<TcgdexCardBriefDto>
+    ): List<TcgCard> = try {
+        call().toCards(lang).also { stats.succeeded() }
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
+        stats.failed()
         emptyList()
+    }
+
+    /** Drops TCG Pocket cards (mobile game, `/tcgp/` assets; not physical cards) and maps the rest. */
+    private suspend fun List<TcgdexCardBriefDto>.toCards(lang: String): List<TcgCard> {
+        val physical = filterNot { it.image?.contains("/tcgp/") == true }
+        if (physical.isEmpty()) return emptyList()
+        val setNames = if (lang == "en") setCatalog.englishNames() else emptyMap()
+        return physical.map { it.toDomain(lang, setNames) }
+    }
+
+    /**
+     * TCGdex lacks images for new ja sets (e.g. M6): fills blank ja images from the cached TCGCSV
+     * Japan source. Applied to a search's final cards only, so the per-search budget is never spent
+     * on cards the number/name filters later drop.
+     */
+    private suspend fun List<TcgCard>.withJapanImages(stats: CallStats): List<TcgCard> = map { card ->
+        val ref = TcgdexIds.parse(card.id)
+        if (ref == null || ref.lang != "ja" || card.imageUrl.isNotBlank()) return@map card
+        japanImages.imageUrl(TcgdexIds.setId(ref.id), card.number, stats.japanBudget)
+            ?.let { card.copy(imageUrl = it) } ?: card
     }
 
     /** Set total as TCGdex wants it (no leading zeros), or null when it isn't a plain number. */
@@ -515,21 +521,22 @@ class CardSearchRepository @Inject constructor(
     /**
      * Maps a TCGdex brief card to [TcgCard].
      * id format: "<setCode>-<localId>" e.g. "swsh3-136", "sve-213"
-     * en keeps "tcgdex_<id>" (stable for saved entries); other languages are "tcgdex_<lang>_<id>"
-     * with setName "<SET> (<LANG>)" e.g. "(JA)", "(ZH-TW)", the marker that surfaces in every
-     * "setName · #number" UI label.
-     * image: base URL without extension; append "/high.webp" for a usable URL.
+     * en keeps "tcgdex_<id>" (stable for saved entries) and gets its English set name from
+     * [englishSetNames] when known (else the bare set code); other languages are
+     * "tcgdex_<lang>_<id>" with setName "<SET> (<LANG>)" e.g. "(JA)", "(ZH-TW)", the marker that
+     * surfaces in every "setName · #number" UI label.
+     * image: base URL without extension; [TcgdexIds.imageUrl] makes it a usable URL.
      */
-    private fun TcgdexCardBriefDto.toDomain(lang: String = "en"): TcgCard {
-        val setCode = id.substringBeforeLast("-").uppercase()
-        val imageUrl = image?.let { "$it/high.webp" } ?: ""
+    private fun TcgdexCardBriefDto.toDomain(lang: String, englishSetNames: Map<String, String>): TcgCard {
+        val setId = TcgdexIds.setId(id)
+        val setCode = setId.uppercase()
         val isEn = lang == "en"
         return TcgCard(
-            id = (if (isEn) TCGDEX_EN_ID_PREFIX else "${TCGDEX_EN_ID_PREFIX}${lang}_") + id,
+            id = TcgdexIds.cardId(lang, id),
             name = name,
             number = localId,
-            setName = if (isEn) setCode else "$setCode (${lang.uppercase()})",
-            imageUrl = imageUrl,
+            setName = if (isEn) englishSetNames[setId.lowercase()] ?: setCode else "$setCode (${lang.uppercase()})",
+            imageUrl = image?.let { TcgdexIds.imageUrl(it) } ?: "",
             pokemonNames = pokemonNamesOf(name)
         )
     }
@@ -543,13 +550,11 @@ class CardSearchRepository @Inject constructor(
             setName = setName,
             imageUrl = imageUrl ?: "",
             pokemonNames = name.split(" & ").map { it.substringBefore(" ").trim() }
-            // hp/artist/setReleaseDate left null — TCGCSV product listings carry no rarity/artist
         )
     }
 
     companion object {
-        private const val TCGDEX_EN_ID_PREFIX = "tcgdex_"
-        private const val POCKET_EXCLUSION = "-set.series:Pocket"
+        private val SET_PREFIXED_PROMO = Regex("^(SVP|MEP)(\\d+)$")
         private const val TCGCSV_GROUP_CONCURRENCY = 8
     }
 }

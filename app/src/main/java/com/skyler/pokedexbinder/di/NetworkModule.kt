@@ -2,7 +2,6 @@ package com.skyler.pokedexbinder.di
 
 import com.skyler.pokedexbinder.data.remote.DiscordApi
 import com.skyler.pokedexbinder.data.remote.GitHubApi
-import com.skyler.pokedexbinder.data.remote.PokemonTcgApi
 import com.skyler.pokedexbinder.data.remote.TcgcsvApi
 import com.skyler.pokedexbinder.data.remote.TcgdexApi
 import com.squareup.moshi.Moshi
@@ -35,19 +34,6 @@ object NetworkModule {
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
-
-    @Provides
-    @Singleton
-    fun provideRetrofit(okHttp: OkHttpClient, moshi: Moshi): Retrofit = Retrofit.Builder()
-        .baseUrl("https://api.pokemontcg.io/v2/")
-        .client(okHttp)
-        .addConverterFactory(MoshiConverterFactory.create(moshi))
-        .build()
-
-    @Provides
-    @Singleton
-    fun providePokemonTcgApi(retrofit: Retrofit): PokemonTcgApi =
-        retrofit.create(PokemonTcgApi::class.java)
 
     @Provides
     @Singleton

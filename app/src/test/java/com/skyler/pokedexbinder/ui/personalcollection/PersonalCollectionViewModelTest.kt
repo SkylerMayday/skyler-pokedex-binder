@@ -247,4 +247,18 @@ class PersonalCollectionViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun `a card with no entry row gets its language from the card id`() = runTest {
+        cacheFlow.value = listOf(cacheRow("tcgdex_ja_M6-1"), cacheRow("tcgdex_th_x-1"))
+
+        val vm = PersonalCollectionViewModel(repository)
+
+        vm.uiState.test {
+            val cards = awaitItem().sections["charizard"].orEmpty()
+            assertEquals("JA", cards.first { it.cardId == "tcgdex_ja_M6-1" }.language)
+            assertEquals("TH", cards.first { it.cardId == "tcgdex_th_x-1" }.language)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }

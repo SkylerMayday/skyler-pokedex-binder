@@ -12,5 +12,12 @@ data class TcgdexCardBriefDto(
 data class TcgdexCardDetailDto(
     val id: String,
     val name: String,
-    val dexId: List<Int>? = null
+    val dexId: List<Int>? = null,
+    val image: String? = null // base URL without extension, absent when TCGdex has no art yet
+)
+
+/** Set summary from `/{lang}/sets` (English names only are used). */
+data class TcgdexSetBriefDto(
+    val id: String,
+    val name: String
 )

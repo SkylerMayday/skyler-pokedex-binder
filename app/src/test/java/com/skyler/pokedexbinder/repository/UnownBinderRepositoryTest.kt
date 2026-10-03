@@ -20,14 +20,14 @@ class UnownBinderRepositoryTest {
         coEvery { unownDao.getByLetterId("A") } returns existing
         val repo = UnownBinderRepository(unownDao)
 
-        val result = repo.assignCard("A", "unown-1", "https://img.pokemontcg.io/unown/1.png", "Unown", "Neo Discovery")
+        val result = repo.assignCard("A", "unown-1", "https://img.example.test/unown/1.png", "Unown", "Neo Discovery")
 
         assertTrue(result)
         coVerify {
             unownDao.upsert(
                 existing.copy(
                     assignedCardId = "unown-1",
-                    assignedCardImageUrl = "https://img.pokemontcg.io/unown/1.png",
+                    assignedCardImageUrl = "https://img.example.test/unown/1.png",
                     assignedCardName = "Unown",
                     assignedCardSetName = "Neo Discovery"
                 )
@@ -41,7 +41,7 @@ class UnownBinderRepositoryTest {
         coEvery { unownDao.getByLetterId("A") } returns existing
         val repo = UnownBinderRepository(unownDao)
 
-        val result = repo.assignCard("A", "unown-1", "https://img.pokemontcg.io/unown/1.png", "Unown", "Neo Discovery")
+        val result = repo.assignCard("A", "unown-1", "https://img.example.test/unown/1.png", "Unown", "Neo Discovery")
 
         assertFalse(result)
         coVerify(exactly = 0) { unownDao.upsert(any()) }
@@ -51,7 +51,7 @@ class UnownBinderRepositoryTest {
     fun `clearCard clears assignment and returns true when unlocked`() = runTest {
         val existing = UnownBinderEntry(
             letterId = "A", position = 0,
-            assignedCardId = "unown-1", assignedCardImageUrl = "https://img.pokemontcg.io/unown/1.png"
+            assignedCardId = "unown-1", assignedCardImageUrl = "https://img.example.test/unown/1.png"
         )
         coEvery { unownDao.getByLetterId("A") } returns existing
         val repo = UnownBinderRepository(unownDao)

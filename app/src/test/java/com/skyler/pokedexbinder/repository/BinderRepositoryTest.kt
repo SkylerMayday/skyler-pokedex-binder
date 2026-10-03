@@ -22,7 +22,7 @@ class BinderRepositoryTest {
             pokemonName = "Bulbasaur",
             dexOrder = 1,
             assignedCardId = "xy1-1",
-            assignedCardImageUrl = "https://img.pokemontcg.io/xy1/1.png"
+            assignedCardImageUrl = "https://img.example.test/xy1/1.png"
         )
         coEvery { mainDao.observeAll() } returns flowOf(listOf(entry))
 
@@ -49,7 +49,7 @@ class BinderRepositoryTest {
         coEvery { mainDao.getByPokemonId("charizard") } returns existing
         val repo = BinderRepository(mainDao)
 
-        val result = repo.assignCard("charizard", "base4-4", "https://img.pokemontcg.io/base4/4.png", "Charizard", "Base Set")
+        val result = repo.assignCard("charizard", "base4-4", "https://img.example.test/base4/4.png", "Charizard", "Base Set")
 
         assertTrue(result)
         coVerify {
@@ -60,7 +60,7 @@ class BinderRepositoryTest {
                     dexNumber = 6,
                     dexOrder = 6,
                     assignedCardId = "base4-4",
-                    assignedCardImageUrl = "https://img.pokemontcg.io/base4/4.png",
+                    assignedCardImageUrl = "https://img.example.test/base4/4.png",
                     assignedCardName = "Charizard",
                     assignedCardSetName = "Base Set"
                 )
@@ -74,7 +74,7 @@ class BinderRepositoryTest {
         coEvery { mainDao.getByPokemonId("charizard") } returns existing
         val repo = BinderRepository(mainDao)
 
-        val result = repo.assignCard("charizard", "base4-4", "https://img.pokemontcg.io/base4/4.png", "Charizard", "Base Set")
+        val result = repo.assignCard("charizard", "base4-4", "https://img.example.test/base4/4.png", "Charizard", "Base Set")
 
         assertFalse(result)
         coVerify(exactly = 0) { mainDao.upsert(any()) }
@@ -84,7 +84,7 @@ class BinderRepositoryTest {
     fun `clearCard clears assignment and returns true when unlocked`() = runTest {
         val existing = MainBinderEntry(
             "charizard", "Charizard", dexNumber = 6, dexOrder = 6,
-            assignedCardId = "base4-4", assignedCardImageUrl = "https://img.pokemontcg.io/base4/4.png"
+            assignedCardId = "base4-4", assignedCardImageUrl = "https://img.example.test/base4/4.png"
         )
         coEvery { mainDao.getByPokemonId("charizard") } returns existing
         val repo = BinderRepository(mainDao)

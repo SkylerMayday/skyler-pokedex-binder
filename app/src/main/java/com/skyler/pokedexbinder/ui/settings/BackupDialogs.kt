@@ -80,8 +80,10 @@ fun ImportDialog(state: ImportUiState, onConfirm: () -> Unit, onDismiss: () -> U
 private fun confirmationText(preview: ImportPreview): String = when (preview) {
     is ImportPreview.Json ->
         "This applies the backup over your current binder data. Slots the backup doesn't mention " +
-            "are left as they are, and Card History entries you've added since are kept. Continue?"
+            "are left as they are, and Card History entries you've added since are kept. " +
+            "$PRE_RESET_RESTORE_WARNING Continue?"
     is ImportPreview.Db ->
         "This replaces your entire database with the backup file (schema v${preview.onDiskVersion}) " +
-            "and restarts the app. Everything currently in your binders is overwritten. Continue?"
+            "and restarts the app. Everything currently in your binders is overwritten. " +
+            "$PRE_RESET_RESTORE_WARNING Continue?"
 }

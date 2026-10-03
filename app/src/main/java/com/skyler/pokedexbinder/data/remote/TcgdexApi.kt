@@ -28,4 +28,22 @@ interface TcgdexApi {
         @Path("lang") lang: String,
         @Path("id") id: String
     ): TcgdexCardDetailDto
+
+    /** Promo-rarity cards by name (substring match), English. */
+    @GET("en/cards")
+    suspend fun searchPromos(
+        @Query("name") name: String,
+        @Query("rarity") rarity: String = "Promo"
+    ): List<TcgdexCardBriefDto>
+
+    /** Cards of one set by number: [setId] as "eq:<id>" (set.id filter is otherwise a substring match). */
+    @GET("{lang}/cards")
+    suspend fun cardsInSet(
+        @Path("lang") lang: String,
+        @Query("set.id") setId: String,
+        @Query("localId") localId: String
+    ): List<TcgdexCardBriefDto>
+
+    @GET("{lang}/sets")
+    suspend fun getSets(@Path("lang") lang: String): List<TcgdexSetBriefDto>
 }

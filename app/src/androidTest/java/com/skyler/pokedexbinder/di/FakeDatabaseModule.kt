@@ -2,6 +2,7 @@ package com.skyler.pokedexbinder.di
 
 import android.content.Context
 import androidx.room.Room
+import com.skyler.pokedexbinder.data.local.CollectionResetDao
 import com.skyler.pokedexbinder.data.local.ConnectingArtDao
 import com.skyler.pokedexbinder.data.local.MainBinderDao
 import com.skyler.pokedexbinder.data.local.PersonalCollectionDao
@@ -25,7 +26,7 @@ import javax.inject.Singleton
  * unacceptable for a feature whose entire purpose is protecting that file from data loss.
  *
  * Provides an in-memory Room database (wiped when the test process ends, never touches the
- * on-device file) plus the same 5 DAOs [DatabaseModule] provides — every `@Provides` here must
+ * on-device file) plus the same 6 DAOs [DatabaseModule] provides — every `@Provides` here must
  * mirror that module's surface, since `@TestInstallIn(replaces = [DatabaseModule::class])`
  * replaces the whole module, not just [DatabaseModule.provideDatabase].
  *
@@ -61,6 +62,9 @@ object FakeDatabaseModule {
 
     @Provides
     fun provideUnownBinderDao(db: PokedexDatabase): UnownBinderDao = db.unownBinderDao()
+
+    @Provides
+    fun provideCollectionResetDao(db: PokedexDatabase): CollectionResetDao = db.collectionResetDao()
 
     // Mirrors DatabaseModule's remaining surface (see the class doc): the real implementations are
     // safe under test — they only read a file path handed to them, and nothing in an instrumented

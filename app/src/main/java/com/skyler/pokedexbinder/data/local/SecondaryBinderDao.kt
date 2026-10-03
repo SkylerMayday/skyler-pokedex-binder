@@ -32,4 +32,12 @@ interface SecondaryBinderDao {
 
     @Query("UPDATE secondary_binder SET language = :language WHERE id = :id")
     suspend fun updateLanguage(id: Int, language: String)
+
+    /** Distinct card ids whose image URL is blank (NULL or ''), for the image sync. */
+    @Query("SELECT DISTINCT cardId FROM secondary_binder WHERE cardId IS NOT NULL AND (cardImageUrl IS NULL OR cardImageUrl = '')")
+    suspend fun blankImageCardIds(): List<String>
+
+    /** Fills a blank image URL only; never overwrites an existing one. Returns rows changed. */
+    @Query("UPDATE secondary_binder SET cardImageUrl = :url WHERE cardId = :cardId AND (cardImageUrl IS NULL OR cardImageUrl = '')")
+    suspend fun fillBlankImage(cardId: String, url: String): Int
 }

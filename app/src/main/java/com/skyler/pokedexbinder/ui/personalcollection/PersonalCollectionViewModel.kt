@@ -65,7 +65,7 @@ class PersonalCollectionViewModel @Inject constructor(
                     name = row.name,
                     imageUrl = row.imageUrl,
                     owned = row.cardId in ownedIds,
-                    language = languageByCardId[row.cardId] ?: "EN"
+                    language = languageByCardId[row.cardId] ?: Language.fromCardId(row.cardId).name
                 )
             }
         }

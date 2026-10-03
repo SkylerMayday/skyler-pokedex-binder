@@ -1,6 +1,5 @@
 package com.skyler.pokedexbinder.ui.scanner
 
-import android.content.Context
 import android.graphics.Bitmap
 import androidx.camera.core.ImageProxy
 import androidx.lifecycle.SavedStateHandle
@@ -19,12 +18,9 @@ import com.skyler.pokedexbinder.domain.SmartThresholdUseCase
 import com.skyler.pokedexbinder.repository.BinderRepository
 import com.skyler.pokedexbinder.repository.CardSearchRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.io.File
-import java.io.FileOutputStream
 import javax.inject.Inject
 
 sealed class ScannerState {
@@ -48,8 +44,7 @@ class ScannerViewModel @Inject constructor(
     private val smartThresholdUseCase: SmartThresholdUseCase,
     private val assignCardUseCase: AssignCardUseCase,
     private val binderRepository: BinderRepository,
-    private val secondaryBinderDao: SecondaryBinderDao,
-    @ApplicationContext private val context: Context
+    private val secondaryBinderDao: SecondaryBinderDao
 ) : ViewModel() {
 
     private val slotId: String = savedStateHandle.get<String>("slotId") ?: ""
@@ -74,18 +69,6 @@ class ScannerViewModel @Inject constructor(
                 // architectural fixes) impossible to root-cause past "something in here is wrong."
                 // Own tag ("ScannerMatch") since this is a genuinely different concern than focus.
                 android.util.Log.i("ScannerMatch", "cropped bitmap ${bitmap.width}x${bitmap.height}")
-
-                // TEMP DIAGNOSTIC (2026-09-11) — saves the exact crop handed to Gemini so it can
-                // be pulled off-device and inspected directly, instead of guessing about capture
-                // quality from a separately hand-taken photo. Investigating why the printed card
-                // number keeps coming back null even after GUIDE_FRAME_WIDTH_RATIO=0.75 and the
-                // gemini-3.6-flash swap, neither of which fixed it. Remove once resolved — never
-                // meant to ship. runCatching: a save failure must never break a real scan.
-                runCatching {
-                    val file = File(context.getExternalFilesDir(null), "scan_debug_${System.currentTimeMillis()}.jpg")
-                    FileOutputStream(file).use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out) }
-                    android.util.Log.i("ScannerMatch", "debug capture saved: ${file.absolutePath}")
-                }
 
                 val parsed = cardScanProvider.scan(bitmap)
                 android.util.Log.i(

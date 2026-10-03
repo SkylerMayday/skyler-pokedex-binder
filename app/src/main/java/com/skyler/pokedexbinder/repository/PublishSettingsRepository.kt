@@ -21,7 +21,8 @@ data class PublishConfig(
     val githubPat: String = "",
     val discordWebhookUrl: String = "",
     val publishPokedex: Boolean = true,      // default ON
-    val publishCardHistory: Boolean = false  // default OFF
+    val publishCardHistory: Boolean = false, // default OFF
+    val postToDiscord: Boolean = false       // default OFF
 )
 
 @Singleton
@@ -34,6 +35,7 @@ class PublishSettingsRepository @Inject constructor(
         val GITHUB_REPO = stringPreferencesKey("github_repo")
         val PUBLISH_POKEDEX = booleanPreferencesKey("publish_pokedex")
         val PUBLISH_CARD_HISTORY = booleanPreferencesKey("publish_card_history")
+        val POST_TO_DISCORD = booleanPreferencesKey("post_to_discord")
     }
 
     private object SecureKeys {
@@ -48,7 +50,8 @@ class PublishSettingsRepository @Inject constructor(
             githubPat = securePrefs.getString(SecureKeys.GITHUB_PAT, "") ?: "",
             discordWebhookUrl = securePrefs.getString(SecureKeys.DISCORD_WEBHOOK_URL, "") ?: "",
             publishPokedex = prefs[Keys.PUBLISH_POKEDEX] ?: true,
-            publishCardHistory = prefs[Keys.PUBLISH_CARD_HISTORY] ?: false
+            publishCardHistory = prefs[Keys.PUBLISH_CARD_HISTORY] ?: false,
+            postToDiscord = prefs[Keys.POST_TO_DISCORD] ?: false
         )
     }
 
@@ -78,5 +81,9 @@ class PublishSettingsRepository @Inject constructor(
 
     suspend fun setPublishCardHistory(v: Boolean) {
         dataStore.edit { it[Keys.PUBLISH_CARD_HISTORY] = v }
+    }
+
+    suspend fun setPostToDiscord(v: Boolean) {
+        dataStore.edit { it[Keys.POST_TO_DISCORD] = v }
     }
 }

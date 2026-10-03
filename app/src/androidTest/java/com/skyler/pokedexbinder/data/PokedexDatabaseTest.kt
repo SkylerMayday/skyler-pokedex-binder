@@ -73,4 +73,55 @@ class PokedexDatabaseTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun resetAllClearsAssignmentsButKeepsSlotRowsAndGroups() = runTest {
+        mainDao.upsert(
+            MainBinderEntry(
+                "bulbasaur", "Bulbasaur", dexNumber = 1, dexOrder = 1,
+                assignedCardId = "tcgdex_sv08-048", assignedCardImageUrl = "u", assignedCardName = "n",
+                assignedCardSetName = "s", language = "JA", remarks = "r", isLocked = true
+            )
+        )
+        val artDao = db.connectingArtDao()
+        artDao.createGroupWithSlots("Group", 1, 2)
+        val slot = artDao.getAllSlots().first()
+        artDao.assignCard(slot.id, "tcgdex_sv08-048", "n", "u")
+        secondaryDao.insertAtEnd(SecondaryBinderEntry(pokemonId = "b", pokemonName = "B", cardId = "c", cardImageUrl = "u"))
+        val pcDao = db.personalCollectionDao()
+        pcDao.upsertCache(listOf(PersonalCollectionCache("c1", "charizard", "n", "u", "s", "")))
+        pcDao.upsertEntry(PersonalCollectionEntry("c1", owned = true, language = "JA"))
+
+        db.collectionResetDao().resetAll()
+
+        val main = mainDao.getByPokemonId("bulbasaur")!!
+        assertNull(main.assignedCardId)
+        assertNull(main.assignedCardImageUrl)
+        assertEquals("EN", main.language)
+        assertNull(main.remarks)
+        assertFalse(main.isLocked)
+        assertEquals(2, artDao.getAllSlots().size)
+        assertTrue(artDao.getAllSlots().all { it.cardId == null && !it.owned })
+        assertEquals(1, artDao.getGroups().size)
+        assertEquals(0, db.collectionResetDao().countCardHistory())
+        assertEquals(0, pcDao.cacheCount())
+        assertTrue(pcDao.getAllEntries().isEmpty())
+    }
+
+    @Test
+    fun fillBlankImageOnlyTouchesBlankRows() = runTest {
+        mainDao.upsert(MainBinderEntry("a", "A", dexOrder = 1, assignedCardId = "card-1", assignedCardImageUrl = null))
+        mainDao.upsert(MainBinderEntry("b", "B", dexOrder = 2, assignedCardId = "card-1", assignedCardImageUrl = ""))
+        mainDao.upsert(MainBinderEntry("c", "C", dexOrder = 3, assignedCardId = "card-1", assignedCardImageUrl = "keep"))
+        mainDao.upsert(MainBinderEntry("d", "D", dexOrder = 4))
+
+        assertEquals(listOf("card-1"), mainDao.blankImageCardIds())
+        assertEquals(2, mainDao.fillBlankImage("card-1", "new"))
+
+        assertEquals("new", mainDao.getByPokemonId("a")!!.assignedCardImageUrl)
+        assertEquals("new", mainDao.getByPokemonId("b")!!.assignedCardImageUrl)
+        assertEquals("keep", mainDao.getByPokemonId("c")!!.assignedCardImageUrl)
+        assertNull(mainDao.getByPokemonId("d")!!.assignedCardImageUrl)
+        assertTrue(mainDao.blankImageCardIds().isEmpty())
+    }
 }

@@ -102,7 +102,7 @@ class QuickScanViewModelTest {
 
     @Test
     fun `empty fast result stays Searching, does not jump to NotFound early`() = runTest {
-        // CLB Mr. Mime scenario: fast source (pokemontcg.io+TCGdex) finds nothing, but TCGCSV
+        // CLB Mr. Mime scenario: fast source (TCGdex) finds nothing, but TCGCSV
         // (still running) might rescue it — must NOT show "not found" before TCGCSV finishes.
         every { cardSearchRepository.searchStreaming(eq("Mr Mime"), any()) } returns
             flow { emit(SearchProgress.Fast(emptyList())); awaitCancellation() }

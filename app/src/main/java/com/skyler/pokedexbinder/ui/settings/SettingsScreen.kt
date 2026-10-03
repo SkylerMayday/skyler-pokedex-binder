@@ -62,6 +62,11 @@ fun SettingsScreen(
         ActivityResultContracts.OpenMultipleDocuments()
     ) { uris -> importVm.onFilesPicked(uris) }
 
+    val resetVm: ResetCollectionViewModel = hiltViewModel()
+    val resetState by resetVm.state.collectAsState()
+    val imageSyncVm: ImageSyncViewModel = hiltViewModel()
+    val imageSyncState by imageSyncVm.state.collectAsState()
+
     LaunchedEffect(backupState) {
         val current = backupState
         if (current is BackupUiState.Success) {
@@ -71,6 +76,22 @@ fun SettingsScreen(
     }
 
     BackupDialog(state = backupState, onDismiss = { backupVm.dismiss() })
+
+    LaunchedEffect(resetState) {
+        // The share sheet opens once on entering the second confirmation; "Share backup again" re-opens it.
+        val current = resetState
+        if (current is ResetUiState.Confirm2 && !current.shareSheetShown) {
+            context.startActivity(current.shareIntent)
+            resetVm.onShareSheetShown()
+        }
+    }
+    ResetCollectionDialog(
+        state = resetState,
+        onExport = { resetVm.exportAndContinue() },
+        onConfirm = { resetVm.confirmReset(it) },
+        onShare = { context.startActivity(it) },
+        onDismiss = { resetVm.dismiss() }
+    )
 
     ImportDialog(
         state = importState,
@@ -93,7 +114,7 @@ fun SettingsScreen(
             title = { Text("Restore from snapshot?") },
             text = { Text("This overwrites your local card assignments with the ones from the " +
                 "published snapshot on GitHub. Slots you've filled in since the last publish will be " +
-                "lost. This cannot be undone.") },
+                "lost. This cannot be undone. $PRE_RESET_RESTORE_WARNING") },
             confirmButton = {
                 TextButton(onClick = { showRestoreConfirm = false; showRestore = true }) { Text("Restore") }
             },
@@ -275,6 +296,14 @@ fun SettingsScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
+            SettingToggleItem(
+                title = "Post updates to Discord",
+                description = "Off by default. When on, Publish now posts owned-card changes to the webhook below. Installs that posted before stop until you turn this on.",
+                checked = publishConfig.postToDiscord,
+                onCheckedChange = { viewModel.setPostToDiscord(it) }
+            )
+            HorizontalDivider()
+
             OutlinedTextField(
                 value = discordWebhookText,
                 onValueChange = { discordWebhookText = it; viewModel.setDiscordWebhookUrl(it) },
@@ -356,8 +385,53 @@ fun SettingsScreen(
                 Text("Restore from file")
             }
 
+            // ---- Card images ----
+            Spacer(Modifier.height(8.dp))
+            SectionHeader("Card images")
+
+            OutlinedButton(
+                onClick = { imageSyncVm.startSync() },
+                enabled = imageSyncState !is ImageSyncUiState.Running,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text("Sync card images")
+            }
+            imageSyncStatus(imageSyncState)?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
+
+            // ---- Danger zone ----
+            Spacer(Modifier.height(8.dp))
+            SectionHeader("Danger zone")
+
+            OutlinedButton(
+                onClick = { resetVm.begin() },
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text("Reset collection data")
+            }
+
         }
     }
+}
+
+private fun imageSyncStatus(state: ImageSyncUiState): String? = when (state) {
+    ImageSyncUiState.Idle -> null
+    is ImageSyncUiState.Running -> "Checking ${state.done}/${state.total}..."
+    is ImageSyncUiState.Done -> with(state.result) {
+        "Updated $updated · Still missing $stillMissing (TCGdex has no image yet) · " +
+            "Couldn't check $failed · Not syncable $unsyncable"
+    }
+    is ImageSyncUiState.Error -> "Image sync failed: ${state.message}"
 }
 
 @Composable

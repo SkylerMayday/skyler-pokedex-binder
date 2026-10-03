@@ -18,229 +18,250 @@ import org.junit.Test
 
 class CardSearchRepositoryTest {
 
-    // Default-empty stubs so unstubbed queries return empty on their own, not via safeSearch's
-    // broad catch swallowing a strict-mockk MockKException. Specific stubs added later win.
-    private val api = mockk<PokemonTcgApi> {
-        coEvery { searchCards(any()) } returns TcgCardsResponse(data = emptyList(), totalCount = 0)
-    }
+    // Default-empty stubs so unstubbed queries return empty (a successful, empty TCGdex call) instead
+    // of a strict-mockk MockKException, which the repository would count as a failed call.
     private val tcgdexApi = mockk<TcgdexApi> {
         coEvery { searchCards(any()) } returns emptyList()
         coEvery { filterCards(any(), any(), any(), any(), any()) } returns emptyList()
+        coEvery { searchPromos(any(), any()) } returns emptyList()
+        coEvery { cardsInSet(any(), any(), any()) } returns emptyList()
+        coEvery { getSets(any()) } returns emptyList()
     }
     private val tcgcsvApi = mockk<TcgcsvApi>()
-
-    @Test
-    fun `searchByNameAndNumber builds correct query and maps results`() = runTest {
-        val dto = TcgCardDto(
-            id = "xy1-1", name = "Venusaur-EX", number = "1",
-            set = TcgSetDto("XY"),
-            images = TcgImagesDto("https://small.url", "https://large.url")
-        )
-        coEvery { api.searchCards("name:*Venusaur* number:\"1\" -set.series:Pocket") } returns
-            TcgCardsResponse(data = listOf(dto), totalCount = 1)
-
-        val repo = CardSearchRepository(api, tcgdexApi, tcgcsvApi)
-        val results = repo.searchByNameAndNumber("Venusaur", "1")
-
-        assertEquals(1, results.size)
-        assertEquals("xy1-1", results[0].id)
-        assertEquals("https://large.url", results[0].imageUrl)
+    private val setCatalog = TcgdexSetCatalog(tcgdexApi)
+    private val japanImages = mockk<TcgcsvJapanSource> {
+        coEvery { imageUrl(any(), any(), any()) } returns null
     }
 
-    @Test
-    fun `searchByName builds name-only query`() = runTest {
-        val dto = TcgCardDto(
-            id = "base1-58", name = "Pikachu", number = "58",
-            set = TcgSetDto("Base"),
-            images = TcgImagesDto("https://small.url", "https://large.url")
-        )
-        coEvery { api.searchCards("name:*Pikachu* -set.series:Pocket") } returns
-            TcgCardsResponse(data = listOf(dto), totalCount = 1)
-        coEvery { tcgdexApi.searchCards("Pikachu") } returns emptyList()
-
-        val repo = CardSearchRepository(api, tcgdexApi, tcgcsvApi)
-        val results = repo.searchByName("Pikachu")
-
-        assertEquals(1, results.size)
-        assertEquals("base1-58", results[0].id)
-    }
+    // --- name / number / promo search (TCGdex only) ---
 
     @Test
-    fun `searchByName merges cross-source duplicate with mismatched setName into one card`() = runTest {
-        val dto = TcgCardDto(
-            id = "xyevo-25", name = "Pikachu", number = "25",
-            set = TcgSetDto("XY Evolutions"),
-            images = TcgImagesDto("https://small.url", "https://large.url")
-        )
-        coEvery { api.searchCards("name:*Pikachu* -set.series:Pocket") } returns
-            TcgCardsResponse(data = listOf(dto), totalCount = 1)
+    fun `searchByNameWithJapanese maps TCGdex cards with real English set names and high-res images`() = runTest {
+        coEvery { tcgdexApi.getSets("en") } returns listOf(TcgdexSetBriefDto("base1", "Base Set"))
         coEvery { tcgdexApi.searchCards("Pikachu") } returns
-            listOf(TcgdexCardBriefDto(id = "xyevo-25", localId = "25", name = "Pikachu"))
+            listOf(brief("base1-58", "58", "Pikachu", image = "https://assets.tcgdex.net/en/base/base1/58"))
+        coEvery { tcgdexApi.getCard("en", "base1-58") } returns TcgdexCardDetailDto("base1-58", "Pikachu", null)
 
-        val repo = CardSearchRepository(api, tcgdexApi, tcgcsvApi)
-        val results = repo.searchByName("Pikachu")
+        val results = repo().searchByNameWithJapanese("Pikachu")
 
         assertEquals(1, results.size)
-        assertEquals("xyevo-25", results[0].id) // primary wins, not "tcgdex_xyevo-25"
+        assertEquals("tcgdex_base1-58", results[0].id)
+        assertEquals("Base Set", results[0].setName)
+        assertEquals("https://assets.tcgdex.net/en/base/base1/58/high.webp", results[0].imageUrl)
     }
 
     @Test
-    fun `searchByName keeps both cards when same name but different number`() = runTest {
-        val dto = TcgCardDto(
-            id = "base1-25", name = "Pikachu", number = "25",
-            set = TcgSetDto("Base"),
-            images = TcgImagesDto("https://small.url", "https://large.url")
+    fun `English set name falls back to the bare set code when the set list is unreachable`() = runTest {
+        coEvery { tcgdexApi.getSets("en") } throws IOException("down")
+        coEvery { tcgdexApi.searchCards("Pikachu") } returns listOf(brief("base1-58", "58", "Pikachu"))
+
+        val results = repo().searchByNameWithJapanese("Pikachu", 25)
+
+        assertEquals("tcgdex_base1-58", results[0].id)
+        assertEquals("BASE1", results[0].setName)
+    }
+
+    @Test
+    fun `searchByNameWithJapanese keeps both cards with the same name but different number`() = runTest {
+        coEvery { tcgdexApi.searchCards("Pikachu") } returns listOf(
+            brief("base1-25", "25", "Pikachu"), brief("base1-58", "58", "Pikachu")
         )
-        coEvery { api.searchCards("name:*Pikachu* -set.series:Pocket") } returns
-            TcgCardsResponse(data = listOf(dto), totalCount = 1)
-        coEvery { tcgdexApi.searchCards("Pikachu") } returns
-            listOf(TcgdexCardBriefDto(id = "base1-58", localId = "58", name = "Pikachu"))
 
-        val repo = CardSearchRepository(api, tcgdexApi, tcgcsvApi)
-        val results = repo.searchByName("Pikachu")
+        val results = repo().searchByNameWithJapanese("Pikachu", 25)
 
-        assertEquals(2, results.size)
+        assertEquals(listOf("tcgdex_base1-25", "tcgdex_base1-58"), results.map { it.id })
     }
 
     @Test
-    fun `searchByName drops TCG Pocket cards from the TCGdex results`() = runTest {
+    fun `searchByNameWithJapanese drops TCG Pocket cards from the TCGdex results`() = runTest {
         coEvery { tcgdexApi.searchCards("Wishiwashi") } returns listOf(
             TcgdexCardBriefDto(id = "A3-184", localId = "184", name = "Wishiwashi ex", image = "https://assets.tcgdex.net/en/tcgp/A3/184"),
             TcgdexCardBriefDto(id = "sm7-31", localId = "31", name = "Wishiwashi", image = "https://assets.tcgdex.net/en/sm/sm7/31")
         )
 
-        val results = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByName("Wishiwashi")
+        val results = repo().searchByNameWithJapanese("Wishiwashi", 746)
 
         assertEquals(listOf("tcgdex_sm7-31"), results.map { it.id })
     }
 
-    // --- searchByParsedInfo (query cascade order) ---
-    // Unstubbed api calls return empty (see the default stubs above), so each test only stubs
-    // the queries it wants to hit.
+    @Test
+    fun `searchByNumber exact-filters the substring localId match`() = runTest {
+        coEvery { tcgdexApi.filterCards("en", "SWSH260", null, null, null) } returns listOf(
+            brief("swsh12pt5gg-SWSH260", "SWSH260", "Pikachu"),
+            brief("other-SWSH2601", "SWSH2601", "Other")
+        )
 
-    private fun cardDto(id: String, name: String, number: String) = TcgCardDto(
-        id = id, name = name, number = number,
-        set = TcgSetDto("Set"),
-        images = TcgImagesDto("https://small.url", "https://large.url")
-    )
+        val results = repo().searchByNumber("swsh260")
+
+        assertEquals(listOf("tcgdex_swsh12pt5gg-SWSH260"), results.map { it.id })
+    }
+
+    @Test
+    fun `searchByNumber falls back to a set-scoped query for SVP and MEP numbers`() = runTest {
+        coEvery { tcgdexApi.cardsInSet("en", "eq:svp", "208") } returns listOf(brief("svp-208", "208", "Victini"))
+
+        val results = repo().searchByNumber("SVP208")
+
+        assertEquals(listOf("tcgdex_svp-208"), results.map { it.id })
+        coVerify(exactly = 1) { tcgdexApi.cardsInSet("en", "eq:svp", "208") }
+    }
+
+    @Test
+    fun `searchByNumber does not use the set-scoped query for other prefixes`() = runTest {
+        val results = repo().searchByNumber("SWSH999")
+
+        assertTrue(results.isEmpty())
+        coVerify(exactly = 0) { tcgdexApi.cardsInSet(any(), any(), any()) }
+    }
+
+    @Test
+    fun `searchPromosByName queries the Promo rarity and maps TCGdex ids`() = runTest {
+        coEvery { tcgdexApi.searchPromos("Pikachu", "Promo") } returns listOf(brief("svp-208", "208", "Pikachu"))
+
+        val results = repo().searchPromosByName("Pikachu")
+
+        assertEquals(listOf("tcgdex_svp-208"), results.map { it.id })
+    }
+
+    // --- searchByParsedInfo (query cascade order, TCGdex only) ---
+    // Unstubbed filterCards/searchCards return empty (see the default stubs above), so each test
+    // only stubs the queries it wants to hit. parsed() has no language, so the lang order is [ja, en].
 
     private fun parsed(name: String?, number: String?, total: String?, dex: Int?) =
         ParsedCardInfo(cardName = name, cardNumber = number, setTotal = total, hp = null, artist = null, dexNumber = dex)
 
-    private fun stub(query: String, vararg cards: TcgCardDto) {
-        coEvery { api.searchCards("$query -set.series:Pocket") } returns
-            TcgCardsResponse(data = cards.toList(), totalCount = cards.size)
-    }
-
     @Test
     fun `searchByParsedInfo prefers dex-pinned match over species-blind number+total`() = runTest {
-        // Live 2026-09-24: Castform scan, name queries empty, number+total matched Munna #116.
-        stub("nationalPokedexNumbers:351 number:\"116\" set.total:172", cardDto("x-116", "Castform", "116"))
-        stub("number:\"116\" set.total:172", cardDto("bw-116", "Munna", "116"))
+        // Live 2026-09-24: Castform scan, number+total matched Munna #116.
+        coEvery { tcgdexApi.filterCards("en", "116", "eq:172", "eq:351", null) } returns
+            listOf(brief("x-116", "116", "Castform"))
+        coEvery { tcgdexApi.filterCards("en", "116", "eq:172", null, null) } returns
+            listOf(brief("bw-116", "116", "Munna"))
 
-        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
-            parsed("Castform", "116", "172", 351)
-        )
+        val result = repo().searchByParsedInfo(parsed("Castform", "116", "172", 351))
 
-        assertEquals(listOf("x-116"), result.cards.map { it.id })
-        assertEquals("dex+number+total", result.matchedQuery)
+        assertEquals(listOf("tcgdex_x-116"), result.cards.map { it.id })
+        assertEquals("tcgdex-en+dex+number+total", result.matchedQuery)
     }
 
     @Test
-    fun `searchByParsedInfo still tries name before dex`() = runTest {
-        stub("name:*Castform* number:\"116\" set.total:172", cardDto("n-116", "Castform", "116"))
-        stub("nationalPokedexNumbers:351 number:\"116\" set.total:172", cardDto("x-116", "Castform", "116"))
-        // Species-blind hit too, so this fails on the pre-session-18 order (number+total first).
-        stub("number:\"116\" set.total:172", cardDto("bw-116", "Munna", "116"))
+    fun `searchByParsedInfo tries dex+number+total before name+number+total and species-blind number+total`() = runTest {
+        // All three steps would hit: swapping the dex and name steps must fail this test.
+        coEvery { tcgdexApi.filterCards("en", "116", "eq:172", "eq:351", null) } returns
+            listOf(brief("x-116", "116", "Castform"))
+        coEvery { tcgdexApi.filterCards("en", "116", "eq:172", null, "Castform") } returns
+            listOf(brief("n-116", "116", "Castform"))
+        coEvery { tcgdexApi.filterCards("en", "116", "eq:172", null, null) } returns
+            listOf(brief("bw-116", "116", "Castform"))
 
-        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
-            parsed("Castform", "116", "172", 351)
+        val result = repo().searchByParsedInfo(parsed("Castform", "116", "172", 351))
+
+        assertEquals(listOf("tcgdex_x-116"), result.cards.map { it.id })
+        assertEquals("tcgdex-en+dex+number+total", result.matchedQuery)
+        coVerify(exactly = 0) { tcgdexApi.filterCards("en", "116", "eq:172", null, "Castform") }
+    }
+
+    @Test
+    fun `searchByParsedInfo continues to broad-number after number+total is name-filtered out`() = runTest {
+        coEvery { tcgdexApi.filterCards("en", "11", "eq:64", null, null) } returns
+            listOf(brief("jungle-11", "11", "Snorlax"))
+        coEvery { tcgdexApi.filterCards("en", "11", null, null, null) } returns listOf(
+            brief("jungle-11", "11", "Snorlax"), brief("bw-11", "11", "Black Kyurem")
         )
 
-        assertEquals(listOf("n-116"), result.cards.map { it.id })
-        assertEquals("name+number+total", result.matchedQuery)
+        val result = repo().searchByParsedInfo(parsed("Black Kyurem", "11", "64", null))
+
+        assertEquals(listOf("tcgdex_bw-11"), result.cards.map { it.id })
+        assertEquals("broad-number", result.matchedQuery)
+    }
+
+    @Test
+    fun `searchByParsedInfo uses name+number+total when there is no dex`() = runTest {
+        coEvery { tcgdexApi.filterCards("en", "116", "eq:172", null, "Castform") } returns
+            listOf(brief("n-116", "116", "Castform"))
+        coEvery { tcgdexApi.filterCards("en", "116", "eq:172", null, null) } returns
+            listOf(brief("bw-116", "116", "Munna"))
+
+        val result = repo().searchByParsedInfo(parsed("Castform", "116", "172", null))
+
+        assertEquals(listOf("tcgdex_n-116"), result.cards.map { it.id })
+        assertEquals("tcgdex-en+name+number+total", result.matchedQuery)
     }
 
     @Test
     fun `searchByParsedInfo labels name+number when the set total is unknown`() = runTest {
-        stub("name:*Castform* number:\"116\"", cardDto("n-116", "Castform", "116"))
+        coEvery { tcgdexApi.filterCards("en", "116", null, null, "Castform") } returns
+            listOf(brief("n-116", "116", "Castform"))
 
-        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
-            parsed("Castform", "116", null, 351)
-        )
+        val result = repo().searchByParsedInfo(parsed("Castform", "116", null, 351))
 
-        assertEquals(listOf("n-116"), result.cards.map { it.id })
-        assertEquals("name+number", result.matchedQuery)
+        assertEquals(listOf("tcgdex_n-116"), result.cards.map { it.id })
+        assertEquals("tcgdex-en+name+number", result.matchedQuery)
+    }
+
+    @Test
+    fun `searchByParsedInfo labels dex+number when the total filter matches nothing`() = runTest {
+        coEvery { tcgdexApi.filterCards("en", "116", null, "eq:351", null) } returns
+            listOf(brief("x-116", "116", "Castform"))
+
+        val result = repo().searchByParsedInfo(parsed("Castform", "116", "172", 351))
+
+        assertEquals(listOf("tcgdex_x-116"), result.cards.map { it.id })
+        assertEquals("tcgdex-en+dex+number", result.matchedQuery)
+        assertFalse(result.identityPinned)
     }
 
     @Test
     fun `searchByParsedInfo labels broad-dex when only a dex number is available`() = runTest {
-        stub("nationalPokedexNumbers:351", cardDto("x-116", "Castform", "116"))
+        coEvery { tcgdexApi.filterCards("en", null, null, "eq:351", null) } returns
+            listOf(brief("x-116", "116", "Castform"))
 
-        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
-            parsed(null, null, null, 351)
-        )
+        val result = repo().searchByParsedInfo(parsed(null, null, null, 351))
 
-        assertEquals(listOf("x-116"), result.cards.map { it.id })
+        assertEquals(listOf("tcgdex_x-116"), result.cards.map { it.id })
         assertEquals("broad-dex", result.matchedQuery)
     }
 
     @Test
-    fun `searchByParsedInfo falls back to number+total only after dex queries come up empty`() = runTest {
-        stub("number:\"116\" set.total:172", cardDto("bw-116", "Munna", "116"))
+    fun `searchByParsedInfo accepts a name-less number+total hit because there is nothing to verify`() = runTest {
+        coEvery { tcgdexApi.filterCards("en", "116", "eq:172", null, null) } returns
+            listOf(brief("bw-116", "116", "Munna"))
 
-        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
-            parsed(null, "116", "172", 351)
-        )
+        val result = repo().searchByParsedInfo(parsed(null, "116", "172", 351))
 
-        assertEquals(listOf("bw-116"), result.cards.map { it.id })
-        assertEquals("number+total", result.matchedQuery)
+        assertEquals(listOf("tcgdex_bw-116"), result.cards.map { it.id })
+        assertEquals("tcgdex-en+number+total", result.matchedQuery)
     }
 
     @Test
-    fun `searchByParsedInfo reports none-matched when every query is empty`() = runTest {
-        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
-            parsed(null, "116", null, null)
-        )
+    fun `searchByParsedInfo reports none-matched and skips number-alone when there is no name`() = runTest {
+        val result = repo().searchByParsedInfo(parsed(null, "116", null, null))
 
         assertTrue(result.cards.isEmpty())
         assertEquals("none-matched", result.matchedQuery)
-    }
-
-    @Test
-    fun `searchByParsedInfo prefers dex+number over number+total when dex+number+total is empty`() = runTest {
-        stub("nationalPokedexNumbers:351 number:\"116\"", cardDto("x-116", "Castform", "116"))
-        stub("number:\"116\" set.total:172", cardDto("bw-116", "Munna", "116"))
-
-        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
-            parsed(null, "116", "172", 351)
-        )
-
-        assertEquals(listOf("x-116"), result.cards.map { it.id })
-        assertEquals("dex+number", result.matchedQuery)
+        // Number alone is thousands of TCGdex cards; without a name to verify it is never queried.
+        coVerify(exactly = 0) { tcgdexApi.filterCards(any(), "116", any(), any(), any()) }
     }
 
     @Test
     fun `searchByParsedInfo labels broad-name when only a name is available`() = runTest {
-        stub("name:*Castform*", cardDto("x-116", "Castform", "116"))
+        coEvery { tcgdexApi.searchCards("Castform") } returns listOf(brief("x-116", "116", "Castform"))
 
-        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
-            parsed("Castform", null, null, null)
-        )
+        val result = repo().searchByParsedInfo(parsed("Castform", null, null, null))
 
-        assertEquals(listOf("x-116"), result.cards.map { it.id })
+        assertEquals(listOf("tcgdex_x-116"), result.cards.map { it.id })
         assertEquals("broad-name", result.matchedQuery)
     }
 
     @Test
-    fun `searchByParsedInfo labels broad-number, not none-matched, when number-alone hits`() = runTest {
-        stub("number:\"116\"", cardDto("bw-116", "Munna", "116"))
-
-        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
-            parsed(null, "116", null, null)
+    fun `searchByParsedInfo labels broad-number, not none-matched, when name-verified number-alone hits`() = runTest {
+        coEvery { tcgdexApi.filterCards("en", "11", null, null, null) } returns listOf(
+            brief("jungle-11", "11", "Snorlax"), brief("bw-11", "11", "Black Kyurem")
         )
 
-        assertEquals(listOf("bw-116"), result.cards.map { it.id })
+        val result = repo().searchByParsedInfo(parsed("Black Kyurem", "11", null, null))
+
+        assertEquals(listOf("tcgdex_bw-11"), result.cards.map { it.id })
         assertEquals("broad-number", result.matchedQuery)
     }
 
@@ -248,11 +269,10 @@ class CardSearchRepositoryTest {
 
     @Test
     fun `searchByParsedInfo rejects a species-blind number+total hit whose name does not match`() = runTest {
-        stub("number:\"11\" set.total:64", cardDto("jungle-11", "Snorlax", "11"))
+        coEvery { tcgdexApi.filterCards("en", "11", "eq:64", null, null) } returns
+            listOf(brief("jungle-11", "11", "Snorlax"))
 
-        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
-            parsed("Black Kyurem", "11", "64", 646)
-        )
+        val result = repo().searchByParsedInfo(parsed("Black Kyurem", "11", "64", 646))
 
         assertTrue(result.cards.isEmpty())
         assertEquals("none-matched", result.matchedQuery)
@@ -260,36 +280,21 @@ class CardSearchRepositoryTest {
 
     @Test
     fun `searchByParsedInfo keeps number+total hit when the name matches`() = runTest {
-        stub("number:\"11\" set.total:64", cardDto("s-11", "Black Kyurem", "11"))
+        coEvery { tcgdexApi.filterCards("en", "11", "eq:64", null, null) } returns
+            listOf(brief("s-11", "11", "Black Kyurem"))
 
-        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
-            parsed("Black Kyurem", "11", "64", 646)
-        )
+        val result = repo().searchByParsedInfo(parsed("Black Kyurem", "11", "64", 646))
 
-        assertEquals(listOf("s-11"), result.cards.map { it.id })
-        assertEquals("number+total", result.matchedQuery)
-    }
-
-    @Test
-    fun `searchByParsedInfo continues to broad-number after number+total is name-filtered out`() = runTest {
-        stub("number:\"11\" set.total:64", cardDto("jungle-11", "Snorlax", "11"))
-        stub("number:\"11\"", cardDto("jungle-11", "Snorlax", "11"), cardDto("bw-11", "Black Kyurem", "11"))
-
-        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
-            parsed("Black Kyurem", "11", "64", 646)
-        )
-
-        assertEquals(listOf("bw-11"), result.cards.map { it.id })
-        assertEquals("broad-number", result.matchedQuery)
+        assertEquals(listOf("tcgdex_s-11"), result.cards.map { it.id })
+        assertEquals("tcgdex-en+number+total", result.matchedQuery)
     }
 
     @Test
     fun `searchByParsedInfo reports none-matched when broad-number hits are all name mismatches`() = runTest {
-        stub("number:\"11\"", cardDto("jungle-11", "Snorlax", "11"))
+        coEvery { tcgdexApi.filterCards("en", "11", null, null, null) } returns
+            listOf(brief("jungle-11", "11", "Snorlax"))
 
-        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
-            parsed("Black Kyurem", "11", null, null)
-        )
+        val result = repo().searchByParsedInfo(parsed("Black Kyurem", "11", null, null))
 
         assertTrue(result.cards.isEmpty())
         assertEquals("none-matched", result.matchedQuery)
@@ -297,17 +302,71 @@ class CardSearchRepositoryTest {
 
     @Test
     fun `searchByParsedInfo does not name-filter broad-dex`() = runTest {
-        stub(
-            "nationalPokedexNumbers:687",
-            cardDto("m-52", "Malamar", "52"), cardDto("m-48", "Malamar", "48")
-        )
+        coEvery { tcgdexApi.filterCards("en", null, null, "eq:687", null) } returns
+            listOf(brief("m-52", "52", "Malamar"), brief("m-48", "48", "Malamar"))
 
-        val result = CardSearchRepository(api, tcgdexApi, tcgcsvApi).searchByParsedInfo(
-            parsed("Mega Malamar ex", "48", "76", 687)
-        )
+        val result = repo().searchByParsedInfo(parsed("Mega Malamar ex", "48", "76", 687))
 
-        assertEquals(listOf("m-52", "m-48"), result.cards.map { it.id })
+        assertEquals(listOf("tcgdex_m-52", "tcgdex_m-48"), result.cards.map { it.id })
         assertEquals("broad-dex", result.matchedQuery)
+    }
+
+    // --- TCGdex outage ---
+
+    private fun assertUnavailable(block: suspend () -> Unit) = runTest {
+        try {
+            block()
+            fail("expected TcgdexUnavailableException")
+        } catch (e: TcgdexUnavailableException) {
+            assertTrue(e.message!!.contains("unreachable"))
+        }
+    }
+
+    @Test
+    fun `searchByParsedInfo throws Unavailable when every TCGdex call failed and nothing matched`() {
+        coEvery { tcgdexApi.filterCards(any(), any(), any(), any(), any()) } throws IOException("network down")
+        coEvery { tcgdexApi.searchCards(any()) } throws IOException("network down")
+
+        assertUnavailable { repo().searchByParsedInfo(parsed("Castform", "116", "172", 351)) }
+    }
+
+    @Test
+    fun `searchByParsedInfo does not throw when only some TCGdex calls failed`() = runTest {
+        coEvery { tcgdexApi.filterCards("ja", any(), any(), any(), any()) } throws IOException("down")
+
+        val result = repo().searchByParsedInfo(parsed("Castform", "116", "172", 351))
+
+        assertTrue(result.cards.isEmpty())
+        assertEquals("none-matched", result.matchedQuery)
+    }
+
+    @Test
+    fun `searchByParsedInfo with nothing to query is none-matched, not Unavailable`() = runTest {
+        val result = repo().searchByParsedInfo(parsed(null, null, null, null))
+
+        assertEquals("none-matched", result.matchedQuery)
+    }
+
+    @Test
+    fun `searchByNameWithJapanese throws Unavailable when the name search fails and nothing else answered`() {
+        coEvery { tcgdexApi.searchCards(any()) } throws IOException("down")
+
+        assertUnavailable { repo().searchByNameWithJapanese("Pikachu") }
+    }
+
+    @Test
+    fun `searchByNameWithJapanese returns an empty list when TCGdex answered with no cards`() = runTest {
+        assertTrue(repo().searchByNameWithJapanese("Nonexistentmon").isEmpty())
+    }
+
+    @Test
+    fun `searchByDexNumber searchByNumber and searchPromosByName throw Unavailable on outage`() {
+        coEvery { tcgdexApi.filterCards(any(), any(), any(), any(), any()) } throws IOException("down")
+        coEvery { tcgdexApi.searchPromos(any(), any()) } throws IOException("down")
+
+        assertUnavailable { repo().searchByDexNumber(25) }
+        assertUnavailable { repo().searchByNumber("SWSH001") }
+        assertUnavailable { repo().searchPromosByName("Pikachu") }
     }
 
     // --- searchTcgcsvByName (retry-on-empty fallback) ---
@@ -326,7 +385,7 @@ class CardSearchRepositoryTest {
         coEvery { tcgcsvApi.getGroups() } returns TcgcsvGroupsResponse(results = listOf(group))
         coEvery { tcgcsvApi.getProducts(23323) } returns TcgcsvProductsResponse(results = listOf(product))
 
-        val repo = CardSearchRepository(api, tcgdexApi, tcgcsvApi)
+        val repo = CardSearchRepository(tcgdexApi, tcgcsvApi, setCatalog, japanImages)
         val results = repo.searchTcgcsvByName("Mr. Mime")
 
         assertEquals(1, results.size)
@@ -345,7 +404,7 @@ class CardSearchRepositoryTest {
         coEvery { tcgcsvApi.getGroups() } returns TcgcsvGroupsResponse(results = listOf(group))
         coEvery { tcgcsvApi.getProducts(1) } returns TcgcsvProductsResponse(results = listOf(product))
 
-        val repo = CardSearchRepository(api, tcgdexApi, tcgcsvApi)
+        val repo = CardSearchRepository(tcgdexApi, tcgcsvApi, setCatalog, japanImages)
         val results = repo.searchTcgcsvByName("Mr. Mime")
 
         assertTrue(results.isEmpty())
@@ -355,7 +414,7 @@ class CardSearchRepositoryTest {
     fun `searchTcgcsvByName returns empty and does not throw on API failure`() = runTest {
         coEvery { tcgcsvApi.getGroups() } throws RuntimeException("network down")
 
-        val repo = CardSearchRepository(api, tcgdexApi, tcgcsvApi)
+        val repo = CardSearchRepository(tcgdexApi, tcgcsvApi, setCatalog, japanImages)
         val results = repo.searchTcgcsvByName("Mr. Mime")
 
         assertTrue(results.isEmpty())
@@ -366,7 +425,7 @@ class CardSearchRepositoryTest {
     @Test
     fun `searchStreaming emits Fast before Complete`() = runTest {
         coEvery { tcgcsvApi.getGroups() } returns TcgcsvGroupsResponse(results = emptyList())
-        val repo = CardSearchRepository(api, tcgdexApi, tcgcsvApi)
+        val repo = CardSearchRepository(tcgdexApi, tcgcsvApi, setCatalog, japanImages)
         val fast = listOf(
             TcgCard("base1-1", "Pikachu", "58", "Base", "https://img/a.jpg", listOf("Pikachu"))
         )
@@ -389,7 +448,7 @@ class CardSearchRepositoryTest {
         )
         coEvery { tcgcsvApi.getGroups() } returns TcgcsvGroupsResponse(results = listOf(group))
         coEvery { tcgcsvApi.getProducts(5) } returns TcgcsvProductsResponse(results = listOf(product))
-        val repo = CardSearchRepository(api, tcgdexApi, tcgcsvApi)
+        val repo = CardSearchRepository(tcgdexApi, tcgcsvApi, setCatalog, japanImages)
         val fast = listOf(
             TcgCard("tcgdex_svp-208", "Victini", "208", "SVP", "", listOf("Victini"))
         )
@@ -412,7 +471,7 @@ class CardSearchRepositoryTest {
         )
         coEvery { tcgcsvApi.getGroups() } returns TcgcsvGroupsResponse(results = listOf(group))
         coEvery { tcgcsvApi.getProducts(7) } returns TcgcsvProductsResponse(results = listOf(product))
-        val repo = CardSearchRepository(api, tcgdexApi, tcgcsvApi)
+        val repo = CardSearchRepository(tcgdexApi, tcgcsvApi, setCatalog, japanImages)
 
         val complete = repo.searchStreaming("Mr. Mime") { emptyList() }.toList()
             .last() as SearchProgress.Complete
@@ -431,7 +490,7 @@ class CardSearchRepositoryTest {
         )
         coEvery { tcgcsvApi.getGroups() } returns TcgcsvGroupsResponse(results = listOf(group))
         coEvery { tcgcsvApi.getProducts(5) } returns TcgcsvProductsResponse(results = listOf(product))
-        val repo = CardSearchRepository(api, tcgdexApi, tcgcsvApi)
+        val repo = CardSearchRepository(tcgdexApi, tcgcsvApi, setCatalog, japanImages)
         val fast = listOf(
             TcgCard("tcgdex_svp-208", "Victini", "208", "SVP", "https://existing/img.jpg", listOf("Victini"))
         )
@@ -453,7 +512,7 @@ class CardSearchRepositoryTest {
             tcgcsvGroupScanCompleted = true
             TcgcsvProductsResponse(results = emptyList())
         }
-        val repo = CardSearchRepository(api, tcgdexApi, tcgcsvApi)
+        val repo = CardSearchRepository(tcgdexApi, tcgcsvApi, setCatalog, japanImages)
         val fast = listOf(
             TcgCard("base1-1", "Pikachu", "58", "Base", "https://img/a.jpg", listOf("Pikachu"))
         )
@@ -479,7 +538,7 @@ class CardSearchRepositoryTest {
     @Test
     fun `searchStreaming completes normally when TCGCSV throws internally`() = runTest {
         coEvery { tcgcsvApi.getGroups() } throws RuntimeException("network down")
-        val repo = CardSearchRepository(api, tcgdexApi, tcgcsvApi)
+        val repo = CardSearchRepository(tcgdexApi, tcgcsvApi, setCatalog, japanImages)
         val fast = listOf(
             TcgCard("base1-1", "Pikachu", "58", "Base", "https://img/a.jpg", listOf("Pikachu"))
         )
@@ -489,6 +548,36 @@ class CardSearchRepositoryTest {
         assertEquals(2, emissions.size)
         assertTrue(emissions[1] is SearchProgress.Complete)
         assertEquals(fast, (emissions[1] as SearchProgress.Complete).cards) // no crash, no new failure mode
+    }
+
+    @Test
+    fun `searchStreaming with an unavailable fast source emits TCGCSV cards as the only Complete`() = runTest {
+        val group = TcgcsvGroupDto(groupId = 7, name = "Pokemon TCG Classic")
+        val product = TcgcsvProductDto(
+            productId = 99, name = "Mr. Mime", cleanName = "Mr. Mime",
+            imageUrl = "https://tcgcsv/mrmime.jpg", groupId = 7,
+            extendedData = listOf(TcgcsvExtendedDataDto(name = "Number", value = "030/034"))
+        )
+        coEvery { tcgcsvApi.getGroups() } returns TcgcsvGroupsResponse(results = listOf(group))
+        coEvery { tcgcsvApi.getProducts(7) } returns TcgcsvProductsResponse(results = listOf(product))
+
+        val emissions = repo().searchStreaming("Mr. Mime") { throw TcgdexUnavailableException() }.toList()
+
+        assertEquals(1, emissions.size)
+        assertTrue(emissions[0] is SearchProgress.Complete)
+        assertEquals(listOf("tcgcsv_99"), (emissions[0] as SearchProgress.Complete).cards.map { it.id })
+    }
+
+    @Test
+    fun `searchStreaming rethrows the fast source failure when TCGCSV also finds nothing`() = runTest {
+        coEvery { tcgcsvApi.getGroups() } returns TcgcsvGroupsResponse(results = emptyList())
+
+        try {
+            repo().searchStreaming("Mr. Mime") { throw TcgdexUnavailableException() }.toList()
+            fail("expected TcgdexUnavailableException")
+        } catch (e: TcgdexUnavailableException) {
+            // expected: the UI shows e.message instead of "no results"
+        }
     }
 
     // --- TCGdex-first scanner cascade (ja + en) ---
@@ -504,7 +593,7 @@ class CardSearchRepositoryTest {
         dexNumber = dex, language = language, printedName = printedName
     )
 
-    private fun repo() = CardSearchRepository(api, tcgdexApi, tcgcsvApi)
+    private fun repo() = CardSearchRepository(tcgdexApi, tcgcsvApi, setCatalog, japanImages)
 
     @Test
     fun `ja dex+number+total pins a single imageless card and marks it JA`() = runTest {
@@ -520,6 +609,66 @@ class CardSearchRepositoryTest {
         assertEquals("tcgdex-ja+dex+number+total", result.matchedQuery)
         assertTrue(result.identityPinned)
         assertFalse(result.nameVerified)
+    }
+
+    @Test
+    fun `ja card with a blank image is filled from the TCGCSV Japan source, label and flags unchanged`() = runTest {
+        coEvery { tcgdexApi.filterCards("ja", "48", "eq:76", "eq:687", null) } returns
+            listOf(brief("M6-048", "048", "Mega Malamar ex"))
+        coEvery { japanImages.imageUrl("M6", "048", any()) } returns "https://cdn/709201_400w.jpg"
+
+        val result = repo().searchByParsedInfo(parsedFull("Malamar", "48", "76", 687, language = "ja"))
+
+        assertEquals("https://cdn/709201_400w.jpg", result.cards[0].imageUrl)
+        assertEquals("tcgdex-ja+dex+number+total", result.matchedQuery)
+        assertTrue(result.identityPinned)
+    }
+
+    @Test
+    fun `Japan source is skipped for ja cards that have an image and for non-ja cards`() = runTest {
+        coEvery { tcgdexApi.filterCards("ja", "48", "eq:76", "eq:687", null) } returns
+            listOf(brief("M6-048", "048", "Mega Malamar ex", image = "https://assets.tcgdex.net/ja/M/M6/048"))
+        coEvery { tcgdexApi.filterCards("en", "16", "eq:172", "eq:351", null) } returns
+            listOf(brief("swsh9-016", "016", "Castform"))
+
+        val ja = repo().searchByParsedInfo(parsedFull("Malamar", "48", "76", 687, language = "ja"))
+        val en = repo().searchByParsedInfo(parsedFull("Castform", "16", "172", 351, language = "en"))
+
+        assertEquals("https://assets.tcgdex.net/ja/M/M6/048/high.webp", ja.cards[0].imageUrl)
+        assertEquals("", en.cards[0].imageUrl)
+        coVerify(exactly = 0) { japanImages.imageUrl(any(), any(), any()) }
+    }
+
+    @Test
+    fun `Japan image budget is spent only on cards that survive the number and name filters`() = runTest {
+        coEvery { tcgdexApi.filterCards("ja", "11", "eq:64", null, null) } returns listOf(
+            brief("SV7a-011", "011", "ブラックキュレムex"),
+            brief("SM11a-011", "011", "ポリゴン"),
+            brief("SV6a-111", "111", "ブラックキュレムex")
+        )
+
+        val result = repo().searchByParsedInfo(
+            parsedFull("Black Kyurem", "11", "64", null, language = "ja", printedName = "ブラックキュレムex")
+        )
+
+        assertEquals(listOf("tcgdex_ja_SV7a-011"), result.cards.map { it.id })
+        coVerify(exactly = 1) { japanImages.imageUrl(any(), any(), any()) }
+        coVerify(exactly = 1) { japanImages.imageUrl("SV7a", "011", any()) }
+    }
+
+    @Test
+    fun `searchByNameAllLanguages is complete only when every call succeeded`() = runTest {
+        coEvery { tcgdexApi.searchCards("Malamar") } returns listOf(brief("sm6-50", "50", "Malamar"))
+        stubAllAsianLangsByDex(687)
+        assertTrue(repo().searchByNameAllLanguages("Malamar", 687).complete)
+
+        coEvery { tcgdexApi.filterCards("ko", null, null, "eq:687", null) } throws IOException("down")
+        assertFalse(repo().searchByNameAllLanguages("Malamar", 687).complete)
+
+        coEvery { tcgdexApi.getCard(any(), any()) } throws IOException("down")
+        val dexFailed = repo().searchByNameAllLanguages("Malamar")
+        assertEquals(listOf("tcgdex_sm6-50"), dexFailed.cards.map { it.id })
+        assertFalse(dexFailed.complete)
     }
 
     @Test
@@ -580,13 +729,14 @@ class CardSearchRepositoryTest {
     }
 
     @Test
-    fun `falls back to the pokemontcg cascade with its old label when every TCGdex step is empty`() = runTest {
-        stub("nationalPokedexNumbers:351 number:\"116\" set.total:172", cardDto("x-116", "Castform", "116"))
+    fun `falls back to the looser TCGdex dex+number step when the total-bearing steps are empty`() = runTest {
+        coEvery { tcgdexApi.filterCards("en", "116", null, "eq:351", null) } returns
+            listOf(brief("swsh9-116", "116", "Castform"))
 
         val result = repo().searchByParsedInfo(parsedFull("Castform", "116", "172", 351, language = "en"))
 
-        assertEquals(listOf("x-116"), result.cards.map { it.id })
-        assertEquals("dex+number+total", result.matchedQuery)
+        assertEquals(listOf("tcgdex_swsh9-116"), result.cards.map { it.id })
+        assertEquals("tcgdex-en+dex+number", result.matchedQuery)
         assertFalse(result.identityPinned)
     }
 
@@ -673,17 +823,18 @@ class CardSearchRepositoryTest {
     }
 
     @Test
-    fun `TCGdex failures fall through to the pokemontcg cascade without throwing`() = runTest {
+    fun `every TCGdex call failing with no result throws Unavailable instead of reporting no match`() = runTest {
         coEvery { tcgdexApi.filterCards(any(), any(), any(), any(), any()) } throws IOException("network down")
-        stub("nationalPokedexNumbers:351 number:\"116\" set.total:172", cardDto("x-116", "Castform", "116"))
+        coEvery { tcgdexApi.searchCards(any()) } throws IOException("network down")
 
-        val result = repo().searchByParsedInfo(
-            parsedFull("Castform", "116", "172", 351, language = "ja", printedName = "ポワルン")
-        )
-
-        assertEquals(listOf("x-116"), result.cards.map { it.id })
-        assertEquals("dex+number+total", result.matchedQuery)
-        assertFalse(result.identityPinned)
+        try {
+            repo().searchByParsedInfo(
+                parsedFull("Castform", "116", "172", 351, language = "ja", printedName = "ポワルン")
+            )
+            fail("expected TcgdexUnavailableException")
+        } catch (e: TcgdexUnavailableException) {
+            assertEquals("Card database (TCGdex) unreachable. Check your connection and try again.", e.message)
+        }
     }
 
     // --- Language mapping (ko / zh-tw / zh-cn / th / id) ---
@@ -822,8 +973,9 @@ class CardSearchRepositoryTest {
             parsedFull("Castform", "116", "172", 351, language = "zh", printedName = "ポワルン")
         )
 
-        // number+total-bearing steps: dex 3 + name 1 + printedName 2 + en number+total 1 = 7
-        coVerify(atMost = 7) { tcgdexApi.filterCards(any(), "116", any(), any(), any()) }
+        // number-bearing steps: dex+total 3 + name+total 1 + printedName 2 + en number+total 1
+        // + name+number 1 + dex+number 3 + broad-number 1 = 12
+        coVerify(atMost = 12) { tcgdexApi.filterCards(any(), "116", any(), any(), any()) }
         // broad-dex walks at most MAX_TCGDEX_LANGS languages
         coVerify(atMost = 3) { tcgdexApi.filterCards(any(), isNull(), isNull(), "eq:351", isNull()) }
         coVerify(exactly = 0) {

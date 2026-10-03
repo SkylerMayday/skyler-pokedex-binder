@@ -28,12 +28,6 @@ class BinderRepository @Inject constructor(
     /** Raw entities (with card name/set) for use cases that need fields not exposed on [PokemonSlot]. */
     suspend fun getAllEntries(): List<MainBinderEntry> = mainBinderDao.getAll()
 
-    /** Rows with an assigned card but missing name/set (pre-v6 assignments) — backfill candidates. */
-    suspend fun getRowsNeedingBackfill(): List<MainBinderEntry> = mainBinderDao.getRowsNeedingCardBackfill()
-
-    suspend fun backfillCardNameSet(pokemonId: String, expectedCardId: String, cardName: String, cardSetName: String) =
-        mainBinderDao.backfillCardNameSet(pokemonId, expectedCardId, cardName, cardSetName)
-
     fun observeSlot(pokemonId: String): Flow<PokemonSlot?> =
         mainBinderDao.observeByPokemonId(pokemonId).map { it?.toDomain() }
 

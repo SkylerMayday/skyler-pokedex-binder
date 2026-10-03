@@ -5,11 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.skyler.pokedexbinder.data.model.PokemonSlot
 import com.skyler.pokedexbinder.data.model.SlotType
-import com.skyler.pokedexbinder.domain.BackfillCardNamesUseCase
+import com.skyler.pokedexbinder.domain.SyncCardImagesUseCase
 import com.skyler.pokedexbinder.repository.BinderRepository
 import com.skyler.pokedexbinder.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +23,7 @@ import javax.inject.Inject
 class MainBinderViewModel @Inject constructor(
     private val binderRepository: BinderRepository,
     private val settingsRepository: SettingsRepository,
-    private val backfillCardNamesUseCase: BackfillCardNamesUseCase,
+    private val imageSync: SyncCardImagesUseCase,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -51,7 +52,16 @@ class MainBinderViewModel @Inject constructor(
             binderRepository.seedAlternateFormsIfMissing()
             binderRepository.seedMegasIfMissing()
             binderRepository.migrateSlotNamesIfNeeded()
-            backfillCardNamesUseCase.backfill()
+        }
+        // Best-effort daily fill of blank card images; a failure must never reach the binder UI.
+        viewModelScope.launch {
+            try {
+                imageSync.syncIfDue()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // ignored: retried on the next app open
+            }
         }
     }
 

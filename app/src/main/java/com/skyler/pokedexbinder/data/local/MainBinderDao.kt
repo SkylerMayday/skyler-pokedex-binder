@@ -341,24 +341,17 @@ interface MainBinderDao {
     """)
     suspend fun migratePrimalDexNumbers()
 
-    /** Rows that have a card assigned but are missing the card's name (pre-v6 assignments). */
-    @Query("SELECT * FROM main_binder WHERE assignedCardId IS NOT NULL AND assignedCardName IS NULL")
-    suspend fun getRowsNeedingCardBackfill(): List<MainBinderEntry>
-
-    /**
-     * Writes the resolved name/set onto a single row, leaving id/image untouched.
-     * Guarded by [expectedCardId] and `assignedCardName IS NULL` so a concurrent
-     * reassignment mid-backfill pass cannot desync the name from the id (no-op if stale).
-     */
-    @Query("""
-        UPDATE main_binder SET assignedCardName = :cardName, assignedCardSetName = :cardSetName
-        WHERE pokemonId = :pokemonId AND assignedCardId = :expectedCardId AND assignedCardName IS NULL
-    """)
-    suspend fun backfillCardNameSet(pokemonId: String, expectedCardId: String, cardName: String, cardSetName: String)
-
     @Query("""
         UPDATE main_binder SET language = :language, remarks = :remarks, isLocked = :isLocked
         WHERE pokemonId = :pokemonId
     """)
     suspend fun updateDetails(pokemonId: String, language: String, remarks: String?, isLocked: Boolean)
+
+    /** Distinct card ids whose image URL is blank (NULL or ''), for the image sync. */
+    @Query("SELECT DISTINCT assignedCardId FROM main_binder WHERE assignedCardId IS NOT NULL AND (assignedCardImageUrl IS NULL OR assignedCardImageUrl = '')")
+    suspend fun blankImageCardIds(): List<String>
+
+    /** Fills a blank image URL only; never overwrites an existing one. Returns rows changed. */
+    @Query("UPDATE main_binder SET assignedCardImageUrl = :url WHERE assignedCardId = :cardId AND (assignedCardImageUrl IS NULL OR assignedCardImageUrl = '')")
+    suspend fun fillBlankImage(cardId: String, url: String): Int
 }

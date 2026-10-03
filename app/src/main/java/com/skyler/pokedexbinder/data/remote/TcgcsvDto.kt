@@ -10,7 +10,9 @@ data class TcgcsvGroupsResponse(
 @JsonClass(generateAdapter = true)
 data class TcgcsvGroupDto(
     val groupId: Int,
-    val name: String
+    val name: String,
+    val abbreviation: String? = null,
+    val publishedOn: String? = null
 )
 
 @JsonClass(generateAdapter = true)

@@ -10,6 +10,7 @@ import com.skyler.pokedexbinder.data.local.PersonalCollectionEntry
 import com.skyler.pokedexbinder.data.local.SecondaryBinderDao
 import com.skyler.pokedexbinder.data.local.SecondaryBinderEntry
 import com.skyler.pokedexbinder.data.local.UnownBinderEntry
+import com.skyler.pokedexbinder.data.model.Language
 import com.skyler.pokedexbinder.data.remote.DiscordApi
 import com.skyler.pokedexbinder.data.remote.DiscordWebhookPayload
 import com.skyler.pokedexbinder.data.remote.GitHubApi
@@ -239,7 +240,7 @@ class PublishRepository @Inject constructor(
 
                 // Notify Discord
                 currentStep = PublishStep.NotifyingDiscord
-                if (config.discordWebhookUrl.isNotBlank()) {
+                if (config.postToDiscord && config.discordWebhookUrl.isNotBlank()) {
                     val embed = buildEmbed(diff, publicPageUrl(config))
                     val webhookResponse = discordApi.sendWebhook(
                         config.discordWebhookUrl,
@@ -251,6 +252,8 @@ class PublishRepository @Inject constructor(
                             "Discord notification failed: HTTP ${webhookResponse.code()}"
                         )
                     }
+                } else if (!config.postToDiscord) {
+                    Log.i("PublishRepository", "Discord posting toggled off — skipping notification")
                 } else {
                     Log.w("PublishRepository", "Discord webhook not configured — skipping notification")
                 }
@@ -386,8 +389,7 @@ class PublishRepository @Inject constructor(
             if (rows.isEmpty()) return@mapNotNull null          // skip empty section
             SnapshotSection(
                 name = title,
-                slots = rows
-                    .sortedByDescending { it.releaseDate }       // same ordering as the app's cache query
+                slots = rows                                     // already in the cache query's order
                     .map { row ->
                         SnapshotSlot(
                             dexNumber = 0,
@@ -399,7 +401,7 @@ class PublishRepository @Inject constructor(
                             cardSet = row.setName,
                             imageUrl = row.imageUrl,
                             owned = row.cardId in pcOwnedIds,     // R6: absent entry => false
-                            language = pcLanguageByCardId[row.cardId] ?: "EN"
+                            language = pcLanguageByCardId[row.cardId] ?: Language.fromCardId(row.cardId).name
                         )
                     }
             )

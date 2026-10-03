@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -49,6 +50,7 @@ class SettingsRepository @Inject constructor(
         val USE_CAMERA_SCANNER = booleanPreferencesKey("use_camera_scanner")
         val DARK_MODE = booleanPreferencesKey("dark_mode")
         val GEMINI_API_KEY = stringPreferencesKey("gemini_api_key")
+        val LAST_IMAGE_SYNC_AT = longPreferencesKey("last_image_sync_at")
     }
 
     private object SecureKeys {
@@ -146,5 +148,12 @@ class SettingsRepository @Inject constructor(
         withContext(Dispatchers.IO) {
             securePrefs.edit().putString(SecureKeys.ANTHROPIC_API_KEY, key).apply()
         }
+    }
+
+    /** Epoch millis of the last image sync that reached TCGdex; 0 = never. Not part of [AppSettings] (that holds keys). */
+    suspend fun getLastImageSyncAt(): Long = dataStore.data.first()[Keys.LAST_IMAGE_SYNC_AT] ?: 0L
+
+    suspend fun setLastImageSyncAt(epochMs: Long) {
+        dataStore.edit { it[Keys.LAST_IMAGE_SYNC_AT] = epochMs }
     }
 }

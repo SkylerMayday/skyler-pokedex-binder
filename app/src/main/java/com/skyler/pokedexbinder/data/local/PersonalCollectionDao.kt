@@ -7,17 +7,20 @@ import kotlinx.coroutines.flow.Flow
 interface PersonalCollectionDao {
 
     // ---- Cache ----
-    @Query("SELECT * FROM personal_collection_cache WHERE pokemonKey = :pokemonKey ORDER BY releaseDate DESC")
+    @Query("SELECT * FROM personal_collection_cache WHERE pokemonKey = :pokemonKey ORDER BY releaseDate DESC, setName, cardId")
     fun observeCacheForPokemon(pokemonKey: String): Flow<List<PersonalCollectionCache>>
 
-    @Query("SELECT * FROM personal_collection_cache ORDER BY releaseDate DESC")
+    @Query("SELECT * FROM personal_collection_cache ORDER BY releaseDate DESC, setName, cardId")
     fun observeAllCache(): Flow<List<PersonalCollectionCache>>
 
-    @Query("SELECT * FROM personal_collection_cache ORDER BY releaseDate DESC")
+    @Query("SELECT * FROM personal_collection_cache ORDER BY releaseDate DESC, setName, cardId")
     suspend fun getAllCache(): List<PersonalCollectionCache>
 
     @Query("SELECT COUNT(*) FROM personal_collection_cache")
     suspend fun cacheCount(): Int
+
+    @Query("SELECT COUNT(*) FROM personal_collection_cache WHERE pokemonKey = :pokemonKey")
+    suspend fun cacheCountForPokemon(pokemonKey: String): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertCache(cards: List<PersonalCollectionCache>)
@@ -53,4 +56,12 @@ interface PersonalCollectionDao {
 
     @Query("UPDATE personal_collection_entry SET language = :language WHERE cardId = :cardId")
     suspend fun updateLanguage(cardId: String, language: String)
+
+    /** Distinct card ids whose image URL is blank (NULL or ''), for the image sync. */
+    @Query("SELECT DISTINCT cardId FROM personal_collection_cache WHERE cardId IS NOT NULL AND (imageUrl IS NULL OR imageUrl = '')")
+    suspend fun blankImageCardIds(): List<String>
+
+    /** Fills a blank image URL only; never overwrites an existing one. Returns rows changed. */
+    @Query("UPDATE personal_collection_cache SET imageUrl = :url WHERE cardId = :cardId AND (imageUrl IS NULL OR imageUrl = '')")
+    suspend fun fillBlankImage(cardId: String, url: String): Int
 }
