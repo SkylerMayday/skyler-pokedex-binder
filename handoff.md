@@ -1,67 +1,57 @@
-# Handoff — Session 21 (2026-10-01 → 10-03), final wrapcon
+# Handoff — Session 22 (2026-10-03), final wrapcon
 
 ## 1. Goals
 
-Live-test the scanner, fix wrong cards for Japanese/other-language cards, replace the useless art hash, survive
-Gemini's free-tier quota, then move the whole app to TCGdex (the `pokemontcg.io` API shuts down 2027-03-01) with a
-wipe-and-rescan instead of a migration.
+Triage `gaps.md`: archive entries that are no longer gaps, then fix every gap that needs no phone or key (ten code
+fixes) and merge them to `master`.
 
 ## 2. Current State
 
-- **Unit tests 505/505 green**, `compileDebugAndroidTestKotlin` green (Skyler ran both; fresh XML read by me).
-  Final multi-lens review: 89 / 94 / 94 (min 89, ship).
-- **Phone has an OLDER build** (installed 2026-10-03 00:32). Verified live on that build: Mega Malamar ex, Klawf, Black
-  Kyurem, Wishiwashi ex accepted automatically; a Simplified-Chinese Palafin fell to the "closest English printings"
-  list; Gemini worked, Claude Sonnet fallback worked earlier (7 of 8 scans on 2026-10-01).
-- **NOT on the phone / never run on a device:** TCGdex-only search, Personal Collection with all languages, Reset
-  collection data, Card-images sync, the Discord toggle, `TcgcsvJapanSource` (M6 images), the Palafin header, any
-  Thai / Indonesian / Korean / Traditional-Chinese card, the androidTest SQL cases.
-- **Committed:** the scanner overhaul (earlier commits `dcfe2d5`, `8eaf3b9`, `8482561`) and, in this wrapcon, the
-  TCGdex-only rebuild (see git log). Skyler's own `CLAUDE.md` / `app/CLAUDE.md` edits and `scripts/scan_capture.log`
-  are deliberately NOT committed.
+- **`master` = `e7e0b72`** (fast-forward of branch `gaps-code-fixes`, branch and worktree deleted). **529/529 unit tests
+  green** on `master` (fresh XMLs, `--rerun-tasks`). Final review: 93 / 92 / 88 (min 88, ship).
+- **Phone still has the OLDER build** (2026-10-03 00:32). Nothing from session 21 part 2 or from this session has run on it.
+- **Uncommitted, deliberately:** `gaps.md`, `gaps-archive.md` (new), `handoff.md`, `project-overview.md` (this wrapcon's
+  docs), plus Skyler's own `CLAUDE.md` / `app/CLAUDE.md` edits and `scripts/scan_capture.log`.
+- **`security-crypto` stays.** Skyler asked to drop it believing the name meant cryptocurrency; a plaintext-storage
+  revert was built and reviewed, then backed out before merge. Entry remains under Parked in `gaps.md`.
 
 ## 3. Active Files
 
-- `repository/CardSearchRepository.kt` (TCGdex-only), `data/remote/` — `TcgdexApi`, `TcgdexIds` (id-scheme source of truth),
-  `TcgdexSetCatalog`, `TcgcsvJapanSource` (+ DTOs, `TcgcsvApi` category-85 calls)
-- `domain/` — `SyncCardImagesUseCase`, `BlankImageResolver` seam, `JapanTcgcsvResolver`, `CardScanProvider`, `SmartThresholdUseCase`
-- `data/local/CollectionResetDao.kt`, `ui/settings/` (Danger zone, Card images, Discord switch), `PersonalCollectionRepository`
-- `.pipeline-archive/2026-10-0*` — specs, change logs, review verdicts of every run
+- `data/remote/TcgcsvJapanSource.kt`, `TcgdexSetCatalog.kt` (failure memory), `domain/CardScanProvider.kt`,
+  `CardScanShared.kt`, `GeminiCardScanner.kt`, `ParsedCardInfo.kt` (fallback + breaker), `repository/CardSearchRepository.kt`
+  (`nameVerified`, NFC), `SettingsRepository.kt` / `PublishSettingsRepository.kt` (`toString` redaction),
+  `ui/scanner/ScannerViewModel.kt`, `ui/settings/SettingsScreen.kt` (label)
+- `gaps.md` (session 22 section on top), `gaps-archive.md` (closed entries, history only)
 
-## 4. Changes Made (since the first wrapcon today)
+## 4. Changes Made
 
 | # | Change | Why |
 |---|---|---|
-| 1 | `pokemontcg.io` removed (API, DTOs, backfill use case, every fallback step); scanner/manual search/Quick Scan/PC are TCGdex-only; `TcgdexUnavailableException` when TCGdex is entirely down | API shuts down 2027-03-01, no Japanese data |
-| 2 | Personal Collection covers English + ja/ko/zh-tw/zh-cn/th/id, de-duplicated by id; partial refreshes never drop a language's cached rows | Skyler: PC includes non-English printings |
-| 3 | Settings **Reset collection data** (forced export → type `RESET` → one transaction; keeps slots, settings, keys, connecting-art layouts; no Room change) | Skyler OK'd wiping; he will rescan everything |
-| 4 | **Card images sync** (manual button + once/24 h auto at app start, 400-id cap) fills blank image URLs in 5 tables | M6 has no TCGdex images yet; saved cards kept blank forever |
-| 5 | **TcgcsvJapanSource** (TCGplayer category 85): cached join by set abbreviation + number numerator, `_400w` images, `FetchBudget(3)`, 15 min / 6 h failure cooldown | Fills the M6 gap; 83 of 116 JA sets join |
-| 6 | **Post updates to Discord** switch, default OFF | First publish after rescan would spam ~1,000 false "replaced" messages |
-| 7 | Debug-capture saving removed from `ScannerViewModel` | Was writing ~3 MB per scan |
-| 8 | Review fixes: id scheme consolidated in `TcgdexIds`, dead ptcg/release-date code deleted, restored cascade-order tests | Three-lens review |
-
-Docs: `gaps.md` (session 21 part 2), `project-overview.md` (card-search + Scanner Matching Pipeline sections).
+| 1 | `gaps.md` shrank 1,397 → ~680 lines; 79 struck entries + 8 superseded calibration entries moved to `gaps-archive.md` | Struck = closed; calibration constants (`0.75` / `1.30`) judged working because live scans resolve cards |
+| 2 | Failed TCGCSV product downloads remembered per group (15 min, 6 h on 401/403); TCGdex English names remember failure (15 min) | Retry-storm risk |
+| 3 | Sync label now "Still missing N (no image from TCGdex or the Japan backup)"; KDoc fixed; 3 weak tests now fail by assertion (mutation-checked) | Gap list |
+| 4 | `AppSettings` and `PublishConfig` `toString` redact secrets; Gemini `Response` closed on all branches | Key leak risk |
+| 5 | `CancellationException` rethrown in `ScannerViewModel`; `lowConfidenceCards` compares by id | Gap list |
+| 6 | `nameVerified` = lone whole-name match (tolerates ex/gx/v/vmax/vstar); `normalizeName` NFC | `ミュウ` matched `ミュウツー` |
+| 7 | Empty Gemini reply falls back to Claude; Gemini 429 starts a 10 min breaker (only when a Claude key exists) | Wasted failed call per scan after quota exhaustion |
 
 ## 5. Failed Attempts
 
-- **Gradle loopback wall** (8th session): Claude could not build; Skyler ran every build/test.
-- **Opus rate limits** cut off three planner/reviewer/coder runs; each was re-run (`resets` times shown in the error).
-- **SIFT** as a hash alternative: no better, needs OpenCV. Dropped.
-- **TCGdex zh-cn sets `CSV9C`/`CSV9.5C`** exist with 0 cards: Palafin ex 228/208 cannot be matched there. No code fix.
-- **tcgcsv.com blocked the app's User-Agent (401) once** during a 370-request probe burst, then recovered; UA left unchanged.
-- `scripts/claude_scan_bakeoff.py` never run (Skyler: "stick to sonnet", so not needed).
-- Git Bash mangles adb paths (`MSYS_NO_PATHCONV=1`) and Bash heredocs with quoted Kotlin fail intermittently (use Write).
+- **Item 11 (plaintext secrets, removing `security-crypto`)** was built and passed review, then backed out: Skyler had misread
+  the library as cryptocurrency-related. Net effect on `master`: zero.
+- First `git add -A` in the worktree hit a transient `Permission denied` on `.git/objects`; the retry worked.
+- `git worktree remove` failed on "Filename too long" (build dirs); a `\\?\` long-path `Remove-Item` then `git worktree prune` fixed it.
+- **Gradle worked from Claude this session** (`./run_build.bat <task>` from Bash) — the loopback wall did not recur.
 
 ## 6. Next Steps
 
 1. **Install the latest build and try it:** `powershell.exe -File scripts\install_debug.ps1`. Check Settings shows "Danger zone", "Card images" and the Discord switch.
-2. **Run `connectedDebugAndroidTest` with the phone connected** (executes the Reset / fillBlankImage SQL tests that have only been compiled), then use **Reset collection data** (it exports first) and **rescan** the collection.
-3. Check an M6 card (Mega Malamar ex / Wishiwashi ex) shows an image and the hash `distance=` is a real number; press **Sync card images** and confirm a second run fetches nothing.
+2. **Run `connectedDebugAndroidTest` with the phone connected** (executes the Reset / `fillBlankImage` SQL tests that have only been compiled), then **Reset collection data** (it exports first) and **rescan**.
+3. **Re-scan Klawf and Mega Malamar** (no unit fixtures for the new `nameVerified`); check an M6 card shows an image; press **Sync card images** twice and confirm the second fetches nothing.
 4. Check the cross-language header on a Palafin / other unmatched Asian-language card.
-5. Fix the one open P2 (`gaps.md`): remember failed TCGCSV Japan product downloads (per-group retry-at + test).
-6. **Rotate the Gemini API key** (printed in logcat and archived transcripts earlier; still unrotated) — blocked on Skyler.
-7. Later, if wanted: PTCG-database for Korean / Traditional Chinese (`gaps.md`); `security-crypto` replacement; English TCGCSV name index.
+5. **Rotate the Gemini API key** (still unrotated) — blocked on Skyler.
+6. Next code candidates (`gaps.md`): triage sessions 4–15 entries I have not verified stale (e.g. `PerceptualHasher` bit-mapping, single-candidate short-circuit); the small test gaps in the session 22 section.
+7. Later, if wanted: PTCG-database for Korean / Traditional Chinese; `security-crypto` replacement (a plaintext revert was rejected-by-misunderstanding — decide deliberately); English TCGCSV name index.
 
-Blocked on Skyler: items 1-4 (phone), 6 (key). Publish only AFTER the rescan is done (the first publish after a wipe writes a
-big changelog; the Discord switch is OFF by default).
+Blocked on Skyler: items 1-4 (phone), 5 (key). Publish only AFTER the rescan is done (the Discord switch is OFF by default).
+Commit the four doc files when ready; they are intentionally not committed.
