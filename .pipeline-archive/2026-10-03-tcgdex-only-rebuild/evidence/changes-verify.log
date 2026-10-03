@@ -1,0 +1,186 @@
+== stray debug grep on pass-3 files
+none
+== CardSearchRepository( call sites
+10
+== UA unchanged
+57:        // User-Agent (and any other non-browser-looking UA) — verified live 2026-07-12.
+62:                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 13) PokedexBinder")
+== git status (pass-3 files)
+ M app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgcsvApi.kt
+ M app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgcsvDto.kt
+ M app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt
+ M app/src/test/java/com/skyler/pokedexbinder/repository/CardSearchRepositoryTest.kt
+?? app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgcsvJapanSource.kt
+?? app/src/main/java/com/skyler/pokedexbinder/domain/JapanTcgcsvResolver.kt
+?? app/src/test/java/com/skyler/pokedexbinder/domain/JapanTcgcsvResolverTest.kt
+== gradle: not run (loopback failure in harness)
+
+################ FIX PASS 1 (review loop 1) 2026-10-03T13:19:06+08:00 ################
+### Check 1/2/3/4 typecheck, lint, tests, build: NOT RUN - Gradle loopback failure in harness; instructed not to attempt.
+
+### Deleted-symbol grep
+=== Fix pass 1: deleted-symbol reference grep over app/src/main app/src/test app/src/androidTest (*.kt), 2026-10-03T13:18:08+08:00
+--- 'getRowsNeedingCardBackfill': 0 hit(s)
+--- 'getRowsNeedingBackfill': 0 hit(s)
+--- 'backfillCardNameSet': 0 hit(s)
+--- 'getSet(': 0 hit(s)
+--- 'TcgdexSetDetailDto': 0 hit(s)
+--- 'releaseDate(': 0 hit(s)
+--- 'englishName(': 0 hit(s)
+--- 'setReleaseDate': 0 hit(s)
+--- 'isNonEnglishTcgdexId': 0 hit(s)
+--- 'TCGDEX_EN_ID_PREFIX': 0 hit(s)
+--- 'it.hp': 0 hit(s)
+--- 'card.hp': 0 hit(s)
+--- '.artist': 15 hit(s)
+app/src/main/java/com/skyler/pokedexbinder/domain/CardScanShared.kt:36:        "\"artist\":\"illustrator name or null\"," +
+app/src/main/java/com/skyler/pokedexbinder/domain/CardScanShared.kt:46:    artist = artist,
+app/src/main/java/com/skyler/pokedexbinder/domain/GeminiCardScanner.kt:34:    val artist: String? = null,
+app/src/main/java/com/skyler/pokedexbinder/domain/ParsedCardInfo.kt:8:    val artist: String?,
+app/src/test/java/com/skyler/pokedexbinder/domain/ClaudeCardScannerTest.kt:28:    """{\"name\":\"Pikachu\",\"number\":\"25\",\"setTotal\":\"185\",\"hp\":\"60\",\"artist\":\"Atsuko Nishida\"}"""
+app/src/test/java/com/skyler/pokedexbinder/domain/ClaudeCardScannerTest.kt:86:        assertEquals("Atsuko Nishida", result.artist)
+app/src/test/java/com/skyler/pokedexbinder/domain/GeminiCardScannerTest.kt:25:    {"candidates":[{"content":{"parts":[{"text":"{\"name\":\"Pikachu\",\"number\":\"25\",\"setTotal\":\"185\",\"hp\":\"60\",\"artist\":\"Atsuko Nishida\"}"}]}}]}
+app/src/test/java/com/skyler/pokedexbinder/domain/GeminiCardScannerTest.kt:78:        assertEquals("Atsuko Nishida", result.artist)
+app/src/test/java/com/skyler/pokedexbinder/domain/GeminiCardScannerTest.kt:95:            {"candidates":[{"content":{"parts":[{"text":"{\"name\":\"Pikachu\",\"number\":null,\"setTotal\":null,\"hp\":null,\"artist\":null}"}]}}]}
+app/src/test/java/com/skyler/pokedexbinder/domain/GeminiCardScannerTest.kt:104:        assertNull(result.artist)
+app/src/test/java/com/skyler/pokedexbinder/repository/CardSearchRepositoryTest.kt:131:        ParsedCardInfo(cardName = name, cardNumber = number, setTotal = total, hp = null, artist = null, dexNumber = dex)
+app/src/test/java/com/skyler/pokedexbinder/repository/CardSearchRepositoryTest.kt:592:        cardName = name, cardNumber = number, setTotal = total, hp = null, artist = null,
+app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModelTest.kt:25:            cardName = "Castform", cardNumber = "62", setTotal = "172", hp = null, artist = null
+app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModelTest.kt:41:            cardName = null, cardNumber = null, setTotal = null, hp = null, artist = null
+app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModelTest.kt:59:            cardName = "Pikachu", cardNumber = "25", setTotal = "102", hp = null, artist = null
+--- 'budget.left =': 0 hit(s)
+--- 'pokemontcg\|PokemonTcgApi\|TcgCardDto': 5 hit(s)
+app/src/androidTest/java/com/skyler/pokedexbinder/data/local/Migration8to9Test.kt:67:                "VALUES ('charizard', 'Charizard', 6, 6, 'BASE', 'base4-4', 'https://img.pokemontcg.io/base4/4.png', 'Charizard', 'Base Set')"
+app/src/androidTest/java/com/skyler/pokedexbinder/data/local/Migration8to9Test.kt:95:                "VALUES (1, 1, 0, 'xy1-1', 'Eevee', 'https://img.pokemontcg.io/xy1/1.png', 1)"
+app/src/androidTest/java/com/skyler/pokedexbinder/data/local/Migration8to9Test.kt:118:                "VALUES (1, 'eevee', 'Eevee', 'xy1-1', 'https://img.pokemontcg.io/xy1/1.png', 0)"
+app/src/androidTest/java/com/skyler/pokedexbinder/data/local/Migration8to9Test.kt:274:                    cardImageUrl = "https://img.pokemontcg.io/xy1/1.png", language = "DE"
+app/src/androidTest/java/com/skyler/pokedexbinder/ui/navigation/AppNavigationScreenTest.kt:79:            // refreshAll()`, which fans out real pokemontcg.io/TCGdex network calls and renders
+
+### Check 6: debug-output scan over files touched in fix pass 1
+app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgcsvJapanSource.kt
+app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexIds.kt
+app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexSetCatalog.kt
+app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexApi.kt
+app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexCardDto.kt
+app/src/main/java/com/skyler/pokedexbinder/data/model/Language.kt
+app/src/main/java/com/skyler/pokedexbinder/data/model/TcgCard.kt
+app/src/main/java/com/skyler/pokedexbinder/data/local/MainBinderDao.kt
+app/src/main/java/com/skyler/pokedexbinder/repository/BinderRepository.kt
+app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt
+app/src/main/java/com/skyler/pokedexbinder/repository/PersonalCollectionRepository.kt
+app/src/main/java/com/skyler/pokedexbinder/publish/PublishRepository.kt
+app/src/main/java/com/skyler/pokedexbinder/domain/JapanTcgcsvResolver.kt
+app/src/main/java/com/skyler/pokedexbinder/domain/SyncCardImagesUseCase.kt
+app/src/main/java/com/skyler/pokedexbinder/ui/mainbinder/MainBinderViewModel.kt
+app/src/main/java/com/skyler/pokedexbinder/ui/settings/ResetCollectionViewModel.kt
+app/src/main/java/com/skyler/pokedexbinder/ui/settings/SettingsScreen.kt
+app/src/test/java/com/skyler/pokedexbinder/data/remote/TcgcsvJapanSourceTest.kt
+app/src/test/java/com/skyler/pokedexbinder/data/remote/TcgdexIdsTest.kt
+app/src/test/java/com/skyler/pokedexbinder/data/remote/TcgdexSetCatalogTest.kt
+app/src/test/java/com/skyler/pokedexbinder/data/model/LanguageTest.kt
+app/src/test/java/com/skyler/pokedexbinder/repository/CardSearchRepositoryTest.kt
+app/src/test/java/com/skyler/pokedexbinder/repository/PersonalCollectionRepositoryTest.kt
+app/src/test/java/com/skyler/pokedexbinder/domain/SyncCardImagesUseCaseTest.kt
+app/src/test/java/com/skyler/pokedexbinder/ui/settings/ResetCollectionViewModelTest.kt
+--- println / Log.* / debugger / TODO / FIXME / apiKey hits in those files:
+app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgcsvJapanSource.kt:65:    internal var log: (String) -> Unit = { android.util.Log.i("TcgcsvJa", it) }
+app/src/main/java/com/skyler/pokedexbinder/repository/BinderRepository.kt:95:            Log.e("BinderRepository", "Failed to seed pokemon slots", e)
+app/src/main/java/com/skyler/pokedexbinder/publish/PublishRepository.kt:256:                    Log.i("PublishRepository", "Discord posting toggled off — skipping notification")
+app/src/main/java/com/skyler/pokedexbinder/publish/PublishRepository.kt:258:                    Log.w("PublishRepository", "Discord webhook not configured — skipping notification")
+app/src/main/java/com/skyler/pokedexbinder/publish/PublishRepository.kt:261:                Log.i("PublishRepository",
+app/src/main/java/com/skyler/pokedexbinder/ui/settings/SettingsScreen.kt:33:    var apiKeyText by remember(settings.geminiApiKey) { mutableStateOf(settings.geminiApiKey) }
+app/src/main/java/com/skyler/pokedexbinder/ui/settings/SettingsScreen.kt:34:    var apiKeyVisible by remember { mutableStateOf(false) }
+app/src/main/java/com/skyler/pokedexbinder/ui/settings/SettingsScreen.kt:177:                value = apiKeyText,
+app/src/main/java/com/skyler/pokedexbinder/ui/settings/SettingsScreen.kt:178:                onValueChange = { apiKeyText = it; viewModel.setGeminiApiKey(it) },
+app/src/main/java/com/skyler/pokedexbinder/ui/settings/SettingsScreen.kt:182:                visualTransformation = if (apiKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
+app/src/main/java/com/skyler/pokedexbinder/ui/settings/SettingsScreen.kt:185:                        onClick = { apiKeyVisible = !apiKeyVisible },
+app/src/main/java/com/skyler/pokedexbinder/ui/settings/SettingsScreen.kt:189:                            if (apiKeyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+app/src/main/java/com/skyler/pokedexbinder/ui/settings/SettingsScreen.kt:190:                            contentDescription = if (apiKeyVisible) "Hide key" else "Show key"
+--- (all hits above are pre-existing lines; none added in this pass; no key value is logged)
+--- added-lines scan of fix-pass files vs HEAD (tracked) for println/Log/debugger:
+62:+                    Log.i("PublishRepository", "Discord posting toggled off — skipping notification")
+
+### Check 7: git status --short
+ M CLAUDE.md
+ M app/CLAUDE.md
+ M app/src/androidTest/java/com/skyler/pokedexbinder/data/PokedexDatabaseTest.kt
+ M app/src/androidTest/java/com/skyler/pokedexbinder/di/FakeDatabaseModule.kt
+ M app/src/main/java/com/skyler/pokedexbinder/data/local/ConnectingArtDao.kt
+ M app/src/main/java/com/skyler/pokedexbinder/data/local/MainBinderDao.kt
+ M app/src/main/java/com/skyler/pokedexbinder/data/local/PersonalCollectionDao.kt
+ M app/src/main/java/com/skyler/pokedexbinder/data/local/PokedexDatabase.kt
+ M app/src/main/java/com/skyler/pokedexbinder/data/local/SecondaryBinderDao.kt
+ M app/src/main/java/com/skyler/pokedexbinder/data/local/UnownBinderDao.kt
+ M app/src/main/java/com/skyler/pokedexbinder/data/model/Language.kt
+ M app/src/main/java/com/skyler/pokedexbinder/data/model/TcgCard.kt
+D  app/src/main/java/com/skyler/pokedexbinder/data/remote/PokemonTcgApi.kt
+D  app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgCardDto.kt
+ M app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgcsvApi.kt
+ M app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgcsvDto.kt
+ M app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexApi.kt
+ M app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexCardDto.kt
+ M app/src/main/java/com/skyler/pokedexbinder/di/DatabaseModule.kt
+ M app/src/main/java/com/skyler/pokedexbinder/di/NetworkModule.kt
+D  app/src/main/java/com/skyler/pokedexbinder/domain/BackfillCardNamesUseCase.kt
+ M app/src/main/java/com/skyler/pokedexbinder/publish/PublishRepository.kt
+ M app/src/main/java/com/skyler/pokedexbinder/repository/BinderRepository.kt
+ M app/src/main/java/com/skyler/pokedexbinder/repository/CardSearchRepository.kt
+ M app/src/main/java/com/skyler/pokedexbinder/repository/PersonalCollectionRepository.kt
+ M app/src/main/java/com/skyler/pokedexbinder/repository/PublishSettingsRepository.kt
+ M app/src/main/java/com/skyler/pokedexbinder/repository/SettingsRepository.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/mainbinder/MainBinderViewModel.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/personalcollection/PersonalCollectionViewModel.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/quickscan/QuickScanViewModel.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModel.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/settings/BackupDialogs.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/settings/SettingsScreen.kt
+ M app/src/main/java/com/skyler/pokedexbinder/ui/settings/SettingsViewModel.kt
+D  app/src/test/java/com/skyler/pokedexbinder/domain/BackfillCardNamesUseCaseTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/publish/PublishRepositoryTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/repository/BinderRepositoryTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/repository/CardSearchRepositoryTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/repository/PersonalCollectionRepositoryTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/repository/PublishSettingsRepositoryTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/repository/UnownBinderRepositoryTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/ui/MainBinderViewModelTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/ui/QuickScanViewModelTest.kt
+ M app/src/test/java/com/skyler/pokedexbinder/ui/personalcollection/PersonalCollectionViewModelTest.kt
+ M gaps.md
+?? .pipeline-archive/2026-10-03-ptcg-removal-plan-remap-superseded/
+?? app/src/main/java/com/skyler/pokedexbinder/data/local/CollectionResetDao.kt
+?? app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgcsvJapanSource.kt
+?? app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexIds.kt
+?? app/src/main/java/com/skyler/pokedexbinder/data/remote/TcgdexSetCatalog.kt
+?? app/src/main/java/com/skyler/pokedexbinder/domain/BlankImageResolver.kt
+?? app/src/main/java/com/skyler/pokedexbinder/domain/JapanTcgcsvResolver.kt
+?? app/src/main/java/com/skyler/pokedexbinder/domain/ResetCollectionUseCase.kt
+?? app/src/main/java/com/skyler/pokedexbinder/domain/SyncCardImagesUseCase.kt
+?? app/src/main/java/com/skyler/pokedexbinder/ui/settings/ImageSyncViewModel.kt
+?? app/src/main/java/com/skyler/pokedexbinder/ui/settings/ResetCollectionDialogs.kt
+?? app/src/main/java/com/skyler/pokedexbinder/ui/settings/ResetCollectionViewModel.kt
+?? app/src/test/java/com/skyler/pokedexbinder/data/model/LanguageTest.kt
+?? app/src/test/java/com/skyler/pokedexbinder/data/remote/
+?? app/src/test/java/com/skyler/pokedexbinder/domain/JapanTcgcsvResolverTest.kt
+?? app/src/test/java/com/skyler/pokedexbinder/domain/ResetCollectionUseCaseTest.kt
+?? app/src/test/java/com/skyler/pokedexbinder/domain/SyncCardImagesUseCaseTest.kt
+?? app/src/test/java/com/skyler/pokedexbinder/ui/settings/ImageSyncViewModelTest.kt
+?? app/src/test/java/com/skyler/pokedexbinder/ui/settings/ResetCollectionViewModelTest.kt
+?? app/src/test/java/com/skyler/pokedexbinder/ui/settings/SettingsViewModelTest.kt
+?? scripts/scan_capture.log
+
+### diff stat vs HEAD (whole uncommitted tree, includes passes 1-3)
+warning: in the working copy of 'CLAUDE.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/CLAUDE.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/data/model/TcgCard.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/publish/PublishRepository.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/repository/BinderRepository.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/main/java/com/skyler/pokedexbinder/ui/quickscan/QuickScanViewModel.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/test/java/com/skyler/pokedexbinder/repository/BinderRepositoryTest.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/test/java/com/skyler/pokedexbinder/repository/PersonalCollectionRepositoryTest.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/test/java/com/skyler/pokedexbinder/repository/UnownBinderRepositoryTest.kt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/src/test/java/com/skyler/pokedexbinder/ui/QuickScanViewModelTest.kt', LF will be replaced by CRLF the next time Git touches it
+ .../pokedexbinder/ui/MainBinderViewModelTest.kt    |  27 +-
+ .../pokedexbinder/ui/QuickScanViewModelTest.kt     |   2 +-
+ .../PersonalCollectionViewModelTest.kt             |  14 +
+ gaps.md                                            |  13 +-
+ 45 files changed, 1045 insertions(+), 741 deletions(-)

@@ -3,6 +3,55 @@
 Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove entries only when
 actually fixed and verified, not when merely planned.
 
+## Refreshed — 2026-10-03 (session 21, part 2 — TCGdex-only rebuild, wipe/reset, image sync)
+
+**Audit scope note**: touched/created `CardSearchRepository.kt` (pokemontcg.io removed), `TcgdexIds.kt`, `TcgdexSetCatalog.kt`,
+`TcgcsvJapanSource.kt`, `JapanTcgcsvResolver.kt`, `SyncCardImagesUseCase.kt`, `CollectionResetDao.kt` + reset UI,
+`PersonalCollectionRepository.kt`, `PublishRepository.kt` (Discord toggle), 5 DAOs (blank-image queries). Reviewed by three
+Opus lenses (89 / 94 / 94 on the second pass). Unit tests **505/505 green**, `compileDebugAndroidTestKotlin` green.
+**None of this part has run on the phone** (installed build predates it).
+
+### Fixed this part (verified by tests + review, not on device)
+
+- ~~**`pokemontcg.io` shuts down 2027-03-01; `searchByName` (Personal Collection) still ptcg-first**~~ **Removed
+  entirely.** Skyler chose wipe-and-rescan over an id-remap migration, so there is no alias table and no migration.
+  Old backups / published snapshots with ptcg ids are NOT translated: restoring one will not crash but shows missing
+  names/images (warning added to the three restore/import confirmations).
+- ~~**Saved cards keep a blank image forever (M6 has no TCGdex art)**~~ **Image sync** (Settings button + daily auto)
+  plus `TcgcsvJapanSource` as a second resolver.
+- ~~**Retry storm when the TCGCSV groups fetch fails**~~ 15 min cooldown (6 h on 401/403), tested.
+- ~~**TEMP DIAGNOSTIC debug-capture save**~~ removed; ~100 MB of old `scan_debug_*.jpg` may remain in the phone's app
+  `files/` dir (delete via adb or Clear storage).
+- ~~**Session 20 header change unverified**~~ `x-goog-api-key` worked live (Gemini answered scans 2026-10-03).
+
+### New, not fixed
+
+- **P2: a failed TCGCSV Japan PRODUCT download is not remembered** (`TcgcsvJapanSource.fetchProducts` `catch -> null`;
+  the sync resolver passes no budget). If the host starts rejecting product downloads, an auto sync could send up to 400
+  failing requests. Fix: per-group retry-at on failure + a test (5 unbudgeted lookups with `getJapanProducts` throwing =
+  1 call). Root: the backoff was added to the one call the finding named, not every call in the per-item loop.
+- **Reset + image-fill SQL has only been COMPILED, never executed** (`PokedexDatabaseTest` androidTest; `fillBlankImage`
+  covered for `main_binder` only). Run `connectedDebugAndroidTest` with the phone before relying on Reset.
+- **`MAX_AUTO_IDS` ceiling:** the auto sync checks the first 400 blank ids (ko / zh-cn last); if >400 ja/en blanks never
+  resolve, later ones are starved until a manual sync.
+- **`TcgdexSetCatalog.englishNames()` does not remember a failure** (retries `/sets` per English step, ≤6 per scan).
+- **Weak tests:** "second refresh never touches owned entries" (PC) cannot fail; "two newest groups" asserts
+  `getJapanProducts(1)` not called, which also passes with `take(3)`; share-sheet rotation gate is only tested at
+  ViewModel level; the concurrent-sync test fails by timeout, not assertion.
+- **KDoc `TcgcsvJapanSource.kt:56` is false** ("one groups call plus one product-list call"; can be two without a budget).
+- **Only ~83 of 116 Japanese sets join to TCGCSV** (vintage `E*/neo*/PMCG*/PCG*`, `SM1p-5p`, `MC`, `SVLS` and part of
+  `M-P`/`SV-P` don't): those stay image-less. U3 (Japanese backup search via TCGCSV when TCGdex is down) was deferred —
+  a saved `tcgcsv_ja_` card would be orphaned once TCGdex adds the set. English TCGCSV still scans ~217 groups per manual
+  search (~30 MB raw); a compact name index would fix it.
+- **No Japanese/other-language fallback when TCGdex is down**: search throws "Card database (TCGdex) unreachable"
+  (English manual search can still be rescued by TCGCSV). Accepted.
+- **User-Agent for tcgcsv.com not changed**: `Mozilla/5.0 (Linux; Android 13) PokedexBinder` returned 200 on 2026-10-03;
+  a 401 "User-Agent blocked" appeared once during a 370-request probe burst. If the phone sees blocked responses, change
+  it to `PokedexBinder/1.0` (known good).
+- **Spec drift:** the archived specs still mention release-date ordering for Personal Collection (dropped by decision) and
+  T8a (skipped). Archived specs are history; do not "fix" them.
+- **Unrelated uncommitted edits** (Skyler's `CLAUDE.md` / `app/CLAUDE.md`, `scripts/scan_capture.log`) remain out of the commits.
+
 ## Refreshed — 2026-10-03 (session 21 — scanner matching overhaul)
 
 **Audit scope note**: touched `CardSearchRepository.kt`, `SmartThresholdUseCase.kt`, `PerceptualHasher.kt`,
@@ -24,21 +73,30 @@ Tests 428/428 green; live-verified for Japanese cards on 2026-10-03 (see handoff
 
 ### New, not fixed
 
-- **`pokemontcg.io` shuts down 2027-03-01; `searchByName` (Personal Collection) is still ptcg-first.** Five-whys:
-  ids are source-prefixed strings -> owned/collection state keys on them -> swapping source changes identity ->
-  needs an id remap. Plan before the deadline.
+- ~~**`pokemontcg.io` shuts down 2027-03-01; `searchByName` (Personal Collection) is still ptcg-first.**~~ **Closed
+  2026-10-03 (part 2 above):** ptcg removed; collection to be wiped and rescanned instead of remapped.
 - **The art hash cannot discriminate in the 20–45 band.** Correct scans scored 8–34; wrong/absent cards 24–30.
   Identity therefore rests on metadata, with 45 only a sanity ceiling. Root: no labelled calibration set, and the
   capture art box assumes the physical card fills the guide frame (unmeasured). Collect `ranked=` log lines.
 - **TCGdex data gaps.** zh-cn `CSV9C`/`CSV9.5C` have 0 cards; ko (239 cards) and zh-cn (877) have no images; newest
   JA set `M6` has no images; JA Black Kyurem ex has no `dexId`; list filters are substring matches (client-side
   exact filtering is mandatory). Coverage varies by language; a paid/other source would be the only fix.
-- **TEMP DIAGNOSTIC debug-capture save still ships** (`ScannerViewModel.kt`, "never meant to ship"): ~2-3 MB JPEG
-  per scan into the app's external files dir; ~100 MB had accumulated.
+- ~~**TEMP DIAGNOSTIC debug-capture save still ships**~~ **Removed 2026-10-03** (uncompiled at the time of writing);
+  old `scan_debug_*.jpg` files (~100 MB) may still sit in the phone's `files/` dir.
+- **Korean (and partly Traditional Chinese) card coverage is thin; circle back to PTCG-database.** TCGdex `ko` has
+  only 239 cards and no images; `zh-tw` has 98 sets. `github.com/type-null/PTCG-database` (MIT, static JSON per
+  language folder, last commit 2026-09; README claims ko 20,323 cards / 264 sets, tc 14,583 / 134, jp 24,039 /
+  329; images hotlinked from official regional sites; its Simplified-Chinese data is copied from TCGdex, no
+  Thai/Indonesian) is the only free source found. It has no search API: it would need a per-language index
+  downloaded and cached on the phone, searched locally, matched by number + set total + printed native name.
+  Not built (Skyler 2026-10-03: "we don't necessarily have to build that now"). README figures unverified by me
+  beyond the `data_jp` folder listing (329 entries). Until built, a Chinese/Korean card that TCGdex lacks falls to
+  the "closest English printings" list, which Skyler accepts for now.
 - **Gemini quota cause unconfirmed** (free-tier daily vs per-minute); 429 body is not logged. Gemini is still
   tried first on every scan, so after quota exhaustion each scan pays one failed call; no circuit breaker. A
   Gemini reply with all-null fields does not fall back to Claude.
-- **TCGdex call budget:** worst case on a total miss is 11 requests (zh) / 8 (others), above the spec's 7 / 5.
+- **TCGdex call budget:** worst case on a total miss is 11 requests (zh) / 8 (others), above the spec's 7 / 5. (After
+  part 2 the ported name+number / dex+number steps raised the test's bound from 7 to 12.)
 - **`lowConfidenceCards` tail filter uses card equality, not id** (`ScannerViewModel.kt`); harmless while the
   cascade de-dupes by id.
 - **`AppSettings` holds both API keys** — any future log/`toString` of the object leaks them. `executeWithRetry`
@@ -76,10 +134,8 @@ Read-only pass (manifest + `libs.versions.toml`); no CVE database lookups were r
   / `Build` imports. `boundVia` is now always `"default-back-camera"`.
 - ~~**`CardFrameOverlay` float geometry**~~ **Not a gap, closed.** Ratios are already shared
   constants; the remainder is a two-line float multiplication in draw code.
-- **Session 20's code changes are unit-test-green, not live-tested.** Skyler ran the build/tests
-  (`BUILD SUCCESSFUL`); fresh XML read by me: 324 tests, 0 failures, 0 skipped. Live matching path
-  and the `x-goog-api-key` header against the real Gemini API are still unexercised — if the
-  header were rejected, every scan would fail with 400/401/403, visible on the first scan.
+- ~~**Session 20's code changes are unit-test-green, not live-tested.**~~ **Closed 2026-10-03:** the live matching
+  path and the `x-goog-api-key` header both worked on the phone (Gemini answered scans; Japanese cards resolved).
 
 ## Refreshed — 2026-09-30 (session 20 — cleanup batch)
 

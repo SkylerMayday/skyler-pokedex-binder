@@ -21,11 +21,12 @@ no users beyond himself.
   each binder's existing per-card action surface (bottom sheets, `SlotDetailScreen`, or a small
   edit icon for Card History which has no sheet). Full spec:
   `docs/specs/2026-07-15-card-language-lock-remarks.md`.
-- **Card search**: `CardSearchRepository` merges three sources:
-  - **pokemontcg.io** (primary) — single fast query, `-set.series:Pocket` filter always applied.
-  - **TCGdex** (secondary) — single fast query, English locale only
-    (`api.tcgdex.net/v2/en/`); merged into every broad name search via
-    `mergeResults`/`dedupeKey` (name+number+setName, lowercased).
+- **Card search** (updated 2026-10-03): `CardSearchRepository` is **TCGdex-only for the primary path** —
+  `pokemontcg.io` was removed entirely (API shut-down 2027-03-01; it had no Japanese data). TCGdex
+  (`api.tcgdex.net/v2/{lang}/`) covers English plus ja/ko/zh-tw/zh-cn/th/id (see "Scanner Matching Pipeline");
+  `TcgdexSetCatalog` supplies English set names (list results carry none). If every TCGdex call fails the search
+  throws `TcgdexUnavailableException` ("Card database (TCGdex) unreachable…"). TCGCSV (below) is the only
+  secondary source and covers English manual/Quick Scan search only, plus Japanese image fill.
   - **TCGCSV** (tcgcsv.com) — no search endpoint exists; the app fans out to all ~217 product
     groups (bounded concurrency, chunks of 8), ~10-13s per scan. **Requires a browser-like
     `User-Agent` header** — tcgcsv.com's bot protection 401s OkHttp's default UA
@@ -848,12 +849,15 @@ How a photo becomes a card. Decisions and their evidence live in `handoff.md` §
    error falls back to Claude Sonnet (`ClaudeCardScanner`, raw OkHttp, model constant `claude-sonnet-4-6`). Both use one
    shared prompt (`CardScanShared.kt`) returning name, number, setTotal, dexNumber, hp, artist, **language**,
    **printedName**. Keys live in the encrypted settings store; never logged.
-3. **Search** — `CardSearchRepository.searchByParsedInfo`: TCGdex first, in the detected language(s)
-   (`tcgdexLangsFor`: ja, ko, zh-tw, zh-cn, th, id, then en), pinning by `dexId` + exact `localId` + exact
-   `set.cardCount.official`; then name+number+total, then a printedName-verified number+total step; then the old
-   `pokemontcg.io` cascade (**delete before 2027-03-01**, tagged `POKEMONTCG-IO-FALLBACK`); then broad steps.
-   TCGdex filters are substring matches (`eq:` for dex/total; `localId` exact-filtered client-side). TCG Pocket
-   (`/tcgp/`) cards are dropped. Non-English ids are `tcgdex_<lang>_<id>`, set names `<SET> (<LANG>)`.
+3. **Search** — `CardSearchRepository.searchByParsedInfo`, **TCGdex only** (since 2026-10-03): in the detected
+   language(s) (`tcgdexLangsFor`: ja, ko, zh-tw, zh-cn, th, id, then en), pin by `dexId` + exact `localId` + exact
+   `set.cardCount.official`; then name+number+total, dex+number, a printedName-verified number+total step, then broad
+   steps (`broad-number` only when a name is known). TCGdex filters are substring matches (`eq:` for dex/total;
+   `localId` exact-filtered client-side). TCG Pocket (`/tcgp/`) cards are dropped. The id scheme
+   (`tcgdex_<id>` English, `tcgdex_<lang>_<id>` otherwise, set names `<SET> (<LANG>)`) lives in one place:
+   `data/remote/TcgdexIds.kt`. Blank-image Japanese cards get an image from `TcgcsvJapanSource` before hashing.
+   **Personal Collection / manual search** use `searchByNameWithJapanese` / `searchByNameAllLanguages` (English + the
+   six Asian languages by dexId; a refresh only replaces a section when every language call succeeded).
 4. **Verify** — `PerceptualHasher` compares the capture's **art region** (x 6.5–93.5%, y 11–49%) to each candidate's art
    with a 32x32 DCT pHash (`ArtHash.kt`, pure JVM). **The hash is noisy** (correct 8–34, wrong 24–30), so
    `SmartThresholdUseCase` accepts a single candidate when metadata pins it (`IDENTITY_PINNED` /
@@ -861,11 +865,24 @@ How a photo becomes a card. Decisions and their evidence live in `handoff.md` §
 5. **Cross-language guard** — an Asian-language scan whose results are all English printings is forced low confidence
    (`CROSS_LANGUAGE`), labelled "closest English printings", hash-ordered. A stand-in printing is not the card owned.
 
+6. **Sync + Japan images** — `SyncCardImagesUseCase` (Settings "Card images" button; auto at app start via
+   `MainBinderViewModel`, at most once per 24 h, 400-id cap) fills BLANK image URLs of saved cards in the five tables that
+   store one (main_binder, unown_binder, connecting_art_slot, secondary_binder, personal_collection_cache) from TCGdex,
+   then from `BlankImageResolver`s (`JapanTcgcsvResolver`). `TcgcsvJapanSource` joins a TCGdex Japanese card to TCGCSV
+   category 85 by lowercase group abbreviation == set id + card-number numerator (83 of 116 Japanese sets match; vintage
+   and some promos don't), caches under `cacheDir/tcgcsv_ja` (groups 24 h; sets >90 days old never refetched), is
+   capped by `FetchBudget(3)` per search, and backs off 15 min (6 h on HTTP 401/403) after a failed groups fetch.
+7. **Reset collection data** — Settings "Danger zone": forced export, then type `RESET`, then one `@Transaction`
+   (`CollectionResetDao`) clears the card data; slots, settings, keys and `connecting_art_group` layouts survive.
+   No Room schema change (still v9). **Post updates to Discord** is a Settings switch, default OFF.
+
 **Why TCGdex, not pokemontcg.io / Scrydex:** `pokemontcg.io` has no Japanese data and shuts down 2027-03-01; Scrydex
-has no free tier ($29/mo minimum); TCGdex is free, already integrated, and has ja/ko/zh/th/id data (coverage uneven).
+has no free tier ($29/mo minimum); TCGdex is free and has ja/ko/zh/th/id data (coverage uneven). Skyler chose to wipe
+and rescan the collection instead of writing an id-remap migration (2026-10-03), so there is no alias table.
 **Why a Claude fallback:** the Gemini free tier 429'd after ~17 scans in a day; Sonnet is ~$0.006/scan (estimate).
 **Don't re-litigate:** the hash is a sanity check, not the identifier — do not tighten the threshold without a labelled
-calibration set. `searchByName` (Personal Collection) stays ptcg-first until an id-remap migration is planned.
+calibration set. The User-Agent for tcgcsv.com was NOT changed (it returned 200; an earlier 401 was a temporary block
+from a probe burst) — probe third-party hosts slowly.
 
 ## Conventions
 

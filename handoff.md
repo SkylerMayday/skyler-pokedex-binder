@@ -1,63 +1,67 @@
-# Handoff — Session 21 (2026-10-01 → 10-03)
+# Handoff — Session 21 (2026-10-01 → 10-03), final wrapcon
 
 ## 1. Goals
 
-Live-test the scanner on the phone, then fix what it showed: wrong cards for Japanese/other-language
-cards, a useless art hash, and Gemini's free-tier quota blocking scans.
+Live-test the scanner, fix wrong cards for Japanese/other-language cards, replace the useless art hash, survive
+Gemini's free-tier quota, then move the whole app to TCGdex (the `pokemontcg.io` API shuts down 2027-03-01) with a
+wipe-and-rescan instead of a migration.
 
 ## 2. Current State
 
-- **Unit tests 428/428 green** (Skyler ran `testDebugUnitTest --rerun-tasks` after each stage; fresh XML
-  read by me: 0 failures, 0 errors, 0 skipped).
-- **Latest build is on the phone** (installed 2026-10-03 00:32). Live-verified that night: Mega Malamar ex
-  (`M6-048`), Klawf (`SV1S-088`), Black Kyurem (`SV7a-011`), Wishiwashi ex (`M6-021`) all accepted
-  automatically; a Simplified-Chinese Palafin ex fell to the English fallback, forced low confidence
-  (`path=CROSS_LANGUAGE`). Gemini answered all five (quota had reset).
-- **Not live-tested:** Castform/Furfrou under the new confidence rule, any Thai / Indonesian / Korean /
-  Traditional-Chinese card, manual search with the extra languages, whether the "closest English
-  printings" header actually renders (only the log line `crossLanguage=true` was seen).
-- Committed in two commits this wrapcon (code+tests, then docs/scripts/pipeline archives). Skyler's own
-  `CLAUDE.md` / `app/CLAUDE.md` edits and `scripts/scan_capture.log` were deliberately left out.
+- **Unit tests 505/505 green**, `compileDebugAndroidTestKotlin` green (Skyler ran both; fresh XML read by me).
+  Final multi-lens review: 89 / 94 / 94 (min 89, ship).
+- **Phone has an OLDER build** (installed 2026-10-03 00:32). Verified live on that build: Mega Malamar ex, Klawf, Black
+  Kyurem, Wishiwashi ex accepted automatically; a Simplified-Chinese Palafin fell to the "closest English printings"
+  list; Gemini worked, Claude Sonnet fallback worked earlier (7 of 8 scans on 2026-10-01).
+- **NOT on the phone / never run on a device:** TCGdex-only search, Personal Collection with all languages, Reset
+  collection data, Card-images sync, the Discord toggle, `TcgcsvJapanSource` (M6 images), the Palafin header, any
+  Thai / Indonesian / Korean / Traditional-Chinese card, the androidTest SQL cases.
+- **Committed:** the scanner overhaul (earlier commits `dcfe2d5`, `8eaf3b9`, `8482561`) and, in this wrapcon, the
+  TCGdex-only rebuild (see git log). Skyler's own `CLAUDE.md` / `app/CLAUDE.md` edits and `scripts/scan_capture.log`
+  are deliberately NOT committed.
 
 ## 3. Active Files
 
-- `repository/CardSearchRepository.kt` — TCGdex-first cascade, language handling, name verification, cross-language flag
-- `domain/` — `ArtHash.kt` (new), `PerceptualHasher.kt`, `SmartThresholdUseCase.kt`, `CardScanProvider.kt` / `ClaudeCardScanner.kt` / `CardScanShared.kt` (new), `GeminiCardScanner.kt`
-- `data/remote/TcgdexApi.kt` (+ DTO, `NetworkModule.kt`), `ui/scanner/ScannerViewModel.kt` / `ScannerScreen.kt`, settings (Anthropic key field)
-- `scripts/claude_scan_bakeoff.py` — Haiku-vs-Sonnet accuracy/cost test; **never run** (see Failed Attempts)
-- Pipeline archives for the four runs: `.pipeline-archive/2026-10-01-*`, `2026-10-02-*`
+- `repository/CardSearchRepository.kt` (TCGdex-only), `data/remote/` — `TcgdexApi`, `TcgdexIds` (id-scheme source of truth),
+  `TcgdexSetCatalog`, `TcgcsvJapanSource` (+ DTOs, `TcgcsvApi` category-85 calls)
+- `domain/` — `SyncCardImagesUseCase`, `BlankImageResolver` seam, `JapanTcgcsvResolver`, `CardScanProvider`, `SmartThresholdUseCase`
+- `data/local/CollectionResetDao.kt`, `ui/settings/` (Danger zone, Card images, Discord switch), `PersonalCollectionRepository`
+- `.pipeline-archive/2026-10-0*` — specs, change logs, review verdicts of every run
 
-## 4. Changes Made
+## 4. Changes Made (since the first wrapcon today)
 
-| # | Change | Why (evidence) |
+| # | Change | Why |
 |---|---|---|
-| 1 | Name verification on `number+total` / `broad-number` (`matchingParsedName`) | Black Kyurem 11/64 resolved to Jungle Snorlax #11 via the species-blind query |
-| 2 | Art-region DCT pHash (`ArtHash.kt`, 63 bits) replaces 8x8 whole-image hash; capture art rect via `cardRectInCrop` | Whole-crop hash ranked the true card 84th/75th of 100 (it hashed the hand/background); art-crop ranked it 2nd/1st |
-| 3 | TCGdex is the primary source; `pokemontcg.io` kept as a fallback tagged `POKEMONTCG-IO-FALLBACK: remove before 2027-03-01` | `pokemontcg.io` shuts down 2027-03-01 (docs.pokemontcg.io); it has no Japanese cards |
-| 4 | Gemini/Claude return `language` + `printedName`; six languages queried (ja, ko, zh-tw, zh-cn, th, id); ids `tcgdex_<lang>_<id>`, set names `<SET> (<LANG>)` | Japanese cards were absent or wrong |
-| 5 | Confidence: `IDENTITY_PINNED` (dex+number+total), `IDENTITY_PINNED_NAME` (printedName-verified), ceiling `PINNED_HASH_CONTRADICTION_DISTANCE=45`, single-candidate hash limit 16→20 | Correct cards scored hash 8–34, wrong 24–30: the hash cannot discriminate, identity rests on metadata |
-| 6 | Dual provider: Gemini first, any non-cancellation error → Claude Sonnet (`claude-sonnet-4-6`); Anthropic key field in Settings | Free-tier Gemini 429'd after ~17 scans; 7 of 8 scans then ran on Claude fine |
-| 7 | `crossLanguage` flag: an Asian-language scan with only English results is forced low confidence, labelled, hash-ordered | A stand-in English printing is not the card owned; never auto-accept |
-| 8 | TCG Pocket (`/tcgp/`) cards dropped from TCGdex results | Mobile-game cards polluted candidates |
+| 1 | `pokemontcg.io` removed (API, DTOs, backfill use case, every fallback step); scanner/manual search/Quick Scan/PC are TCGdex-only; `TcgdexUnavailableException` when TCGdex is entirely down | API shuts down 2027-03-01, no Japanese data |
+| 2 | Personal Collection covers English + ja/ko/zh-tw/zh-cn/th/id, de-duplicated by id; partial refreshes never drop a language's cached rows | Skyler: PC includes non-English printings |
+| 3 | Settings **Reset collection data** (forced export → type `RESET` → one transaction; keeps slots, settings, keys, connecting-art layouts; no Room change) | Skyler OK'd wiping; he will rescan everything |
+| 4 | **Card images sync** (manual button + once/24 h auto at app start, 400-id cap) fills blank image URLs in 5 tables | M6 has no TCGdex images yet; saved cards kept blank forever |
+| 5 | **TcgcsvJapanSource** (TCGplayer category 85): cached join by set abbreviation + number numerator, `_400w` images, `FetchBudget(3)`, 15 min / 6 h failure cooldown | Fills the M6 gap; 83 of 116 JA sets join |
+| 6 | **Post updates to Discord** switch, default OFF | First publish after rescan would spam ~1,000 false "replaced" messages |
+| 7 | Debug-capture saving removed from `ScannerViewModel` | Was writing ~3 MB per scan |
+| 8 | Review fixes: id scheme consolidated in `TcgdexIds`, dead ptcg/release-date code deleted, restored cascade-order tests | Three-lens review |
 
-Docs: `gaps.md` (session 21 section), `project-overview.md` (new "Scanner Matching Pipeline" section).
+Docs: `gaps.md` (session 21 part 2), `project-overview.md` (card-search + Scanner Matching Pipeline sections).
 
 ## 5. Failed Attempts
 
-- **Gradle loopback wall again** (7th session): Claude could not build; Skyler ran every build.
-- **SIFT feature matching** tested as an alternative to the hash: no better (Furfrou rank 2, wrong card on top) and would need OpenCV. Dropped.
-- **TCGdex zh-cn set `CSV9C`/`CSV9.5C`** exist with `official: 208` but contain 0 cards, so Palafin cannot be matched there. No code fix possible.
-- `scripts/claude_scan_bakeoff.py` failed on Skyler's Python (`ModuleNotFoundError: anyio`); fix is `python -m pip install --upgrade anthropic pillow`. Not rerun.
-- Coder agent hit the Claude session rate limit once mid-task; the retry resumed from the partial tree.
-- Git Bash mangles `/storage/...` adb paths (needs `MSYS_NO_PATHCONV=1`).
+- **Gradle loopback wall** (8th session): Claude could not build; Skyler ran every build/test.
+- **Opus rate limits** cut off three planner/reviewer/coder runs; each was re-run (`resets` times shown in the error).
+- **SIFT** as a hash alternative: no better, needs OpenCV. Dropped.
+- **TCGdex zh-cn sets `CSV9C`/`CSV9.5C`** exist with 0 cards: Palafin ex 228/208 cannot be matched there. No code fix.
+- **tcgcsv.com blocked the app's User-Agent (401) once** during a 370-request probe burst, then recovered; UA left unchanged.
+- `scripts/claude_scan_bakeoff.py` never run (Skyler: "stick to sonnet", so not needed).
+- Git Bash mangles adb paths (`MSYS_NO_PATHCONV=1`) and Bash heredocs with quoted Kotlin fail intermittently (use Write).
 
 ## 6. Next Steps
 
-1. **Live-scan the untested cases** (see Current State) and read `adb logcat -s ScannerMatch:*`. Confirm the cross-language header renders on screen.
-2. **Rotate the Gemini API key** (printed in logcat and archived transcripts earlier; still unrotated). Blocked on Skyler.
-3. **Plan the `pokemontcg.io` removal before 2027-03-01.** `searchByName` is still ptcg-first because Personal Collection stores owned status by card id; switching sources changes ids (`xyevo-25` → `tcgdex_xyevo-25`) and would drop Skyler's owned toggles. Needs an id-remap migration (`planning` + pipeline).
-4. **Remove the TEMP DIAGNOSTIC debug-capture save** in `ScannerViewModel.kt` (every scan writes a 2-3 MB JPEG; 47 files / ~100 MB had accumulated) once calibration scans are done.
-5. Optional: run the bake-off (needs `ANTHROPIC_API_KEY` in Skyler's own shell) to choose Haiku vs Sonnet on cost.
-6. Small fixes parked in `gaps.md`: `lowConfidenceCards` filters tail by equality not id; trim the dex step's language fan-out if misses feel slow.
+1. **Install the latest build and try it:** `powershell.exe -File scripts\install_debug.ps1`. Check Settings shows "Danger zone", "Card images" and the Discord switch.
+2. **Run `connectedDebugAndroidTest` with the phone connected** (executes the Reset / fillBlankImage SQL tests that have only been compiled), then use **Reset collection data** (it exports first) and **rescan** the collection.
+3. Check an M6 card (Mega Malamar ex / Wishiwashi ex) shows an image and the hash `distance=` is a real number; press **Sync card images** and confirm a second run fetches nothing.
+4. Check the cross-language header on a Palafin / other unmatched Asian-language card.
+5. Fix the one open P2 (`gaps.md`): remember failed TCGCSV Japan product downloads (per-group retry-at + test).
+6. **Rotate the Gemini API key** (printed in logcat and archived transcripts earlier; still unrotated) — blocked on Skyler.
+7. Later, if wanted: PTCG-database for Korean / Traditional Chinese (`gaps.md`); `security-crypto` replacement; English TCGCSV name index.
 
-Blocked on Skyler: items 1–2, and the decision on item 3's scope (should Personal Collection include non-English printings?).
+Blocked on Skyler: items 1-4 (phone), 6 (key). Publish only AFTER the rescan is done (the first publish after a wipe writes a
+big changelog; the Discord switch is OFF by default).
