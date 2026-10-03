@@ -16,6 +16,9 @@ class RateLimitException(provider: String = "Gemini") : IOException("Rate limite
 class InvalidApiKeyException(provider: String, code: Int) :
     IOException("$provider rejected the API key (HTTP $code)")
 
+/** Gemini answered but returned no field at all; used only as a fallback reason, never shown. */
+internal class EmptyScanException : IOException("Scanner returned no fields")
+
 class NoApiKeyException : IllegalStateException("No scanner API key configured")
 
 // Bumped from 2 (500ms fixed) after live sessions saw 11/12 requests 503 in one sitting (2026-09-22)
@@ -86,7 +89,10 @@ internal suspend fun OkHttpClient.executeWithRetry(
             }
             throw e
         }
-        if (response.code == 429) throw RateLimitException(provider)
+        if (response.code == 429) {
+            response.close()
+            throw RateLimitException(provider)
+        }
         if (response.code in invalidKeyCodes) {
             response.close()
             throw InvalidApiKeyException(provider, response.code)
@@ -99,7 +105,10 @@ internal suspend fun OkHttpClient.executeWithRetry(
             }
             throw IOException("$provider error: ${response.code}")
         }
-        if (!response.isSuccessful) throw IOException("$provider error: ${response.code}")
+        if (!response.isSuccessful) {
+            response.close()
+            throw IOException("$provider error: ${response.code}")
+        }
         return response
     }
     throw lastTimeout ?: IOException("$provider scan failed after retries")

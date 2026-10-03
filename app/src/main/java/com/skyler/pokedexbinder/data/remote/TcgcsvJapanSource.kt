@@ -53,7 +53,8 @@ internal data class ProductsFile(val fetchedAt: Long, val items: List<CachedItem
  * Image URLs for Japanese cards from TCGCSV (TCGplayer category 85), cached on disk under
  * `cacheDir/tcgcsv_ja/`. Image only, never identity. Join: lowercase group abbreviation == TCGdex set id
  * and `Number` numerator == localId (the denominator is ignored; it disagrees with TCGdex for many sets).
- * One lookup costs at most one groups call plus one product-list call; a warm cache costs none.
+ * A lookup costs at most one groups call (process-wide cooldown) plus one product-list call per candidate
+ * group (two when several groups share the abbreviation); failures are remembered per cooldown; a warm cache costs none.
  */
 @Singleton
 class TcgcsvJapanSource @Inject constructor(
@@ -73,6 +74,8 @@ class TcgcsvJapanSource @Inject constructor(
     @Volatile private var memGroups: GroupsFile? = null
     /** Earliest time the groups list may be requested again after a failed refresh (0 = no cooldown). */
     private var groupsRetryAt = 0L
+    /** Per group id: earliest time its product list may be requested again after a failed download. */
+    private val productsRetryAt = ConcurrentHashMap<Int, Long>()
 
     /** `_400w` image of the Japanese card [setId]-[localId], or null. Never throws. */
     suspend fun imageUrl(setId: String, localId: String, budget: FetchBudget? = null): String? = try {
@@ -156,6 +159,7 @@ class TcgcsvJapanSource @Inject constructor(
 
     /** Fetches and stores [group]'s product list; null when over [budget] or on any failure. */
     private suspend fun fetchProducts(group: CachedGroup, budget: FetchBudget?): ProductsFile? {
+        if (nowMs() < (productsRetryAt[group.g] ?: 0L)) return null
         if (budget != null && !budget.tryTake()) return null
         return try {
             val items = api.getJapanProducts(group.g).results.mapNotNull { p ->
@@ -169,10 +173,13 @@ class TcgcsvJapanSource @Inject constructor(
             ProductsFile(nowMs(), items).also {
                 memFiles[group.g] = it
                 writeFile(productsFile(group.g), productsAdapter, it)
+                productsRetryAt.remove(group.g)
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            val blocked = e is HttpException && (e.code() == 401 || e.code() == 403)
+            productsRetryAt[group.g] = nowMs() + if (blocked) PRODUCTS_BLOCKED_RETRY_MS else PRODUCTS_RETRY_MS
             null
         }
     }
@@ -219,6 +226,7 @@ class TcgcsvJapanSource @Inject constructor(
     /** Deletes product files of groups that left the groups list. */
     private suspend fun deleteOrphanFiles(liveIds: Set<Int>) {
         memFiles.keys.retainAll(liveIds)
+        productsRetryAt.keys.retainAll(liveIds)
         withContext(Dispatchers.IO) {
             cacheRoot.listFiles()?.forEach { f ->
                 val id = PRODUCT_FILE.matchEntire(f.name)?.groupValues?.get(1)?.toIntOrNull()
@@ -234,6 +242,8 @@ class TcgcsvJapanSource @Inject constructor(
         const val GROUPS_RETRY_MS = 15L * 60 * 1000
         /** 401/403 is the host blocking us (it blocked a User-Agent after a burst): back off longer. */
         const val GROUPS_BLOCKED_RETRY_MS = 6L * 60 * 60 * 1000
+        const val PRODUCTS_RETRY_MS = 15L * 60 * 1000
+        const val PRODUCTS_BLOCKED_RETRY_MS = GROUPS_BLOCKED_RETRY_MS
         val NUMBER = Regex("""^\D*0*(\d+)""")
         val PRODUCT_FILE = Regex("""g(\d+)\.json""")
     }

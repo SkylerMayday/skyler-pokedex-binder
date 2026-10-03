@@ -967,6 +967,52 @@ class CardSearchRepositoryTest {
         assertTrue(result.nameVerified)
     }
 
+    private suspend fun jaNameVerified(printedName: String, cardName: String): ParsedSearchResult {
+        coEvery { tcgdexApi.filterCards("ja", "11", "eq:64", null, null) } returns
+            listOf(brief("SV7a-011", "011", cardName))
+        return repo().searchByParsedInfo(
+            parsedFull("Mew", "11", "64", null, language = "ja", printedName = printedName)
+        )
+    }
+
+    @Test
+    fun `a name that is only a prefix of the card name is returned but not name-verified`() = runTest {
+        val result = jaNameVerified("ミュウ", "ミュウツー")
+
+        assertEquals(1, result.cards.size)
+        assertFalse(result.nameVerified)
+    }
+
+    @Test
+    fun `a trailing ex on either side still verifies`() = runTest {
+        assertTrue(jaNameVerified("ミュウ", "ミュウex").nameVerified)
+        assertTrue(jaNameVerified("ミュウex", "ミュウ").nameVerified)
+    }
+
+    @Test
+    fun `decomposed and composed forms of the same name verify`() = runTest {
+        val composed = "ブラックキュレムex"
+        val decomposed = java.text.Normalizer.normalize(composed, java.text.Normalizer.Form.NFD)
+        assertTrue(decomposed != composed)
+
+        assertTrue(jaNameVerified(decomposed, composed).nameVerified)
+    }
+
+    @Test
+    fun `prefix name with two candidates is not name-verified`() = runTest {
+        coEvery { tcgdexApi.filterCards("ja", "11", "eq:64", null, null) } returns listOf(
+            brief("SV7a-011", "011", "ミュウ"),
+            brief("SV6a-011", "011", "ミュウツー")
+        )
+
+        val result = repo().searchByParsedInfo(
+            parsedFull("Mew", "11", "64", null, language = "ja", printedName = "ミュウ")
+        )
+
+        assertEquals(2, result.cards.size)
+        assertFalse(result.nameVerified)
+    }
+
     @Test
     fun `zh scan on a total miss stays inside the per-scan TCGdex call budget`() = runTest {
         repo().searchByParsedInfo(

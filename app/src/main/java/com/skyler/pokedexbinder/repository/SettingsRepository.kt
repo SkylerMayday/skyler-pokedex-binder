@@ -27,7 +27,14 @@ data class AppSettings(
     val darkMode: Boolean = false,
     val geminiApiKey: String = "",
     val anthropicApiKey: String = ""
-)
+) {
+    // Keys must never reach a log or crash report via the generated toString().
+    override fun toString() = "AppSettings(showRegional=$showRegional, showAlternateForms=$showAlternateForms, " +
+        "showMega=$showMega, showGmax=$showGmax, useCameraScanner=$useCameraScanner, darkMode=$darkMode, " +
+        "geminiApiKey=$REDACTED, anthropicApiKey=$REDACTED)"
+}
+
+internal const val REDACTED = "<redacted>"
 
 /**
  * Gate for [SettingsRepository.migrateGeminiKeyIfNeeded]: whether the legacy plaintext Gemini API

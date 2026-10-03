@@ -105,4 +105,13 @@ class SettingsRepositoryTest {
         assertEquals("gemini-key", repository.getGeminiApiKey())
         assertEquals("anthropic-key", repository.settings.first().anthropicApiKey)
     }
+
+    @Test
+    fun `AppSettings toString never contains either key`() {
+        val text = AppSettings(geminiApiKey = "SECRET-G", anthropicApiKey = "SECRET-C").toString()
+
+        assertFalse(text, text.contains("SECRET-G"))
+        assertFalse(text, text.contains("SECRET-C"))
+        assertTrue(text, text.contains("showMega="))
+    }
 }

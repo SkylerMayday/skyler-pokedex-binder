@@ -8,6 +8,8 @@ import javax.inject.Singleton
 
 internal enum class ScanProvider { GEMINI, CLAUDE }
 
+private const val GEMINI_COOLDOWN_MS = 10L * 60 * 1000
+
 /** Gemini first, then Claude; a blank key means that provider is absent. */
 internal fun selectProviders(geminiKey: String, claudeKey: String): List<ScanProvider> = buildList {
     if (geminiKey.isNotBlank()) add(ScanProvider.GEMINI)
@@ -15,8 +17,9 @@ internal fun selectProviders(geminiKey: String, claudeKey: String): List<ScanPro
 }
 
 /**
- * Tries Gemini first; on any non-cancellation failure resends the bitmap to Claude (when a Claude
- * key is set). Logs carry provider and exception class names only — never keys or messages.
+ * Tries Gemini first; on any non-cancellation failure, or an all-null reply, resends the bitmap to
+ * Claude (when a Claude key is set). After a Gemini 429, Gemini is skipped for 10 min. Logs carry
+ * provider and exception class names only — never keys or messages.
  */
 @Singleton
 class CardScanProvider @Inject constructor(
@@ -26,6 +29,10 @@ class CardScanProvider @Inject constructor(
 ) {
     /** Test seam: Log is unavailable in JVM unit tests. */
     internal var log: (String) -> Unit = { android.util.Log.i("ScannerMatch", it) }
+    internal var nowMs: () -> Long = System::currentTimeMillis
+
+    // ponytail: in-memory, per process; persist/back off by Retry-After only if quota resets turn out to matter
+    @Volatile private var geminiSkipUntil = 0L
 
     suspend fun scan(bitmap: Bitmap): ParsedCardInfo {
         val geminiKey = settings.getGeminiApiKey().trim()
@@ -33,19 +40,27 @@ class CardScanProvider @Inject constructor(
         val providers = selectProviders(geminiKey, claudeKey)
         if (providers.isEmpty()) throw NoApiKeyException()
 
+        val hasGemini = ScanProvider.GEMINI in providers
+        val hasClaude = ScanProvider.CLAUDE in providers
         var geminiError: Exception? = null
-        if (ScanProvider.GEMINI in providers) {
+        // The breaker only applies when Claude can take over; with Gemini alone keep trying.
+        val geminiCooling = hasGemini && hasClaude && nowMs() < geminiSkipUntil
+        if (hasGemini && !geminiCooling) {
             try {
-                return gemini.scan(bitmap, geminiKey).also { log("scan provider=gemini") }
+                val result = gemini.scan(bitmap, geminiKey)
+                if (!result.isEmpty || !hasClaude) return result.also { log("scan provider=gemini") }
+                geminiError = EmptyScanException()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                if (ScanProvider.CLAUDE !in providers) throw e
+                if (e is RateLimitException) geminiSkipUntil = nowMs() + GEMINI_COOLDOWN_MS
+                if (!hasClaude) throw e
                 geminiError = e
             }
         }
 
-        val fallbackReason = geminiError?.let { it::class.java.simpleName } ?: "none"
+        val fallbackReason = if (geminiCooling) "GeminiCooldown"
+        else geminiError?.let { it::class.java.simpleName } ?: "none"
         try {
             return claude.scan(bitmap, claudeKey).also {
                 log("scan provider=claude fallbackReason=$fallbackReason")

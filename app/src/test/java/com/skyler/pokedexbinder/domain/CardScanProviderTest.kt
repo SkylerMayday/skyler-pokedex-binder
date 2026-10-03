@@ -30,11 +30,14 @@ class CardScanProviderTest {
     private val logs = mutableListOf<String>()
     private val geminiResult = parsed("FromGemini")
     private val claudeResult = parsed("FromClaude")
+    private val emptyResult = ParsedCardInfo(null, null, null, null, null)
+    private var now = 1_000_000L
+    private val minute = 60_000L
 
     private fun provider(geminiKey: String = GEMINI_SECRET, claudeKey: String = CLAUDE_SECRET): CardScanProvider {
         coEvery { settings.getGeminiApiKey() } returns geminiKey
         coEvery { settings.getAnthropicApiKey() } returns claudeKey
-        return CardScanProvider(gemini, claude, settings).also { it.log = { line -> logs += line } }
+        return CardScanProvider(gemini, claude, settings).also { it.log = { line -> logs += line }; it.nowMs = { now } }
     }
 
     private fun assertNoKeysLogged() {
@@ -174,6 +177,90 @@ class CardScanProviderTest {
         } catch (e: CancellationException) {
         }
         coVerify(exactly = 0) { claude.scan(any(), any()) }
+    }
+
+    @Test
+    fun `all-null gemini reply falls back to claude`() = runTest {
+        coEvery { gemini.scan(any(), any()) } returns emptyResult
+        coEvery { claude.scan(any(), any()) } returns claudeResult
+
+        assertSame(claudeResult, provider().scan(bitmap))
+        assertTrue(logs.any { it.contains("provider=claude fallbackReason=EmptyScanException") })
+        assertNoKeysLogged()
+    }
+
+    @Test
+    fun `all-null gemini reply without claude key is returned as is`() = runTest {
+        coEvery { gemini.scan(any(), any()) } returns emptyResult
+
+        assertSame(emptyResult, provider(claudeKey = "").scan(bitmap))
+        coVerify(exactly = 0) { claude.scan(any(), any()) }
+    }
+
+    @Test
+    fun `a gemini reply with only a card number is not empty`() = runTest {
+        val partial = ParsedCardInfo(null, "12", null, null, null)
+        coEvery { gemini.scan(any(), any()) } returns partial
+
+        assertSame(partial, provider().scan(bitmap))
+        coVerify(exactly = 0) { claude.scan(any(), any()) }
+    }
+
+    @Test
+    fun `gemini 429 skips gemini for 10 minutes`() = runTest {
+        coEvery { gemini.scan(any(), any()) } throws RateLimitException()
+        coEvery { claude.scan(any(), any()) } returns claudeResult
+        val p = provider()
+
+        p.scan(bitmap)
+        now += 9 * minute
+        assertSame(claudeResult, p.scan(bitmap))
+
+        coVerify(exactly = 1) { gemini.scan(any(), any()) }
+        coVerify(exactly = 2) { claude.scan(any(), any()) }
+        assertTrue(logs.any { it.contains("provider=claude fallbackReason=GeminiCooldown") })
+        assertNoKeysLogged()
+    }
+
+    @Test
+    fun `gemini is tried again after the cooldown`() = runTest {
+        coEvery { gemini.scan(any(), any()) } throws RateLimitException()
+        coEvery { claude.scan(any(), any()) } returns claudeResult
+        val p = provider()
+
+        p.scan(bitmap)
+        now += 11 * minute
+        p.scan(bitmap)
+
+        coVerify(exactly = 2) { gemini.scan(any(), any()) }
+    }
+
+    @Test
+    fun `gemini 429 without claude key rethrows and does not skip the next scan`() = runTest {
+        coEvery { gemini.scan(any(), any()) } throws RateLimitException()
+        val p = provider(claudeKey = "")
+
+        repeat(2) {
+            try {
+                p.scan(bitmap)
+                fail("expected RateLimitException")
+            } catch (e: RateLimitException) {
+            }
+        }
+
+        coVerify(exactly = 2) { gemini.scan(any(), any()) }
+    }
+
+    @Test
+    fun `a non-429 gemini failure does not start the cooldown`() = runTest {
+        coEvery { gemini.scan(any(), any()) } throws IOException("boom")
+        coEvery { claude.scan(any(), any()) } returns claudeResult
+        val p = provider()
+
+        p.scan(bitmap)
+        p.scan(bitmap)
+
+        coVerify(exactly = 2) { gemini.scan(any(), any()) }
     }
 
     @Test

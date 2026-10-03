@@ -13,11 +13,14 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
 
@@ -182,11 +185,13 @@ class SyncCardImagesUseCaseTest {
 
         val manual = launch { useCase.sync() }
         yield() // the manual run takes the lock and parks on the gate
-        val auto = useCase.syncIfDue(1L shl 40)
+        val auto = async { useCase.syncIfDue(1L shl 40) }
+        runCurrent()
+        assertTrue("auto run must return immediately, not wait for the manual run", auto.isCompleted)
         gate.complete(Unit)
         manual.join()
 
-        assertNull(auto)
+        assertNull(auto.await())
         coVerify(exactly = 1) { main.blankImageCardIds() }
         coVerify(exactly = 1) { api.getCard(any(), any()) }
     }

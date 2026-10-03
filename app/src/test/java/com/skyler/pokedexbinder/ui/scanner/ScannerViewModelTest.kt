@@ -95,6 +95,15 @@ class ScannerViewModelTest {
     }
 
     @Test
+    fun `tail excludes by id, not by equality`() {
+        val first = card("dup", "1").copy(imageUrl = "https://img/first.jpg")
+        val second = card("dup", "1").copy(imageUrl = "https://img/second.jpg")
+        val other = card("other", "1")
+        val out = lowConfidenceCards(listOf(first, second, other), listOf("dup-1" to 5), true)
+        assertEquals(listOf("dup-1", "other-1"), out.map { it.id })
+    }
+
+    @Test
     fun `equal distances keep ranked order`() {
         val c = cards("a", "b")
         val out = lowConfidenceCards(c, listOf("b-1" to 10, "a-1" to 10), true)

@@ -276,19 +276,90 @@ class TcgcsvJapanSourceTest {
         coVerify(exactly = 2) { api.getJapanGroups() }
     }
 
+    private fun stubThreeSharedAbbreviationGroups() = stubGroups(
+        group(1, "M6", name = "Old", published = "2026-01-01T00:00:00"),
+        group(2, "M6", name = "Mid", published = "2026-06-01T00:00:00"),
+        group(3, "M6", name = "New", published = "2027-01-01T00:00:00")
+    )
+
     @Test
     fun `two groups sharing an abbreviation without a set-id name try the two newest`() = runTest {
-        stubGroups(
-            group(1, "M6", name = "Old", published = "2026-01-01T00:00:00"),
-            group(2, "M6", name = "Mid", published = "2026-06-01T00:00:00"),
-            group(3, "M6", name = "New", published = "2027-01-01T00:00:00")
-        )
+        stubThreeSharedAbbreviationGroups()
         stubProducts(3, product(31, "x", "002/010", group = 3))
         stubProducts(2, product(21, "x", "001/010", group = 2))
         val s = source()
 
         assertTrue(s.imageUrl("M6", "1")!!.contains("/21_400w"))
+        coVerify(exactly = 1) { api.getJapanProducts(3) }
+        coVerify(exactly = 1) { api.getJapanProducts(2) }
         coVerify(exactly = 0) { api.getJapanProducts(1) }
+    }
+
+    @Test
+    fun `a miss in the two newest groups never reaches the third`() = runTest {
+        stubThreeSharedAbbreviationGroups()
+        stubProducts(3, product(31, "x", "002/010", group = 3))
+        stubProducts(2, product(21, "x", "005/010", group = 2))
+        stubProducts(1, product(11, "x", "001/010", group = 1)) // would match if take(3) regressed
+        val s = source()
+
+        assertNull(s.imageUrl("M6", "1"))
+        coVerify(exactly = 1) { api.getJapanProducts(3) }
+        coVerify(exactly = 1) { api.getJapanProducts(2) }
+        coVerify(exactly = 0) { api.getJapanProducts(1) }
+    }
+
+    @Test
+    fun `failed product download is remembered per group`() = runTest {
+        stubGroups(group(1, "M6"))
+        coEvery { api.getJapanProducts(1) } throws IOException("down")
+        val s = source()
+
+        repeat(5) { assertNull(s.imageUrl("M6", "048")) }
+
+        coVerify(exactly = 1) { api.getJapanProducts(1) }
+    }
+
+    @Test
+    fun `failed product download is retried after 15 minutes`() = runTest {
+        stubGroups(group(1, "M6"))
+        coEvery { api.getJapanProducts(1) } throws IOException("down")
+        val s = source()
+
+        repeat(3) { s.imageUrl("M6", "048") }
+        coVerify(exactly = 1) { api.getJapanProducts(1) }
+
+        now += 16 * minute
+        s.imageUrl("M6", "048")
+        coVerify(exactly = 2) { api.getJapanProducts(1) }
+    }
+
+    @Test
+    fun `401 on product download backs off 6 hours`() = runTest {
+        stubGroups(group(1, "M6"))
+        coEvery { api.getJapanProducts(1) } throws
+            HttpException(Response.error<Any>(401, "blocked".toResponseBody("text/plain".toMediaType())))
+        val s = source()
+
+        s.imageUrl("M6", "048")
+        now += 5 * hour
+        s.imageUrl("M6", "048")
+        coVerify(exactly = 1) { api.getJapanProducts(1) }
+
+        now += 2 * hour
+        s.imageUrl("M6", "048")
+        coVerify(exactly = 2) { api.getJapanProducts(1) }
+    }
+
+    @Test
+    fun `a failed group does not block other groups`() = runTest {
+        stubGroups(group(1, "A1"), group(2, "A2"))
+        coEvery { api.getJapanProducts(1) } throws IOException("down")
+        stubProducts(2, product(12, "x", "001", group = 2))
+        val s = source()
+
+        assertNull(s.imageUrl("A1", "1"))
+        assertTrue(s.imageUrl("A2", "1")!!.contains("/12_400w"))
     }
 
     @Test

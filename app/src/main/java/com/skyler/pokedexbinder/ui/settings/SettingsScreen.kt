@@ -428,7 +428,7 @@ private fun imageSyncStatus(state: ImageSyncUiState): String? = when (state) {
     ImageSyncUiState.Idle -> null
     is ImageSyncUiState.Running -> "Checking ${state.done}/${state.total}..."
     is ImageSyncUiState.Done -> with(state.result) {
-        "Updated $updated · Still missing $stillMissing (TCGdex has no image yet) · " +
+        "Updated $updated · Still missing $stillMissing (no image from TCGdex or the Japan backup) · " +
             "Couldn't check $failed · Not syncable $unsyncable"
     }
     is ImageSyncUiState.Error -> "Image sync failed: ${state.message}"

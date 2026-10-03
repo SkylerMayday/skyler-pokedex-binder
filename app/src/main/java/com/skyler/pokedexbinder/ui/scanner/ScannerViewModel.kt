@@ -18,6 +18,7 @@ import com.skyler.pokedexbinder.domain.SmartThresholdUseCase
 import com.skyler.pokedexbinder.repository.BinderRepository
 import com.skyler.pokedexbinder.repository.CardSearchRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -121,6 +122,8 @@ class ScannerViewModel @Inject constructor(
             } catch (e: RateLimitException) {
                 consecutiveRateLimits++
                 _state.value = ScannerState.RateLimited(consecutiveRateLimits)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _state.value = ScannerState.Error(e.message ?: "Scan failed")
             } finally {
@@ -206,7 +209,7 @@ internal fun confidenceCheckInputs(parsed: ParsedCardInfo, best: TcgCard): Pair<
 
 // Cross-language stand-ins: closest art first. Only the top-5 `ranked` hashes are known, so those
 // (finite distance, ascending) lead; failed downloads and unranked cards trail in original order.
-// Always a permutation of `candidates`; non-cross or no hash data leaves the order unchanged.
+// Always a permutation of `candidates` by id; non-cross or no hash data leaves the order unchanged.
 internal fun lowConfidenceCards(
     candidates: List<TcgCard>,
     ranked: List<Pair<String, Int>>?,
@@ -218,5 +221,6 @@ internal fun lowConfidenceCards(
         .sortedBy { it.second }
         .mapNotNull { byId[it.first] }
         .distinct()
-    return head + candidates.filter { it !in head }
+    val headIds = head.mapTo(HashSet()) { it.id }
+    return head + candidates.filter { it.id !in headIds }
 }

@@ -17,6 +17,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import java.text.Normalizer
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -90,6 +91,8 @@ internal fun tcgdexLangsFor(language: String?): List<String> {
     }
 }
 
+// Card-type suffixes a reader may add or omit; longest first so "vstar" is not read as "v".
+private val CARD_NAME_SUFFIXES = listOf("vstar", "vmax", "gx", "ex", "v")
 private val CROSS_LANGUAGE_BASES = setOf("ja", "ko", "zh", "th", "id")
 
 /**
@@ -155,7 +158,7 @@ class CardSearchRepository @Inject constructor(
                 val results = tcgdexFilter(lang, number, total, null, null, stats).matchingParsedName(printedName)
                 if (results.isNotEmpty()) {
                     return ParsedSearchResult(
-                        results, "tcgdex-$lang+number+total", nameVerified = results.size == 1
+                        results, "tcgdex-$lang+number+total", nameVerified = results.size == 1 && namesEqual(results[0].name, printedName)
                     )
                 }
             }
@@ -432,9 +435,20 @@ class CardSearchRepository @Inject constructor(
         return na.isNotEmpty() && (na == nb || na.contains(nb) || nb.contains(na))
     }
 
+    /** Whole-name equality, tolerant only of a trailing card-type suffix ("ex") the reader added or omitted. */
+    private fun namesEqual(a: String, b: String): Boolean {
+        val na = stripCardSuffix(normalizeName(a))
+        val nb = stripCardSuffix(normalizeName(b))
+        return na.isNotEmpty() && na == nb
+    }
+
+    private fun stripCardSuffix(n: String): String =
+        CARD_NAME_SUFFIXES.firstOrNull { n.length > it.length && n.endsWith(it) }?.let { n.removeSuffix(it) } ?: n
+
+    // NFC first so decomposed and composed kana/accents compare equal (Thai marks are unchanged by NFC).
     // Combining marks are kept: Thai vowel/tone marks (and decomposed kana) are marks, not letters,
     // and dropping them collapses distinct names to a few base characters.
-    private fun normalizeName(raw: String): String = raw.lowercase().filter {
+    private fun normalizeName(raw: String): String = Normalizer.normalize(raw, Normalizer.Form.NFC).lowercase().filter {
         it.isLetterOrDigit() || Character.getType(it).let { t ->
             t == Character.NON_SPACING_MARK.toInt() || t == Character.COMBINING_SPACING_MARK.toInt()
         }

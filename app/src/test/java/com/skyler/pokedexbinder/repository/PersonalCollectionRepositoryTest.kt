@@ -7,6 +7,7 @@ import com.skyler.pokedexbinder.data.model.Language
 import com.skyler.pokedexbinder.data.model.TcgCard
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.confirmVerified
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -107,11 +108,10 @@ class PersonalCollectionRepositoryTest {
         repo.refreshPokemon("pikachu", listOf("Pikachu"))
         repo.refreshPokemon("pikachu", listOf("Pikachu"))
 
-        assertEquals(2, writes.size)
-        assertEquals(writes[0], writes[1])
-        coVerify(exactly = 0) { dao.upsertEntry(any()) }
-        coVerify(exactly = 0) { dao.deleteEntry(any()) }
-        coVerify(exactly = 0) { dao.updateLanguage(any(), any()) }
+        val ids = listOf("tcgdex_sv1-1", "tcgdex_ja_M6-1")
+        assertEquals(listOf(ids, ids), writes)
+        coVerify(exactly = 2) { dao.replaceCacheForPokemon("pikachu", any()) }
+        confirmVerified(dao) // any other DAO call (owned entries, language, upsertCache) fails the test
     }
 
     @Test

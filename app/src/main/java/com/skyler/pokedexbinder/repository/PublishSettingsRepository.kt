@@ -23,7 +23,12 @@ data class PublishConfig(
     val publishPokedex: Boolean = true,      // default ON
     val publishCardHistory: Boolean = false, // default OFF
     val postToDiscord: Boolean = false       // default OFF
-)
+) {
+    // PAT and webhook URL must never reach a log or crash report via the generated toString().
+    override fun toString() = "PublishConfig(githubOwner=$githubOwner, githubRepo=$githubRepo, " +
+        "githubPat=$REDACTED, discordWebhookUrl=$REDACTED, publishPokedex=$publishPokedex, " +
+        "publishCardHistory=$publishCardHistory, postToDiscord=$postToDiscord)"
+}
 
 @Singleton
 class PublishSettingsRepository @Inject constructor(

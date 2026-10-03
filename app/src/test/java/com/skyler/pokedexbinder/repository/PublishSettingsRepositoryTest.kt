@@ -4,6 +4,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -83,5 +85,14 @@ class PublishSettingsRepositoryTest {
 
         assertEquals(false, config.publishPokedex)
         assertEquals(true, config.publishCardHistory)
+    }
+
+    @Test
+    fun `PublishConfig toString never contains the PAT or webhook`() {
+        val text = PublishConfig(githubPat = "SECRET-PAT", discordWebhookUrl = "https://hook/SECRET-HOOK").toString()
+
+        assertFalse(text, text.contains("SECRET-PAT"))
+        assertFalse(text, text.contains("SECRET-HOOK"))
+        assertTrue(text, text.contains("githubOwner="))
     }
 }

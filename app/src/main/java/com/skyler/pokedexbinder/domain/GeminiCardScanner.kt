@@ -65,9 +65,9 @@ class GeminiCardScanner @Inject constructor(
             .post(body.toRequestBody("application/json".toMediaType()))
             .build()
 
-        val response = okHttpClient.executeWithRetry(request, "Gemini")
-
-        val geminiResponse = responseAdapter.fromJson(response.body!!.string())
+        val raw = okHttpClient.executeWithRetry(request, "Gemini").use { it.body?.string() }
+            ?: throw IOException("Empty Gemini response")
+        val geminiResponse = responseAdapter.fromJson(raw)
             ?: throw IOException("Empty Gemini response")
         val text = geminiResponse.candidates
             ?.firstOrNull()?.content?.parts?.firstOrNull()?.text
