@@ -116,7 +116,6 @@ Tests 428/428 green; live-verified for Japanese cards on 2026-10-03 (see handoff
   the match.
 - **`ScannerViewModel`'s `NoApiKeyException` → state mapping has no JVM test** (needs camera objects).
 - **Saved card Language is not pre-filled from the detected language** (out of scope; touches 4+ assign flows).
-- **The cross-language header was never seen on screen**, only its log flag.
 - **`scripts/claude_scan_bakeoff.py` never run** (Skyler's Python lacks `anyio`); prices in it are from the
   claude-api skill's cached table (2026-06-04) and the per-scan cost (~$0.002 Haiku / ~$0.006 Sonnet) is an
   estimate, not measured.

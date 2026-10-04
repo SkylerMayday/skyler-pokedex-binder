@@ -891,3 +891,7 @@ History only. Cross-references like "see above" inside entries point at sections
 
 - **Empty Gemini reply + Claude failure:** the user now sees Claude's error (a Claude 429 shows `RateLimited` and bumps
   the counter) instead of the old no-match screen. Spec was silent; optional fix is to return the empty Gemini result.
+
+## Closed 2026-10-04 — seen on the phone by Skyler after scanning a zh-cn Palafin and a ko Elgyem (both logged `crossLanguage=true`)
+
+~~**The cross-language header was never seen on screen**~~, only its log flag.
