@@ -7,9 +7,14 @@ fixes) and merge them to `master`.
 
 ## 2. Current State
 
-- **`master` = `e7e0b72`** (fast-forward of branch `gaps-code-fixes`, branch and worktree deleted). **529/529 unit tests
-  green** on `master` (fresh XMLs, `--rerun-tasks`). Final review: 93 / 92 / 88 (min 88, ship).
-- **Phone still has the OLDER build** (2026-10-03 00:32). Nothing from session 21 part 2 or from this session has run on it.
+- **`master` = `4167771`** (code: `e7e0b72` gaps fixes, `c7c9367` hermetic androidTest DataStore module, `4167771` clear scan
+  failure message; branches and worktrees deleted). **537/537 unit tests green** and the instrumented suite **22/22 on the
+  emulator** (fresh result files). Reviews: 93/92/88, 95, 93.
+- **Phone has the build from 2026-10-04 11:42** (includes `e7e0b72`, NOT `c7c9367`/`4167771`). Install again for the clearer
+  scan-failure message: `powershell.exe -File scripts\install_debug.ps1`.
+- **Scan error seen 2026-10-04 12:02** (`Unable to resolve host "api.anthropic.com"`): cause unknown (log not captured; phone
+  was disconnected). The new build shows a clear message and returns the normal no-match screen when Gemini answered empty.
+  A real DNS outage is a phone/network issue (Wi-Fi/data, Private DNS, VPN, captive portal).
 - **Uncommitted, deliberately:** `gaps.md`, `gaps-archive.md` (new), `handoff.md`, `project-overview.md` (this wrapcon's
   docs), plus Skyler's own `CLAUDE.md` / `app/CLAUDE.md` edits and `scripts/scan_capture.log`.
 - **`security-crypto` stays.** Skyler asked to drop it believing the name meant cryptocurrency; a plaintext-storage
@@ -46,7 +51,7 @@ fixes) and merge them to `master`.
 ## 6. Next Steps
 
 1. **Install the latest build and try it:** `powershell.exe -File scripts\install_debug.ps1`. Check Settings shows "Danger zone", "Card images" and the Discord switch.
-2. ~~Run `connectedDebugAndroidTest`~~ **Done 2026-10-04 on the emulator** (not the phone: AGP would uninstall the app and wipe its data): 16/22 pass incl. the Reset and `fillBlankImage` SQL; 6 `AppNavigationScreenTest` UI tests fail on a DataStore-singleton clash (`gaps.md`, likely since session 16). Next: **Reset collection data** (it exports first) and **rescan**.
+2. ~~Run `connectedDebugAndroidTest`~~ **Done 2026-10-04 on the emulator** (never the phone: AGP would uninstall the app and wipe its data): now **22/22** incl. the Reset and `fillBlankImage` SQL, after the `FakeSecurityPrefsModule` fix. Next: **Reset collection data** (it exports first) and **rescan**. If a scan fails again, plug the phone in and capture `adb logcat -d -s ScannerMatch` right away.
 3. ~~Re-scan Klawf and Mega Malamar~~ **Done 2026-10-04** on the new build: both accepted via `IDENTITY_PINNED` (they never reach `nameVerified`). Still to check: an M6 card shows an image; press **Sync card images** twice and confirm the second fetches nothing.
 4. Check the cross-language header on a Palafin / other unmatched Asian-language card.
 5. **Rotate the Gemini API key** (still unrotated) — blocked on Skyler.

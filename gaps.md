@@ -4,6 +4,28 @@ Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove ent
 actually fixed and verified, not when merely planned. Struck-through (closed) entries live in
 [gaps-archive.md](gaps-archive.md).
 
+## Refreshed — 2026-10-04 (session 22, part 2 — androidTest DataStore fix, clearer scan failure)
+
+**Audit scope note**: added `androidTest/di/FakeSecurityPrefsModule.kt`; changed `CardScanProvider`, `CardScanShared`,
+`CardScanProviderTest`. Reviewed 95 (androidTest fix) and 93 (scan failure), single reviewer each. Unit tests **537/537 green** on
+`master` (fresh XMLs); instrumented suite **22/22 on the emulator** (mutation-checked: without the module the same 6 fail).
+**Not run on the phone.** Two closed entries are in [gaps-archive.md](gaps-archive.md) (section "Closed 2026-10-04").
+
+### New, not fixed
+
+- **Which failure produced the 2026-10-04 12:02 scan error is unknown.** The screen showed `Unable to resolve host
+  "api.anthropic.com"`; the phone was disconnected, so the `scan provider=none geminiError=… claudeError=…` log line was not
+  captured. A real DNS outage cannot be fixed in the app (check Wi-Fi/mobile data, Settings > Private DNS, VPN/ad-blocker,
+  captive portal). Next time, capture logcat tag `ScannerMatch` right after a failure.
+- **Wording gaps (P3):** a malformed Claude reply (`IOException("Empty Claude response")` / `"No text in Claude response"`,
+  `ClaudeCardScanner.kt:50,56`) is classified as a network failure and says "check your internet connection"; a Gemini
+  `InvalidApiKeyException` is folded into "Gemini failed"; a Gemini-only config with a network failure still shows raw text.
+- **Log line order:** `scan provider=none` is logged before the empty-Gemini result is returned, so a scan that returns a
+  result can log as `provider=none` (diagnostics only).
+- **`connectedDebugAndroidTest` exits 1 ("There were failing tests") even when the test log says `OK (22 tests)`**; cause
+  unexplained. Read verdicts from `testlog/test-results.log` only; an absent `test_status` in the textproto is NOT a pass.
+- **The pipeline folders of this run were deleted with the worktree** (`.pipeline/` is not archived to `.pipeline-archive`).
+
 ## Refreshed — 2026-10-03 (session 22 — gaps.md code fixes, merged to master `e7e0b72`)
 
 **Audit scope note**: touched `TcgcsvJapanSource`, `TcgdexSetCatalog`, `CardScanProvider`, `CardScanShared`, `GeminiCardScanner`,
@@ -21,8 +43,6 @@ Three Opus lenses: 93 / 92 / 88 (min 88, ship). Unit tests **529/529 green** on 
 - **Product-download failure is remembered per group**, so the first failure for each distinct group (~83) still costs one call.
 - **Untested:** "a cooled-down group spends no `FetchBudget`" (swapping the two guard lines stays green); the
   `CancellationException` rethrow in `ScannerViewModel`; the Gemini success-path `.use` body close.
-- **Empty Gemini reply + Claude failure:** the user now sees Claude's error (a Claude 429 shows `RateLimited` and bumps
-  the counter) instead of the old no-match screen. Spec was silent; optional fix is to return the empty Gemini result.
 - **`AppSettings.toString` / `PublishConfig.toString` are hand-written**, so a new field silently drops out of the output.
 - **Small:** `EmptyScanException` is never thrown (log name only); the 401/403 `blocked` check is duplicated at
   `TcgcsvJapanSource.kt:124,181` and `PRODUCTS_RETRY_MS` restates the 15-minute literal.
@@ -42,14 +62,6 @@ Opus lenses (89 / 94 / 94 on the second pass). Unit tests **505/505 green**, `co
 
 ### New, not fixed
 
-- **`AppNavigationScreenTest`: 6 of 7 tests fail** ("There are multiple DataStores active for the same file ...
-  app_settings.preferences_pb"), found 2026-10-04 on the `pokedex_test` emulator (`connectedDebugAndroidTest`: 22 run, 16
-  pass, 6 fail; only `drawerShowsAllFiveItemsInTopToBottomOrder` passes, the first test to run). [Likely] cause:
-  `SecurityPrefsModule` provides the settings DataStore as `@Singleton` via `PreferenceDataStoreFactory`, and Hilt builds a
-  new singleton component per test, so test 2 onward opens a second DataStore on the same file in one process. The module
-  is unchanged since `d88be31` (session 16, DI-based testability) and today's merge touched no DI/androidTest files, so it
-  is not from session 22; those UI tests were last seen passing 2026-09-04, before that commit. Not bisected.
-  Fix options: a Hilt test module that replaces the DataStore providers with in-memory ones, or cancel the scope between tests.
 - **Reset + image-fill SQL now executed** (2026-10-04, emulator, not the phone): `resetAllClearsAssignmentsButKeepsSlotRowsAndGroups`
   and `fillBlankImageOnlyTouchesBlankRows` pass; `fillBlankImage` is still covered for `main_binder` only.
   Do not run `connectedDebugAndroidTest` against the phone: AGP uninstalls the app afterwards and would delete its data

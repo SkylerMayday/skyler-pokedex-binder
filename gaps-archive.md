@@ -877,3 +877,17 @@ History only. Cross-references like "see above" inside entries point at sections
 - **`normalizeName` keeps combining marks:** NFC vs NFD accents could mismatch (both sources emit NFC today).
 - **`ScannerViewModel`'s generic `catch (Exception)` swallows `CancellationException`** (pre-existing); its
   `NoApiKeyException` → state mapping has no JVM test (needs camera objects).
+
+## Closed 2026-10-04 — fixed in `c7c9367` and `4167771`, verified (537 unit, 22/22 emulator instrumented), not run on phone
+
+- **`AppNavigationScreenTest`: 6 of 7 tests fail** ("There are multiple DataStores active for the same file ...
+  app_settings.preferences_pb"), found 2026-10-04 on the `pokedex_test` emulator (`connectedDebugAndroidTest`: 22 run, 16
+  pass, 6 fail; only `drawerShowsAllFiveItemsInTopToBottomOrder` passes, the first test to run). [Likely] cause:
+  `SecurityPrefsModule` provides the settings DataStore as `@Singleton` via `PreferenceDataStoreFactory`, and Hilt builds a
+  new singleton component per test, so test 2 onward opens a second DataStore on the same file in one process. The module
+  is unchanged since `d88be31` (session 16, DI-based testability) and today's merge touched no DI/androidTest files, so it
+  is not from session 22; those UI tests were last seen passing 2026-09-04, before that commit. Not bisected.
+  Fix options: a Hilt test module that replaces the DataStore providers with in-memory ones, or cancel the scope between tests.
+
+- **Empty Gemini reply + Claude failure:** the user now sees Claude's error (a Claude 429 shows `RateLimited` and bumps
+  the counter) instead of the old no-match screen. Spec was silent; optional fix is to return the empty Gemini result.
