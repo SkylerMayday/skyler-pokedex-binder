@@ -46,8 +46,8 @@ fixes) and merge them to `master`.
 ## 6. Next Steps
 
 1. **Install the latest build and try it:** `powershell.exe -File scripts\install_debug.ps1`. Check Settings shows "Danger zone", "Card images" and the Discord switch.
-2. **Run `connectedDebugAndroidTest` with the phone connected** (executes the Reset / `fillBlankImage` SQL tests that have only been compiled), then **Reset collection data** (it exports first) and **rescan**.
-3. **Re-scan Klawf and Mega Malamar** (no unit fixtures for the new `nameVerified`); check an M6 card shows an image; press **Sync card images** twice and confirm the second fetches nothing.
+2. ~~Run `connectedDebugAndroidTest`~~ **Done 2026-10-04 on the emulator** (not the phone: AGP would uninstall the app and wipe its data): 16/22 pass incl. the Reset and `fillBlankImage` SQL; 6 `AppNavigationScreenTest` UI tests fail on a DataStore-singleton clash (`gaps.md`, likely since session 16). Next: **Reset collection data** (it exports first) and **rescan**.
+3. ~~Re-scan Klawf and Mega Malamar~~ **Done 2026-10-04** on the new build: both accepted via `IDENTITY_PINNED` (they never reach `nameVerified`). Still to check: an M6 card shows an image; press **Sync card images** twice and confirm the second fetches nothing.
 4. Check the cross-language header on a Palafin / other unmatched Asian-language card.
 5. **Rotate the Gemini API key** (still unrotated) — blocked on Skyler.
 6. Next code candidates (`gaps.md`): triage sessions 4–15 entries I have not verified stale (e.g. `PerceptualHasher` bit-mapping, single-candidate short-circuit); the small test gaps in the session 22 section.

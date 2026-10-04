@@ -13,9 +13,11 @@ Three Opus lenses: 93 / 92 / 88 (min 88, ship). Unit tests **529/529 green** on 
 
 ### New, not fixed
 
-- **Klawf and Mega Malamar need a device re-scan.** `nameVerified` is now a lone whole-name match (tolerating a trailing
-  ex/gx/v/vmax/vstar) and `normalizeName` is NFC everywhere; neither card has a unit-test fixture. A variant outside the
-  suffix list (e.g. fullwidth `ＥＸ`) shows as unverified, never auto-accepted wrongly.
+- **The new `nameVerified` has not run on a device.** Re-scanned 2026-10-04 on the new build: Klawf (`SV1S-088`) and Mega
+  Malamar ex (`M6-048`) were both accepted via `IDENTITY_PINNED`, but both took the dex-pinned query, which runs before
+  `nameVerified` (log: `nameVerified=false`), so only NFC and the pinned path are confirmed. `nameVerified` is now a lone
+  whole-name match (tolerating a trailing ex/gx/v/vmax/vstar); it only matters when the reader drops the dex number. A
+  variant outside the suffix list (e.g. fullwidth `ＥＸ`) shows as unverified, never auto-accepted wrongly.
 - **Product-download failure is remembered per group**, so the first failure for each distinct group (~83) still costs one call.
 - **Untested:** "a cooled-down group spends no `FetchBudget`" (swapping the two guard lines stays green); the
   `CancellationException` rethrow in `ScannerViewModel`; the Gemini success-path `.use` body close.
@@ -40,8 +42,18 @@ Opus lenses (89 / 94 / 94 on the second pass). Unit tests **505/505 green**, `co
 
 ### New, not fixed
 
-- **Reset + image-fill SQL has only been COMPILED, never executed** (`PokedexDatabaseTest` androidTest; `fillBlankImage`
-  covered for `main_binder` only). Run `connectedDebugAndroidTest` with the phone before relying on Reset.
+- **`AppNavigationScreenTest`: 6 of 7 tests fail** ("There are multiple DataStores active for the same file ...
+  app_settings.preferences_pb"), found 2026-10-04 on the `pokedex_test` emulator (`connectedDebugAndroidTest`: 22 run, 16
+  pass, 6 fail; only `drawerShowsAllFiveItemsInTopToBottomOrder` passes, the first test to run). [Likely] cause:
+  `SecurityPrefsModule` provides the settings DataStore as `@Singleton` via `PreferenceDataStoreFactory`, and Hilt builds a
+  new singleton component per test, so test 2 onward opens a second DataStore on the same file in one process. The module
+  is unchanged since `d88be31` (session 16, DI-based testability) and today's merge touched no DI/androidTest files, so it
+  is not from session 22; those UI tests were last seen passing 2026-09-04, before that commit. Not bisected.
+  Fix options: a Hilt test module that replaces the DataStore providers with in-memory ones, or cancel the scope between tests.
+- **Reset + image-fill SQL now executed** (2026-10-04, emulator, not the phone): `resetAllClearsAssignmentsButKeepsSlotRowsAndGroups`
+  and `fillBlankImageOnlyTouchesBlankRows` pass; `fillBlankImage` is still covered for `main_binder` only.
+  Do not run `connectedDebugAndroidTest` against the phone: AGP uninstalls the app afterwards and would delete its data
+  (pin the emulator with `ANDROID_SERIAL=emulator-5554`; boot it with `-gpu swiftshader_indirect -no-window`).
 - **`MAX_AUTO_IDS` ceiling:** the auto sync checks the first 400 blank ids (ko / zh-cn last); if >400 ja/en blanks never
   resolve, later ones are starved until a manual sync.
 - **English has no backup image resolver.** `JapanTcgcsvResolver` returns null for non-`ja`, so an English card TCGdex
