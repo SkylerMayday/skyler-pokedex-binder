@@ -53,7 +53,7 @@ fixes) and merge them to `master`.
 1. **Install the latest build and try it:** `powershell.exe -File scripts\install_debug.ps1`. Check Settings shows "Danger zone", "Card images" and the Discord switch.
 2. ~~Run `connectedDebugAndroidTest`~~ **Done 2026-10-04 on the emulator** (never the phone: AGP would uninstall the app and wipe its data): now **22/22** incl. the Reset and `fillBlankImage` SQL, after the `FakeSecurityPrefsModule` fix. **Reset collection data done by Skyler 2026-10-04** (on the 16:06 build). Next: **rescan the collection**. If a scan fails again, plug the phone in and capture `adb logcat -d -s ScannerMatch` right away.
 3. ~~Re-scan Klawf and Mega Malamar~~ **Done 2026-10-04** on the new build: both accepted via `IDENTITY_PINNED` (they never reach `nameVerified`). Still to check: an M6 card shows an image; press **Sync card images** twice and confirm the second fetches nothing.
-4. Check the cross-language header on a Palafin / other unmatched Asian-language card.
+4. ~~Check the cross-language header~~ **Done 2026-10-04**: seen on a zh-cn Palafin ex and a ko Elgyem (both unmatched, TCGdex has no card; "closest English printings" list). A Thai card is still untested (the "Thai" scan read as Korean).
 5. **Rotate the Gemini API key** (still unrotated) — blocked on Skyler.
 6. Next code candidates (`gaps.md`): triage sessions 4–15 entries I have not verified stale (e.g. `PerceptualHasher` bit-mapping, single-candidate short-circuit); the small test gaps in the session 22 section.
 7. Later, if wanted: PTCG-database for Korean / Traditional Chinese; `security-crypto` replacement (a plaintext revert was rejected-by-misunderstanding — decide deliberately); English TCGCSV name index.
