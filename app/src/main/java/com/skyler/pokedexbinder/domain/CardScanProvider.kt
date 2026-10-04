@@ -3,12 +3,41 @@ package com.skyler.pokedexbinder.domain
 import android.graphics.Bitmap
 import com.skyler.pokedexbinder.repository.SettingsRepository
 import kotlinx.coroutines.CancellationException
+import java.io.IOException
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import javax.inject.Inject
 import javax.inject.Singleton
 
 internal enum class ScanProvider { GEMINI, CLAUDE }
 
 private const val GEMINI_COOLDOWN_MS = 10L * 60 * 1000
+
+/** Our scanners throw `IOException("<provider> error: <code>")` for non-retryable HTTP errors. */
+private val HTTP_ERROR = Regex(".*error: \\d{3}.*")
+
+private fun isNetworkFailure(t: Throwable): Boolean =
+    t is UnknownHostException || t is ConnectException || t is SocketTimeoutException ||
+        (t is IOException && t !is RateLimitException && t !is InvalidApiKeyException &&
+            !HTTP_ERROR.matches(t.message.orEmpty()))
+
+/** Fixed strings only: never the exception message, which can carry hostnames. */
+private fun failureMessage(gemini: Exception?, geminiCooling: Boolean, claude: Exception): String {
+    val claudeNetwork = isNetworkFailure(claude)
+    val geminiPart = when {
+        geminiCooling || gemini is RateLimitException -> "Gemini unavailable (quota)"
+        gemini == null -> null
+        isNetworkFailure(gemini) -> "Gemini unreachable"
+        else -> "Gemini failed"
+    }
+    val advice = if (claudeNetwork) "check your internet connection" else "try again"
+    return when {
+        geminiPart != null -> "$geminiPart and ${if (claudeNetwork) "Claude unreachable" else "Claude failed"} — $advice"
+        claudeNetwork -> "Can't reach Claude — $advice"
+        else -> "Claude failed — $advice"
+    }
+}
 
 /** Gemini first, then Claude; a blank key means that provider is absent. */
 internal fun selectProviders(geminiKey: String, claudeKey: String): List<ScanProvider> = buildList {
@@ -43,6 +72,7 @@ class CardScanProvider @Inject constructor(
         val hasGemini = ScanProvider.GEMINI in providers
         val hasClaude = ScanProvider.CLAUDE in providers
         var geminiError: Exception? = null
+        var geminiEmpty: ParsedCardInfo? = null
         // The breaker only applies when Claude can take over; with Gemini alone keep trying.
         val geminiCooling = hasGemini && hasClaude && nowMs() < geminiSkipUntil
         if (hasGemini && !geminiCooling) {
@@ -50,6 +80,7 @@ class CardScanProvider @Inject constructor(
                 val result = gemini.scan(bitmap, geminiKey)
                 if (!result.isEmpty || !hasClaude) return result.also { log("scan provider=gemini") }
                 geminiError = EmptyScanException()
+                geminiEmpty = result
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -70,7 +101,9 @@ class CardScanProvider @Inject constructor(
         } catch (e: Exception) {
             geminiError?.let { e.addSuppressed(it) }
             log("scan provider=none geminiError=$fallbackReason claudeError=${e::class.java.simpleName}")
-            throw e
+            if (e is RateLimitException || e is InvalidApiKeyException) throw e
+            geminiEmpty?.let { return it }
+            throw ScanFailedException(failureMessage(geminiError, geminiCooling, e), e)
         }
     }
 }

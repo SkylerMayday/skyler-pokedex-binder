@@ -14,7 +14,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 import java.io.IOException
+import java.net.ConnectException
 import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 
 private const val GEMINI_SECRET = "SECRET-G"
 private const val CLAUDE_SECRET = "SECRET-C"
@@ -272,6 +274,115 @@ class CardScanProviderTest {
             provider().scan(bitmap)
             fail("expected CancellationException")
         } catch (e: CancellationException) {
+        }
+    }
+
+    private suspend fun scanFailure(p: CardScanProvider): ScanFailedException {
+        try {
+            p.scan(bitmap)
+        } catch (e: ScanFailedException) {
+            return e
+        }
+        fail("expected ScanFailedException")
+        throw AssertionError()
+    }
+
+    @Test
+    fun `empty gemini reply plus claude network failure returns the empty result`() = runTest {
+        coEvery { gemini.scan(any(), any()) } returns emptyResult
+        coEvery { claude.scan(any(), any()) } throws UnknownHostException("api.anthropic.com")
+
+        assertSame(emptyResult, provider().scan(bitmap))
+        assertNoKeysLogged()
+    }
+
+    @Test
+    fun `gemini 429 plus claude DNS failure throws a friendly ScanFailedException`() = runTest {
+        val rate = RateLimitException()
+        val dns = UnknownHostException("api.anthropic.com")
+        coEvery { gemini.scan(any(), any()) } throws rate
+        coEvery { claude.scan(any(), any()) } throws dns
+
+        val e = scanFailure(provider())
+
+        assertEquals("Gemini unavailable (quota) and Claude unreachable — check your internet connection", e.message)
+        assertFalse(e.message!!.contains("api.anthropic.com"))
+        assertFalse(e.message!!.contains(GEMINI_SECRET))
+        assertFalse(e.message!!.contains(CLAUDE_SECRET))
+        assertSame(dns, e.cause)
+        assertTrue(dns.suppressed.contains(rate))
+        assertNoKeysLogged()
+    }
+
+    @Test
+    fun `gemini cooling plus claude DNS failure names gemini quota`() = runTest {
+        coEvery { gemini.scan(any(), any()) } throws RateLimitException()
+        coEvery { claude.scan(any(), any()) } returns claudeResult andThenThrows UnknownHostException("x")
+        val p = provider()
+        p.scan(bitmap)
+
+        val e = scanFailure(p)
+
+        assertTrue(e.message!!, e.message!!.contains("Gemini unavailable (quota)") && e.message!!.contains("Claude"))
+        coVerify(exactly = 1) { gemini.scan(any(), any()) }
+    }
+
+    @Test
+    fun `claude-only network failure uses the can't reach message`() = runTest {
+        coEvery { claude.scan(any(), any()) } throws UnknownHostException("h")
+
+        assertEquals(
+            "Can't reach Claude — check your internet connection",
+            scanFailure(provider(geminiKey = "")).message
+        )
+    }
+
+    @Test
+    fun `claude failure kinds map to network or failed wording`() = runTest {
+        val network = listOf(SocketTimeoutException(), ConnectException(), IOException("x"), IOException("Claude scan failed after retries"))
+        for (f in network) {
+            coEvery { claude.scan(any(), any()) } throws f
+            val m = scanFailure(provider(geminiKey = "")).message!!
+            assertTrue(m, m.contains("internet"))
+        }
+        coEvery { claude.scan(any(), any()) } throws IOException("Claude error: 500")
+        val m = scanFailure(provider(geminiKey = "")).message!!
+        assertEquals("Claude failed — try again", m)
+    }
+
+    @Test
+    fun `gemini failure kinds are labelled in the combined message`() = runTest {
+        coEvery { claude.scan(any(), any()) } throws IOException("Claude error: 500")
+        coEvery { gemini.scan(any(), any()) } throws UnknownHostException("h")
+        assertEquals("Gemini unreachable and Claude failed — try again", scanFailure(provider()).message)
+
+        coEvery { gemini.scan(any(), any()) } throws IOException("Gemini error: 500")
+        assertEquals("Gemini failed and Claude failed — try again", scanFailure(provider()).message)
+    }
+
+    @Test
+    fun `empty gemini reply plus claude rate limit or bad key propagates unwrapped`() = runTest {
+        coEvery { gemini.scan(any(), any()) } returns emptyResult
+        for (f in listOf<Exception>(RateLimitException("Claude"), InvalidApiKeyException("Claude", 401))) {
+            coEvery { claude.scan(any(), any()) } throws f
+            try {
+                provider().scan(bitmap)
+                fail("expected ${f::class.java.simpleName}")
+            } catch (e: IOException) {
+                assertSame(f, e)
+            }
+        }
+    }
+
+    @Test
+    fun `gemini 429 plus claude rate limit still throws RateLimitException`() = runTest {
+        coEvery { gemini.scan(any(), any()) } throws RateLimitException()
+        coEvery { claude.scan(any(), any()) } throws RateLimitException("Claude")
+
+        try {
+            provider().scan(bitmap)
+            fail("expected RateLimitException")
+        } catch (e: RateLimitException) {
         }
     }
 }

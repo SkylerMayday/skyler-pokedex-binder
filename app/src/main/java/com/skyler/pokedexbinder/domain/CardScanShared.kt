@@ -19,6 +19,9 @@ class InvalidApiKeyException(provider: String, code: Int) :
 /** Gemini answered but returned no field at all; used only as a fallback reason, never shown. */
 internal class EmptyScanException : IOException("Scanner returned no fields")
 
+/** Every scan provider failed; [message] is user-safe (fixed strings only), the real error is [cause]. */
+class ScanFailedException(message: String, cause: Throwable) : IOException(message, cause)
+
 class NoApiKeyException : IllegalStateException("No scanner API key configured")
 
 // Bumped from 2 (500ms fixed) after live sessions saw 11/12 requests 503 in one sitting (2026-09-22)
