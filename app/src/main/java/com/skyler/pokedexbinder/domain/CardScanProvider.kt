@@ -4,8 +4,8 @@ import android.graphics.Bitmap
 import com.skyler.pokedexbinder.repository.SettingsRepository
 import kotlinx.coroutines.CancellationException
 import java.io.IOException
+import java.io.InterruptedIOException
 import java.net.ConnectException
-import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,7 +18,7 @@ private const val GEMINI_COOLDOWN_MS = 10L * 60 * 1000
 private val HTTP_ERROR = Regex(".*error: \\d{3}.*")
 
 private fun isNetworkFailure(t: Throwable): Boolean =
-    t is UnknownHostException || t is ConnectException || t is SocketTimeoutException ||
+    t is UnknownHostException || t is ConnectException || t is InterruptedIOException ||
         (t is IOException && t !is RateLimitException && t !is InvalidApiKeyException &&
             !HTTP_ERROR.matches(t.message.orEmpty()))
 

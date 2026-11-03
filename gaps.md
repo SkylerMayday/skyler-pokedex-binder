@@ -4,6 +4,29 @@ Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove ent
 actually fixed and verified, not when merely planned. Struck-through (closed) entries live in
 [gaps-archive.md](gaps-archive.md).
 
+## Refreshed — 2026-11-04 (session 23 — model swap + hygiene batch)
+
+**Audit scope note**: full read of the scanner pipeline, DI, manifest, backup XMLs; reference sweep for unused code. Changed
+`GeminiCardScanner` (`gemini-3.8-flash`), `ClaudeCardScanner` (`claude-sonnet-5-5`), scan call timeout, parallel hash downloads,
+backup exclusions, provider-aware rate-limit text, 10 dead-code removals. Unit tests **547/547** (fresh XMLs, `--rerun-tasks`);
+3-lens Opus review 92 / 89 / 88. **Not run on the phone. `compileDebugAndroidTestKotlin` and `lintDebug` could not run**
+(sandbox Gradle fails `PKIX path validation` on uncached artifacts, e.g. `hilt-android-testing`, `lint-gradle`): run both in your own shell.
+Three stale entries moved to [gaps-archive.md](gaps-archive.md) ("Closed 2026-11-04").
+
+### New, not fixed
+
+- **The 10 s scan `callTimeout` has no data behind it** (`SCAN_CALL_TIMEOUT_MS`, user decision). It covers upload + model time + body
+  read and nothing streams. If healthy scans exceed 10 s, each provider fails after ~43.5 s (4 attempts) and every attempt is
+  billed; the screen then says "check your internet connection". Nothing logs elapsed ms per attempt. Add that log, then retune.
+- **No recovery when `EncryptedSharedPreferences.create` fails** (`SecurityPrefsModule.kt`). The new backup exclusions only apply to
+  backups made after this build; an older Google backup still holds the encrypted files. Run "Back up now" after installing.
+  Real fix: catch, `deleteSharedPreferences`, recreate.
+- **Untested:** `ScannerViewModel` passing `e.provider` into `RateLimited` (the constructor default is gone, so the compiler now
+  enforces it); the `PerceptualHasherTest` cancellation test cannot fail for the leak it is written for (its final assert is always true).
+- **P3:** provider is a plain `String` although `ScanProvider` exists; the rate-limit text hardcodes `console.anthropic.com` for any non-Gemini provider.
+- **Deferred by choice:** `ScannerScreen.kt` is 1,034 lines (camera, focus, guide frame and every result state in one file); no camera tests, so a split is risky.
+- **Stale in this file:** the session-15 "`SmartThresholdUseCase` can never mark high confidence when the number is null" entry predates the `HASH_MARGIN` path.
+
 ## Refreshed — 2026-10-04 (session 22, part 2 — androidTest DataStore fix, clearer scan failure)
 
 **Audit scope note**: added `androidTest/di/FakeSecurityPrefsModule.kt`; changed `CardScanProvider`, `CardScanShared`,
@@ -149,8 +172,6 @@ read `CardSearchRepository.kt`, manifest, `libs.versions.toml`. Not a full re-au
   phone/Gemini quota kept blocking (sessions 18-19). The gated items (live `query=` data, Reviewer
   F1, hash-margin calibration, `GUIDE_FRAME_WIDTH_RATIO`/`CROP_MARGIN_FACTOR` re-tune) are still
   open and unchanged — see session 19's list below.
-- **The `x-goog-api-key` header is unverified against the real API** (unit test uses MockWebServer
-  only). Documented Gemini behaviour, but not exercised on-device.
 - **No test covers `CameraPreview`'s simplified bind path** (compose + real camera only); the
   fallback-bind branch it used to have is gone, so a failed bind now yields no camera and a log line.
 
@@ -324,21 +345,6 @@ made session 14 remains uncommitted in the working tree.
 
 ### New this session — confirmed root cause, real bug, not fixed yet
 
-- **`PerceptualHasher.computeHash()` (`PerceptualHasher.kt:18-33`) has a live bit-mapping bug that
-  has silently degraded every perceptual-hash match since the hasher was introduced
-  (`498d035`, 2026-05-20).** It loops over all 256 pixels of a 16x16 downsample but writes each
-  bit via `1L shl i` — Kotlin/JVM's `Long.shl` masks the shift amount to its low 6 bits, so pixel
-  indices `i` and `i+64`/`i+128`/`i+192` all OR onto the *same* final bit instead of getting
-  independent bits. Not a theoretical concern — **verified empirically**: replayed the exact
-  algorithm (real JVM shift semantics reproduced in Python, not assumed) against 16 real card
-  images fetched live from `api.pokemontcg.io` (8 different Charizard prints + 8 clearly-different
-  Pokémon — Pikachu variants, Eevee, Detective Pikachu). Result: several **completely different
-  cards hash identically** (multiple Pikachu prints + Eevee + Detective Pikachu all collapsed to
-  `0xffffffffffffffff`), average pairwise distance across all 16 genuinely-different cards was
-  **6.0 out of a possible 64**, several pairs at exact distance 0. A corrected 8x8-resize version
-  (matching a real 64-bit capacity, no wraparound) separated the same 16 images to an average of
-  21.5/64 with no exact collisions — confirming the fix works, not just that the bug exists.
-  **Fix spec'd, not built**: `docs/specs/2026-09-13-scanner-hash-confidence.md` (task 1-2).
 - **Separately, structurally: `SmartThresholdUseCase.evaluate()` can never mark high confidence
   when Gemini's OCR'd card number is null, regardless of hash quality** — it only checks for a
   `numberMatch` among candidates ([SmartThresholdUseCase.kt:21-33](app/src/main/java/com/skyler/pokedexbinder/domain/SmartThresholdUseCase.kt:21)), never consulting the
@@ -365,21 +371,6 @@ session was live-device diagnosis (logcat, a real Gemini API dashboard check) an
 investigation — no code touched by that half of the session.
 
 ### New this session, not fixed — deferred, needs Skyler's call
-
-- **`SmartThresholdUseCase.evaluate()` (line 18) and `PerceptualHasher.findBestMatch()` (line 39)
-  both short-circuit to auto-high-confidence whenever `cardSearchRepository.searchByParsedInfo()`
-  returns exactly 1 candidate — skipping all visual verification, including the perceptual hash
-  comparison that exists for exactly this purpose.** Live-reproduced: real Furfrou card, Gemini's
-  own species OCR misread it as "Hisuian Zorua," the search-by-name query (built from that
-  misread) returned exactly 1 candidate for the wrong species, and the app confidently assigned it
-  — nothing in the pipeline ever compared the captured photo against a card image, because the
-  search query itself was already scoped to the wrong Pokémon before any visual check could run.
-  Distinct from the confidence-check regression fixed session 10 (`ff0134c`) — that was a
-  self-referential number check among multiple same-name candidates; this is the single-candidate
-  case having no cross-check at all. Fix would mean computing the perceptual hash distance even at
-  `candidates.size == 1` and gating confidence on a hamming-distance threshold — a new, uncalibrated
-  constant needing real data, same class of decision as `GUIDE_FRAME_WIDTH_RATIO`. One data point so
-  far (n=1) — deferred pending Skyler's call on whether to build it now or wait for it to recur.
 
 ## Refreshed — 2026-09-10 (session 13)
 

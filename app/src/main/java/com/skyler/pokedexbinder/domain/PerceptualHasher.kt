@@ -5,6 +5,10 @@ import android.graphics.BitmapFactory
 import com.skyler.pokedexbinder.data.model.TcgCard
 import com.skyler.pokedexbinder.ui.scanner.cardRectInCrop
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -19,6 +23,7 @@ data class HashMatchResult(
 )
 
 private const val RANKED_LOG_SIZE = 5
+private const val MAX_PARALLEL_DOWNLOADS = 4
 
 /**
  * Art-region perceptual hash (63 meaningful bits, see [ArtHash]) comparison between a captured
@@ -59,13 +64,18 @@ class PerceptualHasher @Inject constructor(
         val crop = cardRectInCrop(capturedBitmap.width, capturedBitmap.height)
         val capturedHash = computeHash(capturedBitmap, ArtRect(crop.left, crop.top, crop.right, crop.bottom))
         return withContext(Dispatchers.IO) {
+            val gate = Semaphore(MAX_PARALLEL_DOWNLOADS)
             val distances = candidates.map { card ->
-                val url = if (baseUrl.isNotEmpty()) "$baseUrl${card.imageUrl}" else card.imageUrl
-                val cardBitmap = downloadBitmap(url)
-                val distance = cardBitmap?.let { hammingDistance(capturedHash, computeHash(it)) }
-                    ?: Int.MAX_VALUE
-                card to distance
-            }
+                async {
+                    gate.withPermit {
+                        val url = if (baseUrl.isNotEmpty()) "$baseUrl${card.imageUrl}" else card.imageUrl
+                        val cardBitmap = downloadBitmap(url)
+                        val distance = cardBitmap?.let { hammingDistance(capturedHash, computeHash(it)) }
+                            ?: Int.MAX_VALUE
+                        card to distance
+                    }
+                }
+            }.awaitAll()
             val sorted = distances.sortedBy { it.second }
             val best = sorted[0]
             val margin = if (sorted.size >= 2) sorted[1].second - best.second else Int.MAX_VALUE

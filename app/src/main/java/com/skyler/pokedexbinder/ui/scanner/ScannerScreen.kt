@@ -875,15 +875,7 @@ fun ScannerScreen(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = when {
-                                isRepeated ->
-                                    "Still rate-limited after waiting — you may have hit your daily Gemini quota.\n\n" +
-                                    "Check your usage at aistudio.google.com or search manually for now."
-                                secondsLeft > 0 ->
-                                    "Too many scans at once — Gemini needs a moment.\n\nRetry in $secondsLeft seconds."
-                                else ->
-                                    "Ready to scan again!"
-                            },
+                            text = rateLimitMessage(s.provider, isRepeated, secondsLeft),
                             style = MaterialTheme.typography.bodyLarge,
                             textAlign = TextAlign.Center
                         )
@@ -1031,4 +1023,21 @@ private fun CardSelectionList(
             OutlinedButton(onClick = onSearchManually, modifier = Modifier.weight(1f)) { Text("Search Manually") }
         }
     }
+}
+
+internal fun rateLimitMessage(provider: String, isRepeated: Boolean, secondsLeft: Int): String = when {
+    provider == "Gemini" -> when {
+        isRepeated ->
+            "Still rate-limited after waiting — you may have hit your daily Gemini quota.\n\n" +
+                "Check your usage at aistudio.google.com or search manually for now."
+        secondsLeft > 0 ->
+            "Too many scans at once — Gemini needs a moment.\n\nRetry in $secondsLeft seconds."
+        else -> "Ready to scan again!"
+    }
+    isRepeated ->
+        "Still rate-limited after waiting — you may have hit your $provider usage limit.\n\n" +
+            "Check your usage at console.anthropic.com or search manually for now."
+    secondsLeft > 0 ->
+        "Too many scans at once — $provider needs a moment.\n\nRetry in $secondsLeft seconds."
+    else -> "Ready to scan again!"
 }

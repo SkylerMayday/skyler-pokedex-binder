@@ -135,6 +135,7 @@ class GeminiCardScannerTest {
         var caught: Exception? = null
         try { scanner.scan(bitmap, "test-key") } catch (e: Exception) { caught = e }
         assert(caught is RateLimitException) { "Expected RateLimitException but got $caught" }
+        assert((caught as RateLimitException).provider == "Gemini")
     }
 
     @Test

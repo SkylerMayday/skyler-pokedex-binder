@@ -26,9 +26,6 @@ interface MainBinderDao {
     @Query("SELECT COUNT(*) FROM main_binder")
     suspend fun count(): Int
 
-    @Query("SELECT COUNT(*) FROM main_binder WHERE slotType = 'ALTERNATE_FORM'")
-    suspend fun countAlternateForms(): Int
-
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIfAbsent(entries: List<MainBinderEntry>)
 

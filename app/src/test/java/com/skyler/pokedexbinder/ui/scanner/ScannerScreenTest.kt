@@ -119,4 +119,35 @@ class ScannerScreenTest {
         assertEquals(ImageRect(112, 0, 861, 900), rect)
         assertTrue(rect.bottom <= 900)
     }
+
+    // ---- rateLimitMessage ----
+
+    @Test
+    fun `rateLimitMessage Gemini strings are unchanged`() {
+        assertEquals(
+            "Still rate-limited after waiting — you may have hit your daily Gemini quota.\n\n" +
+                "Check your usage at aistudio.google.com or search manually for now.",
+            rateLimitMessage("Gemini", isRepeated = true, secondsLeft = 10)
+        )
+        assertEquals(
+            "Too many scans at once — Gemini needs a moment.\n\nRetry in 42 seconds.",
+            rateLimitMessage("Gemini", isRepeated = false, secondsLeft = 42)
+        )
+        assertEquals("Ready to scan again!", rateLimitMessage("Gemini", isRepeated = false, secondsLeft = 0))
+    }
+
+    @Test
+    fun `rateLimitMessage Claude repeated names Claude not Gemini`() {
+        val msg = rateLimitMessage("Claude", isRepeated = true, secondsLeft = 10)
+        assertTrue(msg.contains("Claude"))
+        assertTrue(!msg.contains("Gemini") && !msg.contains("aistudio"))
+    }
+
+    @Test
+    fun `rateLimitMessage Claude countdown names Claude`() {
+        val msg = rateLimitMessage("Claude", isRepeated = false, secondsLeft = 42)
+        assertTrue(msg.contains("Claude needs a moment"))
+        assertTrue(msg.contains("Retry in 42 seconds"))
+        assertEquals("Ready to scan again!", rateLimitMessage("Claude", isRepeated = false, secondsLeft = 0))
+    }
 }

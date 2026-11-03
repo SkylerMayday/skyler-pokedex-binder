@@ -26,7 +26,7 @@ data class GeminiContent(val parts: List<GeminiPart>? = null)
 data class GeminiPart(val text: String? = null)
 
 @JsonClass(generateAdapter = true)
-data class GeminiCardResult(
+data class ScannedCardJson(
     val name: String? = null,
     val number: String? = null,
     val setTotal: String? = null,
@@ -53,8 +53,9 @@ class GeminiCardScanner @Inject constructor(
     /** Overridden in tests to redirect requests to MockWebServer. */
     internal var baseUrl: String = GEMINI_BASE_URL
 
+    private val scanClient by lazy { okHttpClient.forScan() }
     private val responseAdapter by lazy { moshi.adapter(GeminiResponse::class.java) }
-    private val cardResultAdapter by lazy { moshi.adapter(GeminiCardResult::class.java) }
+    private val cardResultAdapter by lazy { moshi.adapter(ScannedCardJson::class.java) }
 
     suspend fun scan(bitmap: Bitmap, apiKey: String): ParsedCardInfo = withContext(Dispatchers.IO) {
         val base64 = bitmapToJpegBase64(bitmap)
@@ -65,7 +66,7 @@ class GeminiCardScanner @Inject constructor(
             .post(body.toRequestBody("application/json".toMediaType()))
             .build()
 
-        val raw = okHttpClient.executeWithRetry(request, "Gemini").use { it.body?.string() }
+        val raw = scanClient.executeWithRetry(request, "Gemini").use { it.body?.string() }
             ?: throw IOException("Empty Gemini response")
         val geminiResponse = responseAdapter.fromJson(raw)
             ?: throw IOException("Empty Gemini response")
@@ -73,7 +74,7 @@ class GeminiCardScanner @Inject constructor(
             ?.firstOrNull()?.content?.parts?.firstOrNull()?.text
             ?: throw IOException("No text in Gemini response")
 
-        val result = runCatching { cardResultAdapter.fromJson(text) }.getOrNull() ?: GeminiCardResult()
+        val result = runCatching { cardResultAdapter.fromJson(text) }.getOrNull() ?: ScannedCardJson()
         result.toParsedCardInfo()
     }
 

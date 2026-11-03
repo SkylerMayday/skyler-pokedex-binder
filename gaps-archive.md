@@ -895,3 +895,41 @@ History only. Cross-references like "see above" inside entries point at sections
 ## Closed 2026-10-04 — seen on the phone by Skyler after scanning a zh-cn Palafin and a ko Elgyem (both logged `crossLanguage=true`)
 
 ~~**The cross-language header was never seen on screen**~~, only its log flag.
+
+## Closed 2026-11-04 (found stale during the hygiene audit)
+
+Verified against current code: the 63-bit `ArtHash` replaced the shifting `PerceptualHasher` hash, `SmartThresholdUseCase` now requires a hash for a lone candidate, and live Gemini scans have worked with the header key.
+
+- **`PerceptualHasher.computeHash()` (`PerceptualHasher.kt:18-33`) has a live bit-mapping bug that
+  has silently degraded every perceptual-hash match since the hasher was introduced
+  (`498d035`, 2026-05-20).** It loops over all 256 pixels of a 16x16 downsample but writes each
+  bit via `1L shl i` — Kotlin/JVM's `Long.shl` masks the shift amount to its low 6 bits, so pixel
+  indices `i` and `i+64`/`i+128`/`i+192` all OR onto the *same* final bit instead of getting
+  independent bits. Not a theoretical concern — **verified empirically**: replayed the exact
+  algorithm (real JVM shift semantics reproduced in Python, not assumed) against 16 real card
+  images fetched live from `api.pokemontcg.io` (8 different Charizard prints + 8 clearly-different
+  Pokémon — Pikachu variants, Eevee, Detective Pikachu). Result: several **completely different
+  cards hash identically** (multiple Pikachu prints + Eevee + Detective Pikachu all collapsed to
+  `0xffffffffffffffff`), average pairwise distance across all 16 genuinely-different cards was
+  **6.0 out of a possible 64**, several pairs at exact distance 0. A corrected 8x8-resize version
+  (matching a real 64-bit capacity, no wraparound) separated the same 16 images to an average of
+  21.5/64 with no exact collisions — confirming the fix works, not just that the bug exists.
+  **Fix spec'd, not built**: `docs/specs/2026-09-13-scanner-hash-confidence.md` (task 1-2).
+
+- **`SmartThresholdUseCase.evaluate()` (line 18) and `PerceptualHasher.findBestMatch()` (line 39)
+  both short-circuit to auto-high-confidence whenever `cardSearchRepository.searchByParsedInfo()`
+  returns exactly 1 candidate — skipping all visual verification, including the perceptual hash
+  comparison that exists for exactly this purpose.** Live-reproduced: real Furfrou card, Gemini's
+  own species OCR misread it as "Hisuian Zorua," the search-by-name query (built from that
+  misread) returned exactly 1 candidate for the wrong species, and the app confidently assigned it
+  — nothing in the pipeline ever compared the captured photo against a card image, because the
+  search query itself was already scoped to the wrong Pokémon before any visual check could run.
+  Distinct from the confidence-check regression fixed session 10 (`ff0134c`) — that was a
+  self-referential number check among multiple same-name candidates; this is the single-candidate
+  case having no cross-check at all. Fix would mean computing the perceptual hash distance even at
+  `candidates.size == 1` and gating confidence on a hamming-distance threshold — a new, uncalibrated
+  constant needing real data, same class of decision as `GUIDE_FRAME_WIDTH_RATIO`. One data point so
+  far (n=1) — deferred pending Skyler's call on whether to build it now or wait for it to recur.
+
+- **The `x-goog-api-key` header is unverified against the real API** (unit test uses MockWebServer
+  only). Documented Gemini behaviour, but not exercised on-device.

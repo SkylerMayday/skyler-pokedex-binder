@@ -44,7 +44,6 @@ class SlotDetailViewModelTest {
             }
             cancelAndIgnoreRemainingEvents()
         }
-        assertFalse(vm.isLoading.value)
     }
 
     @Test

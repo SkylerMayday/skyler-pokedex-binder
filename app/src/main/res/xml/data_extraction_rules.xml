@@ -10,11 +10,19 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
+        <!-- EncryptedSharedPreferences: ciphertext is useless without this device's Keystore master key;
+             restoring it crashes on decrypt. -->
+        <exclude domain="sharedpref" path="settings_secrets.xml" />
+        <exclude domain="sharedpref" path="publish_secrets.xml" />
         <exclude domain="file" path="exports/" />
         <!-- One-shot pending-error message, must never survive a device transfer. -->
         <exclude domain="sharedpref" path="backup_import_state.xml" />
     </cloud-backup>
     <device-transfer>
+        <!-- EncryptedSharedPreferences: ciphertext is useless without this device's Keystore master key;
+             restoring it crashes on decrypt. -->
+        <exclude domain="sharedpref" path="settings_secrets.xml" />
+        <exclude domain="sharedpref" path="publish_secrets.xml" />
         <exclude domain="file" path="exports/" />
         <!-- One-shot pending-error message, must never survive a device transfer. -->
         <exclude domain="sharedpref" path="backup_import_state.xml" />

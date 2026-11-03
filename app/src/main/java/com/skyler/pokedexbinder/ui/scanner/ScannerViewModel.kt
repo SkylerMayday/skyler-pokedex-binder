@@ -29,7 +29,7 @@ sealed class ScannerState {
     data class IdleWithGrace(val graceEndsAt: Long) : ScannerState() // post-rate-limit cooldown
     object Scanning : ScannerState()
     object NoApiKey : ScannerState()
-    data class RateLimited(val consecutiveHits: Int) : ScannerState()
+    data class RateLimited(val consecutiveHits: Int, val provider: String) : ScannerState()
     data class HighConfidence(val card: TcgCard) : ScannerState()
     data class LowConfidence(val cards: List<TcgCard>, val crossLanguage: Boolean = false) : ScannerState()
     data class Error(val message: String) : ScannerState()
@@ -121,7 +121,7 @@ class ScannerViewModel @Inject constructor(
                 _state.value = ScannerState.NoApiKey
             } catch (e: RateLimitException) {
                 consecutiveRateLimits++
-                _state.value = ScannerState.RateLimited(consecutiveRateLimits)
+                _state.value = ScannerState.RateLimited(consecutiveRateLimits, e.provider)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

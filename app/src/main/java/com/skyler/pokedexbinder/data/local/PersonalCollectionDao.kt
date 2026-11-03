@@ -28,9 +28,6 @@ interface PersonalCollectionDao {
     @Query("DELETE FROM personal_collection_cache WHERE pokemonKey = :pokemonKey")
     suspend fun deleteCacheForPokemon(pokemonKey: String)
 
-    @Query("DELETE FROM personal_collection_cache")
-    suspend fun clearCache()
-
     /** Replaces the cache rows for one Pokémon key atomically (used on refresh). */
     @Transaction
     suspend fun replaceCacheForPokemon(pokemonKey: String, cards: List<PersonalCollectionCache>) {

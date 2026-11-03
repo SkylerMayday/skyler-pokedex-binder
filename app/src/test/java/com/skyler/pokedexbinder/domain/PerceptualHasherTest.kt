@@ -8,16 +8,25 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
+import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 class PerceptualHasherTest {
 
@@ -145,10 +154,14 @@ class PerceptualHasherTest {
                 hasher.computeHash(card2Bitmap)
             )
 
-            server.enqueue(MockResponse().setBody("x"))
-            server.enqueue(MockResponse().setBody("x"))
-            every { BitmapFactory.decodeByteArray(any(), any(), any()) } returnsMany
-                listOf(card1Bitmap, card2Bitmap)
+            // Downloads run in parallel, so responses/decodes are keyed by path/body, not by order.
+            server.dispatcher = echoPathDispatcher()
+            every { BitmapFactory.decodeByteArray(any(), any(), any()) } answers {
+                when (String(firstArg<ByteArray>())) {
+                    "card1" -> card1Bitmap
+                    else -> card2Bitmap
+                }
+            }
 
             val card1 = TcgCard("id1", "Pikachu", "25", "Base Set", "card1", listOf("Pikachu"))
             val card2 = TcgCard("id2", "Charizard", "4", "Base Set", "card2", listOf("Charizard"))
@@ -158,6 +171,93 @@ class PerceptualHasherTest {
             assertEquals(0, result?.distance)
             assertEquals(expectedD2, result?.margin)
             assertEquals(listOf("id1" to 0, "id2" to expectedD2), result?.ranked)
+        } finally {
+            unmockkStatic(BitmapFactory::class)
+        }
+    }
+
+    private fun echoPathDispatcher() = object : Dispatcher() {
+        override fun dispatch(request: RecordedRequest) =
+            MockResponse().setBody(request.path!!.trimStart('/'))
+    }
+
+    private fun cards(n: Int) = (1..n).map { TcgCard("id$it", "N$it", "$it", "Set", "card$it", listOf("N$it")) }
+
+    @Test
+    fun `ties resolve by candidate order under parallel download`() = runTest {
+        mockkStatic(BitmapFactory::class)
+        try {
+            val captured = fakeBitmap(974, 1361) { x, y -> patternA(x, y) }
+            val same = fakeBitmap(749, 1046) { x, y -> patternB(x, y) }
+            every { BitmapFactory.decodeByteArray(any(), any(), any()) } returns same
+            // Earlier candidates answer slower, so completion order is the reverse of list order.
+            server.dispatcher = object : Dispatcher() {
+                override fun dispatch(request: RecordedRequest): MockResponse {
+                    val n = request.path!!.trimStart('/').removePrefix("card").toInt()
+                    return MockResponse().setBody("x").setBodyDelay((7 - n) * 80L, TimeUnit.MILLISECONDS)
+                }
+            }
+            val list = cards(6)
+
+            val result = hasher.findBestMatch(list, captured)
+
+            assertEquals("id1", result?.card?.id)
+            assertEquals(list.take(5).map { it.id }, result?.ranked?.map { it.first })
+        } finally {
+            unmockkStatic(BitmapFactory::class)
+        }
+    }
+
+    @Test
+    fun `parallelism is bounded to 4`() = runTest {
+        mockkStatic(BitmapFactory::class)
+        try {
+            val captured = fakeBitmap(974, 1361) { x, y -> patternA(x, y) }
+            every { BitmapFactory.decodeByteArray(any(), any(), any()) } returns
+                fakeBitmap(749, 1046) { x, y -> patternB(x, y) }
+            val inFlight = AtomicInteger()
+            val maxSeen = AtomicInteger()
+            server.dispatcher = object : Dispatcher() {
+                override fun dispatch(request: RecordedRequest): MockResponse {
+                    maxSeen.accumulateAndGet(inFlight.incrementAndGet()) { a, b -> maxOf(a, b) }
+                    Thread.sleep(100)
+                    inFlight.decrementAndGet()
+                    return MockResponse().setBody("x")
+                }
+            }
+
+            hasher.findBestMatch(cards(12), captured)
+
+            assertTrue("max=${maxSeen.get()}", maxSeen.get() <= 4)
+            assertTrue("max=${maxSeen.get()}", maxSeen.get() >= 2)
+        } finally {
+            unmockkStatic(BitmapFactory::class)
+        }
+    }
+
+    @Test
+    fun `cancellation propagates`() = runBlocking {
+        mockkStatic(BitmapFactory::class)
+        try {
+            val captured = fakeBitmap(974, 1361) { x, y -> patternA(x, y) }
+            every { BitmapFactory.decodeByteArray(any(), any(), any()) } returns
+                fakeBitmap(749, 1046) { x, y -> patternB(x, y) }
+            val started = CompletableDeferred<Unit>()
+            server.dispatcher = object : Dispatcher() {
+                override fun dispatch(request: RecordedRequest): MockResponse {
+                    started.complete(Unit)
+                    // Blocking OkHttp calls already in flight can't be interrupted, so they finish (~1.2s);
+                    // the second wave of 4 (another ~1.2s) must never start once cancelled.
+                    return MockResponse().setBody("x").setBodyDelay(1200, TimeUnit.MILLISECONDS)
+                }
+            }
+            val job = launch { hasher.findBestMatch(cards(8), captured) }
+            started.await()
+
+            job.cancel()
+            withTimeout(2_000) { job.join() }
+
+            assertTrue(job.isCancelled)
         } finally {
             unmockkStatic(BitmapFactory::class)
         }

@@ -31,9 +31,6 @@ class SlotDetailViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    // Always false — loading is now implicit in the Flow (Room is near-instant)
-    val isLoading: StateFlow<Boolean> = MutableStateFlow(false)
-
     /** One-shot event: emitted when a clear/reassign was blocked by a locked slot (defense in
      * depth — the triggering button should already be disabled, but a stale UI state or a race
      * is possible). Collected by the screen to show a dialog. */

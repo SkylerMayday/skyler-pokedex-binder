@@ -14,7 +14,6 @@ internal data class ArtRect(val left: Int, val top: Int, val right: Int, val bot
 internal object ArtHash {
     const val GRID = 32                  // DCT input is GRID x GRID
     const val LOW = 8                    // low-frequency block edge
-    const val HASH_BITS = LOW * LOW - 1  // 63, DC dropped
 
     // Art window as a fraction of the card rect. Double (not Float) so e.g. 1000 * 0.065 lands on
     // exactly 65.0 before truncation. Named for re-tuning from saved device captures.

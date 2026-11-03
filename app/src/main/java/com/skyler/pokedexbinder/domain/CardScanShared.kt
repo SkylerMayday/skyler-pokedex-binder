@@ -8,10 +8,11 @@ import okhttp3.Request
 import okhttp3.Response
 import java.io.ByteArrayOutputStream
 import java.io.IOException
-import java.net.SocketTimeoutException
+import java.io.InterruptedIOException
+import java.util.concurrent.TimeUnit
 
 /** Messages here must never contain an API key or request URL/headers. */
-class RateLimitException(provider: String = "Gemini") : IOException("Rate limited by $provider API")
+class RateLimitException(val provider: String = "Gemini") : IOException("Rate limited by $provider API")
 
 class InvalidApiKeyException(provider: String, code: Int) :
     IOException("$provider rejected the API key (HTTP $code)")
@@ -33,6 +34,13 @@ private const val SCAN_RETRY_BASE_DELAY_MS = 500L
 
 private const val JPEG_QUALITY = 80
 
+/** Per-attempt cap on a scan request (connect + headers + body); a hung provider costs 10s, not 30s. */
+internal const val SCAN_CALL_TIMEOUT_MS = 10_000L
+
+/** Shares pool and dispatcher with the receiver; only adds the call timeout. */
+internal fun OkHttpClient.forScan(timeoutMs: Long = SCAN_CALL_TIMEOUT_MS): OkHttpClient =
+    newBuilder().callTimeout(timeoutMs, TimeUnit.MILLISECONDS).build()
+
 internal const val CARD_SCAN_PROMPT = "Analyze this Pokémon TCG card. The card may be in any language. " +
         "Return ONLY a JSON object with no markdown:\n" +
         "{\"name\":\"Pokémon name in English regardless of card language, or null\"," +
@@ -44,7 +52,7 @@ internal const val CARD_SCAN_PROMPT = "Analyze this Pokémon TCG card. The card 
         "\"language\":\"ISO 639-1 code of the language the card is printed in (e.g. en, ja, ko, th, id, fr); for Chinese cards return zh-CN for Simplified characters or zh-TW for Traditional characters, or null\"," +
         "\"printedName\":\"card name exactly as printed, in its printed language and script, or null\"}"
 
-internal fun GeminiCardResult.toParsedCardInfo(): ParsedCardInfo = ParsedCardInfo(
+internal fun ScannedCardJson.toParsedCardInfo(): ParsedCardInfo = ParsedCardInfo(
     cardName = name,
     cardNumber = number,
     setTotal = setTotal,
@@ -72,19 +80,19 @@ private fun scaleBitmap(bitmap: Bitmap, maxDim: Int): Bitmap {
 }
 
 /**
- * Retries only on a 5xx response or a client-side [SocketTimeoutException]; 429, [invalidKeyCodes]
- * and other failures fail immediately.
+ * Retries only on a 5xx response or a client-side timeout ([InterruptedIOException]: read timeout or
+ * OkHttp call timeout); 429, [invalidKeyCodes] and other failures fail immediately.
  */
 internal suspend fun OkHttpClient.executeWithRetry(
     request: Request,
     provider: String,
     invalidKeyCodes: Set<Int> = emptySet()
 ): Response {
-    var lastTimeout: SocketTimeoutException? = null
+    var lastTimeout: InterruptedIOException? = null
     for (attempt in 0..MAX_SCAN_RETRIES) {
         val response = try {
             newCall(request).execute()
-        } catch (e: SocketTimeoutException) {
+        } catch (e: InterruptedIOException) {
             lastTimeout = e
             if (attempt < MAX_SCAN_RETRIES) {
                 delay(backoffDelayMs(attempt))

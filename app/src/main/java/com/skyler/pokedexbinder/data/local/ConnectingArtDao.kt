@@ -13,9 +13,6 @@ interface ConnectingArtDao {
     @Query("SELECT * FROM connecting_art_group ORDER BY position ASC, id ASC")
     suspend fun getGroups(): List<ConnectingArtGroup>
 
-    @Query("SELECT * FROM connecting_art_group WHERE id = :groupId")
-    suspend fun getGroup(groupId: Int): ConnectingArtGroup?
-
     @Insert
     suspend fun insertGroup(group: ConnectingArtGroup): Long
 
@@ -54,9 +51,6 @@ interface ConnectingArtDao {
 
     @Insert
     suspend fun insertSlots(slots: List<ConnectingArtSlot>)
-
-    @Update
-    suspend fun updateSlot(slot: ConnectingArtSlot)
 
     @Update
     suspend fun updateSlots(slots: List<ConnectingArtSlot>)

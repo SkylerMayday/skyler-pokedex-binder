@@ -33,8 +33,9 @@ class ClaudeCardScanner @Inject constructor(
     /** Overridden in tests to redirect requests to MockWebServer. */
     internal var baseUrl: String = CLAUDE_BASE_URL
 
+    private val scanClient by lazy { okHttpClient.forScan() }
     private val responseAdapter by lazy { moshi.adapter(ClaudeResponse::class.java) }
-    private val cardResultAdapter by lazy { moshi.adapter(GeminiCardResult::class.java) }
+    private val cardResultAdapter by lazy { moshi.adapter(ScannedCardJson::class.java) }
 
     suspend fun scan(bitmap: Bitmap, apiKey: String): ParsedCardInfo = withContext(Dispatchers.IO) {
         val body = buildRequestJson(CARD_SCAN_PROMPT, bitmapToJpegBase64(bitmap))
@@ -45,7 +46,7 @@ class ClaudeCardScanner @Inject constructor(
             .post(body.toRequestBody("application/json".toMediaType()))
             .build()
 
-        val responseText = okHttpClient.executeWithRetry(request, "Claude", CLAUDE_INVALID_KEY_CODES).use {
+        val responseText = scanClient.executeWithRetry(request, "Claude", CLAUDE_INVALID_KEY_CODES).use {
             it.body?.string()
         } ?: throw IOException("Empty Claude response")
 
@@ -56,7 +57,7 @@ class ClaudeCardScanner @Inject constructor(
             ?: throw IOException("No text in Claude response")
 
         val result = runCatching { cardResultAdapter.fromJson(extractJsonObject(text)) }.getOrNull()
-            ?: GeminiCardResult()
+            ?: ScannedCardJson()
         result.toParsedCardInfo()
     }
 

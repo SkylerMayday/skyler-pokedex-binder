@@ -14,6 +14,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 import java.io.IOException
+import java.io.InterruptedIOException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -348,6 +349,17 @@ class CardScanProviderTest {
         coEvery { claude.scan(any(), any()) } throws IOException("Claude error: 500")
         val m = scanFailure(provider(geminiKey = "")).message!!
         assertEquals("Claude failed — try again", m)
+    }
+
+    @Test
+    fun `call timeouts on both providers read as unreachable`() = runTest {
+        coEvery { gemini.scan(any(), any()) } throws InterruptedIOException("timeout")
+        coEvery { claude.scan(any(), any()) } throws InterruptedIOException("timeout")
+
+        val m = scanFailure(provider()).message!!
+
+        assertTrue(m, m.contains("Gemini unreachable"))
+        assertTrue(m, m.contains("Claude unreachable"))
     }
 
     @Test

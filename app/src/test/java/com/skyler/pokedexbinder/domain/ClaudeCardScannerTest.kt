@@ -165,6 +165,7 @@ class ClaudeCardScannerTest {
         val caught = scanCatching()
 
         assertTrue("Expected RateLimitException but got $caught", caught is RateLimitException)
+        assertEquals("Claude", (caught as RateLimitException).provider)
         assertTrue(caught!!.message!!.contains("Claude"))
         assertEquals(1, server.requestCount)
     }

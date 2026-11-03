@@ -10,14 +10,20 @@ import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.SocketPolicy
 import okio.Buffer
 import okio.BufferedSource
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 import java.io.IOException
+import java.io.InterruptedIOException
+import java.net.SocketTimeoutException
 
 class CardScanSharedTest {
 
@@ -78,5 +84,49 @@ class CardScanSharedTest {
 
         assertSame(body, response.body)
         assertFalse(body.closed)
+    }
+
+    @Test
+    fun `forScan sets the call timeout and leaves the base client unchanged`() {
+        val base = OkHttpClient()
+        val scan = base.forScan()
+
+        assertEquals(10_000L, SCAN_CALL_TIMEOUT_MS)
+        assertEquals(SCAN_CALL_TIMEOUT_MS, scan.callTimeoutMillis.toLong())
+        assertEquals(0, base.callTimeoutMillis)
+    }
+
+    @Test
+    fun `call timeout is retried then succeeds`() = runTest {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE))
+            server.enqueue(MockResponse().setBody("ok"))
+            val scan = OkHttpClient().forScan(200)
+
+            val response = scan.executeWithRetry(Request.Builder().url(server.url("/")).build(), "Gemini")
+
+            assertEquals(200, response.code)
+            response.close()
+            assertEquals(2, server.requestCount)
+        }
+    }
+
+    @Test
+    fun `call timeout after retries exhausted throws InterruptedIOException`() = runTest {
+        MockWebServer().use { server ->
+            repeat(4) { server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE)) }
+            val scan = OkHttpClient().forScan(200)
+
+            var caught: Throwable? = null
+            try {
+                scan.executeWithRetry(Request.Builder().url(server.url("/")).build(), "Gemini")
+            } catch (e: IOException) {
+                caught = e
+            }
+
+            assertTrue("got $caught", caught is InterruptedIOException)
+            assertTrue(caught !is SocketTimeoutException)
+            assertEquals(4, server.requestCount)
+        }
     }
 }

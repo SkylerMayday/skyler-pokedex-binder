@@ -13,9 +13,6 @@ class PersonalCollectionRepository @Inject constructor(
     private val dao: PersonalCollectionDao,
     private val cardSearchRepository: CardSearchRepository
 ) {
-    fun observeCache(pokemonKey: String): Flow<List<PersonalCollectionCache>> =
-        dao.observeCacheForPokemon(pokemonKey)
-
     fun observeAllCache(): Flow<List<PersonalCollectionCache>> = dao.observeAllCache()
 
     fun observeEntries(): Flow<List<PersonalCollectionEntry>> = dao.observeEntries()
