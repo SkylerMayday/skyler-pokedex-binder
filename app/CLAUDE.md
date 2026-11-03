@@ -24,6 +24,4 @@ Budget for all seven before proposing a new section. Missing #7 is the usual sil
 
 ## Build
 
-Windows-only Gradle. From a Bash-only context (pipeline subagents), write a real `.ps1` and invoke `powershell.exe -NoProfile -ExecutionPolicy Bypass -File <script>.ps1`. **Inline `-Command` mangles `$env:` assignments** because Bash expands `$env` first. See `~/.claude/rules/lessons/no-powershell-tool-in-harness.md`.
-
-Verifying someone else's build claim requires `--rerun-tasks` — a bare `UP-TO-DATE` is their cached result, not confirmation. See `~/.claude/rules/lessons/delete-stale-test-results-dir-before-rerun.md`.
+See the root `CLAUDE.md` (Running it, Sharp edges) — Windows-only Gradle; verify another stage's build claim with `--rerun-tasks`.

@@ -18,9 +18,10 @@ Three stale entries moved to [gaps-archive.md](gaps-archive.md) ("Closed 2026-11
 - **The 10 s scan `callTimeout` has no data behind it** (`SCAN_CALL_TIMEOUT_MS`, user decision). It covers upload + model time + body
   read and nothing streams. If healthy scans exceed 10 s, each provider fails after ~43.5 s (4 attempts) and every attempt is
   billed; the screen then says "check your internet connection". Nothing logs elapsed ms per attempt. Add that log, then retune.
-- **No recovery when `EncryptedSharedPreferences.create` fails** (`SecurityPrefsModule.kt`). The new backup exclusions only apply to
-  backups made after this build; an older Google backup still holds the encrypted files. Run "Back up now" after installing.
-  Real fix: catch, `deleteSharedPreferences`, recreate.
+- **Encrypted-prefs recovery is built (2026-11-04) but not tried on a device.** `createOrResetOnDecryptFailure` in `SecurityPrefsModule.kt`
+  deletes an unreadable `settings_secrets` / `publish_secrets` file and recreates it empty (GeneralSecurityException / IOException only;
+  the keys must be re-entered). Caveat: a transient Keystore failure would also wipe the stored keys. The backup exclusions only
+  apply to backups made after the hygiene build: press "Back up now" once after installing.
 - **Untested:** `ScannerViewModel` passing `e.provider` into `RateLimited` (the constructor default is gone, so the compiler now
   enforces it); the `PerceptualHasherTest` cancellation test cannot fail for the leak it is written for (its final assert is always true).
 - **P3:** provider is a plain `String` although `ScanProvider` exists; the rate-limit text hardcodes `console.anthropic.com` for any non-Gemini provider.
