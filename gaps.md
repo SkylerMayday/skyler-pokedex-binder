@@ -25,7 +25,7 @@ Three stale entries moved to [gaps-archive.md](gaps-archive.md) ("Closed 2026-11
 - **Untested:** `ScannerViewModel` passing `e.provider` into `RateLimited` (the constructor default is gone, so the compiler now
   enforces it); the `PerceptualHasherTest` cancellation test cannot fail for the leak it is written for (its final assert is always true).
 - **P3:** provider is a plain `String` although `ScanProvider` exists; the rate-limit text hardcodes `console.anthropic.com` for any non-Gemini provider.
-- **Deferred by choice:** `ScannerScreen.kt` is 1,034 lines (camera, focus, guide frame and every result state in one file); no camera tests, so a split is risky.
+- **`ScannerScreen.kt` split (2026-11-04, pure move, no logic change):** geometry/detection -> `ScannerGeometry.kt`, camera focus/diagnostics -> `ScannerCamera.kt`; the file is 664 lines, down from 1,034. `CameraPreview` (~200 lines) and the nine-state `ScannerScreen` stay together and still have no camera tests.
 - **Stale in this file:** the session-15 "`SmartThresholdUseCase` can never mark high confidence when the number is null" entry predates the `HASH_MARGIN` path.
 
 ## Refreshed — 2026-10-04 (session 22, part 2 — androidTest DataStore fix, clearer scan failure)
