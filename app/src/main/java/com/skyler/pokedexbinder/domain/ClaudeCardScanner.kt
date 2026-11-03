@@ -13,7 +13,7 @@ import org.json.JSONObject
 import java.io.IOException
 import javax.inject.Inject
 
-internal const val CLAUDE_MODEL = "claude-sonnet-4-6"
+internal const val CLAUDE_MODEL = "claude-sonnet-5-5"
 private const val CLAUDE_BASE_URL = "https://api.anthropic.com/v1/messages"
 private const val ANTHROPIC_VERSION = "2023-06-01"
 private const val CLAUDE_MAX_TOKENS = 512 // the card JSON object is ~100 tokens

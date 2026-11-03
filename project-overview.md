@@ -845,9 +845,9 @@ How a photo becomes a card. Decisions and their evidence live in `handoff.md` §
 
 1. **Capture** → 1.30x guide-frame crop (`ImageProxyExt.toCroppedBitmap`). The crop contains hand/background; the card
    is ~1/1.30 of its width (`cardRectInCrop` in `ScannerScreen.kt`).
-2. **Read the card** — `CardScanProvider` tries Gemini Flash (`GeminiCardScanner`), and on **any** non-cancellation
+2. **Read the card** — `CardScanProvider` tries Gemini Flash (`GeminiCardScanner`, `gemini-3.8-flash` since 2026-11-03, was 3.6 — unverified on-device), and on **any** non-cancellation
    error **or an all-null reply** (`ParsedCardInfo.isEmpty`) falls back to Claude Sonnet (`ClaudeCardScanner`, raw OkHttp,
-   model constant `claude-sonnet-4-6`). A Gemini 429 starts a 10 min in-memory breaker (`GEMINI_COOLDOWN_MS`) that skips
+   model constant `claude-sonnet-5-5`). A Gemini 429 starts a 10 min in-memory breaker (`GEMINI_COOLDOWN_MS`) that skips
    Gemini, but only when a Claude key exists. Both use one
    shared prompt (`CardScanShared.kt`) returning name, number, setTotal, dexNumber, hp, artist, **language**,
    **printedName**. Keys live in the encrypted settings store; never logged.

@@ -44,7 +44,7 @@ data class GeminiCardResult(
 // model — the 404 only surfaced once quota-decoupling created a genuinely new key. Google's own
 // error names gemini-3.6-flash as the replacement; confirmed working against the same new key.
 private const val GEMINI_BASE_URL =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent"
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent"
 
 class GeminiCardScanner @Inject constructor(
     private val okHttpClient: OkHttpClient,
