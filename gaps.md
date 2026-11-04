@@ -4,6 +4,14 @@ Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove ent
 actually fixed and verified, not when merely planned. Struck-through (closed) entries live in
 [gaps-archive.md](gaps-archive.md).
 
+## Refreshed — 2026-11-04 (session 24 — redundancy audit)
+
+**Audit scope note**: `ponytail-audit` read of deps, repositories, DAOs, interfaces; screens not opened. Tests 552/552. Archived history (sessions <=20) is in [gaps-archive.md](gaps-archive.md) and was not re-audited.
+
+### New, not fixed
+
+- **Deferred cuts** (each needs a device check or rewrites tests for little gain): `accompanist-permissions` (loses the resume re-check if replaced naively), `material` lib (theme parent, dark-mode flash risk), `AssignCardUseCase` merge, five identical blank-image DAO query pairs, `ConnectingArtRepository` pass-throughs, `SqliteVersionReader` bound twice (constructor default + `@Provides`). `SecondaryBinderScreen`/`UnownBinderScreen` and `ConnectingArtScreen`/`PersonalCollectionScreen` may share a composable; unread.
+
 ## Refreshed — 2026-11-04 (session 23 — model swap + hygiene batch)
 
 **Audit scope note**: full read of the scanner pipeline, DI, manifest, backup XMLs; reference sweep for unused code. Changed

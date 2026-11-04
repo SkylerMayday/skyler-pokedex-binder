@@ -1,22 +1,35 @@
-# Handoff — Session 23 (2026-11-04)
+# Handoff — Session 24 (2026-11-04)
 
 ## 1. Goals
 
-Check which models do card scanning; move to current models; audit the codebase for fixes, redundancy and improvements; apply them.
+Audit for tech debt and redundancy (`ponytail-audit`), apply the safe cuts.
 
 ## 2. Current State
 
-- **Models:** Gemini `gemini-3.8-flash` (free tier, same price as 3.6), Claude fallback `claude-sonnet-5-5`. Committed on `master` as `6a2225b`. **Not tried on the phone.**
-- **Hygiene batch merged** to `master` (`96072ae`, fast-forward) and **pushed to `origin`**; worktree and branch deleted. Contents: backup exclusions for the encrypted secret prefs; scan `callTimeout` 10 s; parallel hash downloads (max 4); provider-aware rate-limit text; `GeminiCardResult` renamed `ScannedCardJson`; 10 dead-code removals; `scripts/test_gemini_retry.ps1` deleted; `docs/superpowers/README.md` added.
-- **Verified:** 547/547 unit tests (fresh, also re-run on `master` after the merge), `assembleDebug` green, mutation-checked F2/F3/F4, 3-lens review 92/89/88 (ship).
-- **Not verified:** `compileDebugAndroidTestKotlin`, `lintDebug` (sandbox TLS/PKIX failure on uncached Gradle artifacts), anything on-device.
+- `master` = `origin/master` = `0517a45`. Branch `cleanup/redundancy` merged (ff) and deleted.
+- Unit tests 552/552 (`./run_build.bat testDebugUnitTest --rerun-tasks`, fresh). The Gradle loopback wall hit `./gradlew.bat` directly; `run_build.bat` worked.
+- **Not verified:** `compileDebugAndroidTestKotlin`, `lintDebug`, anything on-device (session 23 items still open).
 
-## 3. Next Steps
+## 3. Active files
 
-1. Run `./run_build.bat compileDebugAndroidTestKotlin` and `./run_build.bat lintDebug` in your own shell.
-2. Install (`powershell.exe -File scripts\install_debug.ps1`) and do a few scans. Watch `adb logcat -s ScannerMatch`: `provider=gemini` = 3.8 works; `provider=claude fallbackReason=...` = Gemini failed. Watch for timeouts: if scans fail near 10 s, raise `SCAN_CALL_TIMEOUT_MS`.
-3. Press "Back up now" once after installing so Google's stored backup stops containing the encrypted prefs.
-4. Rotate the Gemini API key (still unrotated; blocked on Skyler).
-5. Candidates (`gaps.md`, session 23 section): elapsed-ms logging per scan attempt; recovery when `EncryptedSharedPreferences` decrypt fails; the `ScannerScreen.kt` split; the older session-22 items.
+`UnownBinderRepository.kt`, `AppNavigation.kt`, `gradle/libs.versions.toml`, `gaps.md`, `gaps-archive.md`.
 
-Blocked on Skyler: items 1-4.
+## 4. Changes made
+
+- `searchNameFor(letterId)` (ignored its arg) -> `const val SEARCH_QUERY`; removed the unused `letterId` local in the Unown search route.
+- Dropped unused `coroutines-play-services` catalog entry.
+- `gaps.md` 699 -> 162 lines; sessions <=20 history moved to `gaps-archive.md`.
+
+## 5. Failed attempts / skipped on purpose
+
+- `accompanist-permissions` -> native launcher: skipped; accompanist re-checks the permission on resume (returning from Settings), native would not without extra code.
+- `material` lib removal: skipped; changing the theme parent may flash white in dark mode before Compose draws. Needs a device look.
+- `AssignCardUseCase` -> `BinderRepository`: skipped; 3 test files rewritten to save ~15 lines.
+- Remaining audit items (#3 blank-image DAO queries, #4 `ConnectingArtRepository` pass-through, #6 Unown mutate helper, #10 `SqliteVersionReader` double wiring, #14 duplicate screens): not done, low payoff vs test churn.
+
+## 6. Next Steps
+
+1. Session 23 list still stands: `./run_build.bat compileDebugAndroidTestKotlin` and `lintDebug` in your own shell; install, scan, watch `adb logcat -s ScannerMatch`; "Back up now" once; rotate the Gemini key.
+2. Optional: the audit leftovers above, only if you touch those files anyway.
+
+Blocked on Skyler: item 1.
