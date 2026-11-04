@@ -75,6 +75,6 @@ class UnownBinderRepository @Inject constructor(
          * "Unown A"), per Skyler's fallback: browse every Unown printing and manually pick which
          * one belongs in which slot, rather than relying on a per-letter query to disambiguate.
          */
-        fun searchNameFor(letterId: String): String = "Unown"
+        const val SEARCH_QUERY = "Unown"
     }
 }

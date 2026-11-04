@@ -226,13 +226,12 @@ fun AppNavigation() {
                     route = Screen.UnownSearch.route,
                     arguments = listOf(navArgument("letterId") { type = NavType.StringType })
                 ) { backStack ->
-                    val letterId = backStack.arguments?.getString("letterId") ?: ""
                     val parentEntry = remember(backStack) {
                         navController.getBackStackEntry(Screen.Unown.route)
                     }
                     val unownVm: UnownBinderViewModel = hiltViewModel(parentEntry)
                     ManualSearchScreen(
-                        initialQuery = com.skyler.pokedexbinder.repository.UnownBinderRepository.searchNameFor(letterId),
+                        initialQuery = com.skyler.pokedexbinder.repository.UnownBinderRepository.SEARCH_QUERY,
                         onCardSelected = { card ->
                             unownVm.assignPendingCard(card)
                             navController.popBackStack()
