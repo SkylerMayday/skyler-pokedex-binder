@@ -3,9 +3,12 @@ package com.skyler.pokedexbinder.repository
 import android.util.Log
 import com.skyler.pokedexbinder.data.local.MainBinderDao
 import com.skyler.pokedexbinder.data.local.MainBinderEntry
+import com.skyler.pokedexbinder.data.local.SecondaryBinderDao
+import com.skyler.pokedexbinder.data.local.SecondaryBinderEntry
 import com.skyler.pokedexbinder.data.model.Language
 import com.skyler.pokedexbinder.data.model.PokemonSlot
 import com.skyler.pokedexbinder.data.model.SlotType
+import com.skyler.pokedexbinder.data.model.TcgCard
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
@@ -14,7 +17,8 @@ import javax.inject.Singleton
 
 @Singleton
 class BinderRepository @Inject constructor(
-    private val mainBinderDao: MainBinderDao
+    private val mainBinderDao: MainBinderDao,
+    private val secondaryBinderDao: SecondaryBinderDao
 ) {
     fun observeSlots(): Flow<List<PokemonSlot>> =
         mainBinderDao.observeAll().map { entries -> entries.map { it.toDomain() } }
@@ -50,6 +54,28 @@ class BinderRepository @Inject constructor(
             )
         )
         return true
+    }
+
+    /**
+     * Assigns [card] to the slot, first moving any displaced card to Card History.
+     * Returns false if the slot is missing or locked; true if the assignment proceeded.
+     */
+    suspend fun assignWithHistory(pokemonId: String, card: TcgCard): Boolean {
+        val slot = getSlotByPokemonId(pokemonId) ?: return false
+        if (slot.isLocked) return false
+
+        if (slot.isOccupied) {
+            secondaryBinderDao.insertAtEnd(
+                SecondaryBinderEntry(
+                    pokemonId = slot.id,
+                    pokemonName = slot.name,
+                    cardId = slot.assignedCardId!!,
+                    cardImageUrl = slot.assignedCardImageUrl!!
+                )
+            )
+        }
+
+        return assignCard(pokemonId, card.id, card.imageUrl, card.name, card.setName)
     }
 
     /** Returns false (no-op) if the slot is locked; true if the clear proceeded. */

@@ -174,7 +174,6 @@ class ScannerViewModelTest {
         cardSearchRepository = mockk(),
         perceptualHasher = mockk(),
         smartThresholdUseCase = mockk(),
-        assignCardUseCase = mockk(),
         binderRepository = mockk(),
         secondaryBinderDao = mockk()
     )

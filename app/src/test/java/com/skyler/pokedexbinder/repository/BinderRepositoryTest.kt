@@ -3,6 +3,9 @@ package com.skyler.pokedexbinder.repository
 import app.cash.turbine.test
 import com.skyler.pokedexbinder.data.local.MainBinderDao
 import com.skyler.pokedexbinder.data.local.MainBinderEntry
+import com.skyler.pokedexbinder.data.local.SecondaryBinderDao
+import com.skyler.pokedexbinder.data.local.SecondaryBinderEntry
+import com.skyler.pokedexbinder.data.model.TcgCard
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -14,6 +17,91 @@ import org.junit.Test
 class BinderRepositoryTest {
 
     private val mainDao = mockk<MainBinderDao>(relaxed = true)
+    private val secondaryDao = mockk<SecondaryBinderDao>(relaxed = true)
+
+    private fun card(id: String, name: String) = TcgCard(
+        id = id, name = name, number = "1", setName = "XY",
+        imageUrl = "https://img.url/$id", pokemonNames = listOf(name)
+    )
+
+    private fun entry(pokemonId: String, name: String, cardId: String? = null, locked: Boolean = false) =
+        MainBinderEntry(
+            pokemonId = pokemonId, pokemonName = name, dexNumber = 1, dexOrder = 1,
+            assignedCardId = cardId, assignedCardImageUrl = cardId?.let { "https://img.url/$it" },
+            isLocked = locked
+        )
+
+    @Test
+    fun `assignWithHistory to empty slot does not touch card history`() = runTest {
+        coEvery { mainDao.getByPokemonId("bulbasaur") } returns entry("bulbasaur", "Bulbasaur")
+
+        val result = BinderRepository(mainDao, secondaryDao).assignWithHistory("bulbasaur", card("xy1-1", "Bulbasaur"))
+
+        assertTrue(result)
+        coVerify(exactly = 0) { secondaryDao.insert(any()) }
+        coVerify(exactly = 0) { secondaryDao.insertAtEnd(any()) }
+        coVerify {
+            mainDao.upsert(
+                entry("bulbasaur", "Bulbasaur").copy(
+                    assignedCardId = "xy1-1", assignedCardImageUrl = "https://img.url/xy1-1",
+                    assignedCardName = "Bulbasaur", assignedCardSetName = "XY"
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `assignWithHistory to occupied slot moves old card to card history`() = runTest {
+        coEvery { mainDao.getByPokemonId("charizard") } returns entry("charizard", "Charizard", cardId = "base1-4")
+
+        val result = BinderRepository(mainDao, secondaryDao).assignWithHistory("charizard", card("xy1-11", "Charizard"))
+
+        assertTrue(result)
+        coVerify {
+            secondaryDao.insertAtEnd(
+                SecondaryBinderEntry(
+                    pokemonId = "charizard",
+                    pokemonName = "Charizard",
+                    cardId = "base1-4",
+                    cardImageUrl = "https://img.url/base1-4"
+                )
+            )
+        }
+        coVerify {
+            mainDao.upsert(match { it.pokemonId == "charizard" && it.assignedCardId == "xy1-11" })
+        }
+    }
+
+    @Test
+    fun `assignWithHistory does nothing when slot not found`() = runTest {
+        coEvery { mainDao.getByPokemonId("missingno") } returns null
+
+        val result = BinderRepository(mainDao, secondaryDao).assignWithHistory("missingno", card("xy1-1", "MissingNo"))
+
+        assertFalse(result)
+        coVerify(exactly = 0) { secondaryDao.insert(any()) }
+        coVerify(exactly = 0) { secondaryDao.insertAtEnd(any()) }
+        coVerify(exactly = 0) { mainDao.upsert(any()) }
+    }
+
+    @Test
+    fun `assignWithHistory on locked occupied slot is a no-op and returns false`() = runTest {
+        coEvery { mainDao.getByPokemonId("charizard") } returns
+            entry("charizard", "Charizard", cardId = "base1-4", locked = true)
+
+        val result = BinderRepository(mainDao, secondaryDao).assignWithHistory("charizard", card("xy1-11", "Charizard"))
+
+        assertFalse(result)
+        coVerify(exactly = 0) { secondaryDao.insertAtEnd(any()) }
+        coVerify(exactly = 0) { mainDao.upsert(any()) }
+    }
+
+    @Test
+    fun `assignWithHistory returns true when assignment proceeds`() = runTest {
+        coEvery { mainDao.getByPokemonId("bulbasaur") } returns entry("bulbasaur", "Bulbasaur")
+
+        assertTrue(BinderRepository(mainDao, secondaryDao).assignWithHistory("bulbasaur", card("xy1-1", "Bulbasaur")))
+    }
 
     @Test
     fun `observeSlots maps DB entries to PokemonSlot with card info`() = runTest {
@@ -26,7 +114,7 @@ class BinderRepositoryTest {
         )
         coEvery { mainDao.observeAll() } returns flowOf(listOf(entry))
 
-        val repo = BinderRepository(mainDao)
+        val repo = BinderRepository(mainDao, secondaryDao)
         repo.observeSlots().test {
             val slots = awaitItem()
             assertEquals(1, slots.size)
@@ -39,7 +127,7 @@ class BinderRepositoryTest {
     @Test
     fun `getSlotByPokemonId returns null when not found`() = runTest {
         coEvery { mainDao.getByPokemonId("missingno") } returns null
-        val repo = BinderRepository(mainDao)
+        val repo = BinderRepository(mainDao, secondaryDao)
         assertNull(repo.getSlotByPokemonId("missingno"))
     }
 
@@ -47,7 +135,7 @@ class BinderRepositoryTest {
     fun `assignCard upserts entry with card info and returns true when unlocked`() = runTest {
         val existing = MainBinderEntry("charizard", "Charizard", dexNumber = 6, dexOrder = 6)
         coEvery { mainDao.getByPokemonId("charizard") } returns existing
-        val repo = BinderRepository(mainDao)
+        val repo = BinderRepository(mainDao, secondaryDao)
 
         val result = repo.assignCard("charizard", "base4-4", "https://img.example.test/base4/4.png", "Charizard", "Base Set")
 
@@ -72,7 +160,7 @@ class BinderRepositoryTest {
     fun `assignCard no-ops and returns false when slot is locked`() = runTest {
         val existing = MainBinderEntry("charizard", "Charizard", dexNumber = 6, dexOrder = 6, isLocked = true)
         coEvery { mainDao.getByPokemonId("charizard") } returns existing
-        val repo = BinderRepository(mainDao)
+        val repo = BinderRepository(mainDao, secondaryDao)
 
         val result = repo.assignCard("charizard", "base4-4", "https://img.example.test/base4/4.png", "Charizard", "Base Set")
 
@@ -87,7 +175,7 @@ class BinderRepositoryTest {
             assignedCardId = "base4-4", assignedCardImageUrl = "https://img.example.test/base4/4.png"
         )
         coEvery { mainDao.getByPokemonId("charizard") } returns existing
-        val repo = BinderRepository(mainDao)
+        val repo = BinderRepository(mainDao, secondaryDao)
 
         val result = repo.clearCard("charizard")
 
@@ -111,7 +199,7 @@ class BinderRepositoryTest {
             assignedCardId = "base4-4", isLocked = true
         )
         coEvery { mainDao.getByPokemonId("charizard") } returns existing
-        val repo = BinderRepository(mainDao)
+        val repo = BinderRepository(mainDao, secondaryDao)
 
         val result = repo.clearCard("charizard")
 
@@ -121,7 +209,7 @@ class BinderRepositoryTest {
 
     @Test
     fun `updateDetails delegates to dao with raw language name`() = runTest {
-        val repo = BinderRepository(mainDao)
+        val repo = BinderRepository(mainDao, secondaryDao)
 
         repo.updateDetails("charizard", com.skyler.pokedexbinder.data.model.Language.JA, "Holo copy", true)
 

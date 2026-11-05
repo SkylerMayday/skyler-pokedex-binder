@@ -7,7 +7,6 @@ import com.skyler.pokedexbinder.data.local.SecondaryBinderDao
 import com.skyler.pokedexbinder.data.local.SecondaryBinderEntry
 import com.skyler.pokedexbinder.data.model.PokemonSlot
 import com.skyler.pokedexbinder.data.model.TcgCard
-import com.skyler.pokedexbinder.domain.AssignCardUseCase
 import com.skyler.pokedexbinder.repository.BinderRepository
 import com.skyler.pokedexbinder.repository.CardSearchRepository
 import com.skyler.pokedexbinder.repository.SearchProgress
@@ -38,8 +37,7 @@ class QuickScanViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val cardSearchRepository: CardSearchRepository,
     private val binderRepository: BinderRepository,
-    private val secondaryBinderDao: SecondaryBinderDao,
-    private val assignCardUseCase: AssignCardUseCase
+    private val secondaryBinderDao: SecondaryBinderDao
 ) : ViewModel() {
 
     private val targetSlotId: String = savedStateHandle.get<String>("slotId") ?: ""
@@ -138,7 +136,7 @@ class QuickScanViewModel @Inject constructor(
             _state.value = when {
                 matching.isEmpty() -> QuickScanState.NoSlot(card)
                 matching.size == 1 -> {
-                    assignCardUseCase.assign(matching[0].id, card)
+                    binderRepository.assignWithHistory(matching[0].id, card)
                     QuickScanState.Success(card, matching[0].name)
                 }
                 else -> QuickScanState.SlotSelection(card, matching)
@@ -148,7 +146,7 @@ class QuickScanViewModel @Inject constructor(
 
     fun confirmCard(card: TcgCard) {
         viewModelScope.launch {
-            assignCardUseCase.assign(targetSlotId, card)
+            binderRepository.assignWithHistory(targetSlotId, card)
             _state.value = QuickScanState.Success(card, targetSlotName)
         }
     }
@@ -159,7 +157,7 @@ class QuickScanViewModel @Inject constructor(
 
     fun assignToSlot(slot: PokemonSlot, card: TcgCard) {
         viewModelScope.launch {
-            assignCardUseCase.assign(slot.id, card)
+            binderRepository.assignWithHistory(slot.id, card)
             _state.value = QuickScanState.Success(card, slot.name)
         }
     }
@@ -193,7 +191,7 @@ class QuickScanViewModel @Inject constructor(
         )
         if (targetSlotId.isNotBlank()) {
             viewModelScope.launch {
-                assignCardUseCase.assign(targetSlotId, card)
+                binderRepository.assignWithHistory(targetSlotId, card)
                 _state.value = QuickScanState.Success(card, targetSlotName)
             }
         } else {

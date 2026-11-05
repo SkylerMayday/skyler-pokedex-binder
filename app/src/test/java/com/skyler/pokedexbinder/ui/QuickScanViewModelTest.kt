@@ -6,7 +6,6 @@ import com.skyler.pokedexbinder.data.local.SecondaryBinderEntry
 import com.skyler.pokedexbinder.data.model.PokemonSlot
 import com.skyler.pokedexbinder.data.model.SlotType
 import com.skyler.pokedexbinder.data.model.TcgCard
-import com.skyler.pokedexbinder.domain.AssignCardUseCase
 import com.skyler.pokedexbinder.repository.BinderRepository
 import com.skyler.pokedexbinder.repository.CardSearchRepository
 import com.skyler.pokedexbinder.repository.SearchProgress
@@ -42,7 +41,6 @@ class QuickScanViewModelTest {
     private val cardSearchRepository = mockk<CardSearchRepository>()
     private val binderRepository = mockk<BinderRepository>(relaxed = true)
     private val secondaryBinderDao = mockk<SecondaryBinderDao>(relaxed = true)
-    private val assignCardUseCase = mockk<AssignCardUseCase>(relaxed = true)
 
     @Before
     fun setUp() {
@@ -63,8 +61,7 @@ class QuickScanViewModelTest {
         savedStateHandle = SavedStateHandle(mapOf("slotId" to slotId, "replacing" to replacing)),
         cardSearchRepository = cardSearchRepository,
         binderRepository = binderRepository,
-        secondaryBinderDao = secondaryBinderDao,
-        assignCardUseCase = assignCardUseCase
+        secondaryBinderDao = secondaryBinderDao
     )
 
     private fun pokemonSlot(
@@ -261,7 +258,7 @@ class QuickScanViewModelTest {
         vm.selectCard(options[0])
 
         assertEquals(QuickScanState.CardConfirm(options[0], options, true), vm.state.value)
-        coVerify(exactly = 0) { assignCardUseCase.assign(any(), any()) }
+        coVerify(exactly = 0) { binderRepository.assignWithHistory(any(), any()) }
     }
 
     @Test
@@ -303,7 +300,7 @@ class QuickScanViewModelTest {
 
         vm.selectCard(c)
 
-        coVerify { assignCardUseCase.assign("charizard_id", c) }
+        coVerify { binderRepository.assignWithHistory("charizard_id", c) }
         assertEquals(QuickScanState.Success(c, "Charizard"), vm.state.value)
     }
 
@@ -329,7 +326,7 @@ class QuickScanViewModelTest {
 
         vm.selectCard(c)
 
-        coVerify { assignCardUseCase.assign("cz", c) }
+        coVerify { binderRepository.assignWithHistory("cz", c) }
     }
 
     // --- confirmCard / wrongCard / assignToSlot ---
@@ -345,7 +342,7 @@ class QuickScanViewModelTest {
 
         vm.confirmCard(c)
 
-        coVerify { assignCardUseCase.assign("target", c) }
+        coVerify { binderRepository.assignWithHistory("target", c) }
         assertEquals(QuickScanState.Success(c, "Bulbasaur"), vm.state.value)
     }
 
@@ -367,7 +364,7 @@ class QuickScanViewModelTest {
 
         vm.assignToSlot(slotFixture, c)
 
-        coVerify { assignCardUseCase.assign("s1", c) }
+        coVerify { binderRepository.assignWithHistory("s1", c) }
         assertEquals(QuickScanState.Success(c, "Squirtle"), vm.state.value)
     }
 
@@ -437,7 +434,7 @@ class QuickScanViewModelTest {
         vm.confirmCustomCard("Pidgey", "Custom Set", "001", "https://img/custom.jpg")
 
         coVerify {
-            assignCardUseCase.assign(
+            binderRepository.assignWithHistory(
                 "target",
                 match<TcgCard> {
                     it.name == "Pidgey" && it.setName == "Custom Set" &&

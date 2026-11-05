@@ -8,7 +8,6 @@ import androidx.lifecycle.viewModelScope
 import com.skyler.pokedexbinder.data.local.SecondaryBinderDao
 import com.skyler.pokedexbinder.data.local.SecondaryBinderEntry
 import com.skyler.pokedexbinder.data.model.TcgCard
-import com.skyler.pokedexbinder.domain.AssignCardUseCase
 import com.skyler.pokedexbinder.domain.CardScanProvider
 import com.skyler.pokedexbinder.domain.NoApiKeyException
 import com.skyler.pokedexbinder.domain.ParsedCardInfo
@@ -44,7 +43,6 @@ class ScannerViewModel @Inject constructor(
     private val cardSearchRepository: CardSearchRepository,
     private val perceptualHasher: PerceptualHasher,
     private val smartThresholdUseCase: SmartThresholdUseCase,
-    private val assignCardUseCase: AssignCardUseCase,
     private val binderRepository: BinderRepository,
     private val secondaryBinderDao: SecondaryBinderDao
 ) : ViewModel() {
@@ -143,7 +141,7 @@ class ScannerViewModel @Inject constructor(
                 }
                 slotId.isNotBlank() -> {
                     // Launched from a specific slot
-                    assignCardUseCase.assign(slotId, card)
+                    binderRepository.assignWithHistory(slotId, card)
                     _state.value = ScannerState.Success(card, slotName)
                 }
                 else -> {
@@ -152,7 +150,7 @@ class ScannerViewModel @Inject constructor(
                         card.pokemonNames.any { it.equals(slot.name, ignoreCase = true) }
                     }
                     if (matchedSlot != null) {
-                        assignCardUseCase.assign(matchedSlot.id, card)
+                        binderRepository.assignWithHistory(matchedSlot.id, card)
                         _state.value = ScannerState.Success(card, matchedSlot.name)
                     } else {
                         secondaryBinderDao.insertAtEnd(card.toSecondaryEntry())
