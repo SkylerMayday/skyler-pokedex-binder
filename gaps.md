@@ -4,6 +4,29 @@ Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove ent
 actually fixed and verified, not when merely planned. Struck-through (closed) entries live in
 [gaps-archive.md](gaps-archive.md).
 
+## Refreshed — 2026-11-06 (session 25, batch 1 — scanner behaviour and tests, branch `worktree-gaps-batch1-scanner`)
+
+**Audit scope note**: touched `CardScanShared`, `CardScanProvider`, `ClaudeCardScanner`, `GeminiCardScanner`, `ScannerScreen`,
+`ScannerViewModel`, `TcgcsvJapanSource`, `SyncCardImagesUseCase` + tests. Unit tests **579/579** (fresh XMLs, `--rerun-tasks`, recounted by
+the orchestrator); 3-lens Opus review 90 / 90 / 91 (min 90, ship). **Not run on the phone.** `lintDebug` and
+`connectedDebugAndroidTest` still blocked in the sandbox (PKIX on uncached artifacts); run both in your own shell. Fixed entries moved to
+[gaps-archive.md](gaps-archive.md) ("Closed 2026-11-06"). The Gemini key rotation gap is dropped by Skyler's decision.
+
+### New, not fixed
+
+- **Collect `attempt provider= n= ms= outcome=` lines (logcat tag `ScannerMatch`) before retuning `SCAN_CALL_TIMEOUT_MS`.** `ms=` stops at the
+  response headers (`logAttempt("ok")` fires before the body is read), so a timeout during the body read still logs `outcome=ok`.
+- **Gemini bad-key HTTP code is unverified.** 401/403 are classed as invalid key; Gemini may return 400. After one wrong key on the phone, read
+  `outcome=` in logcat and add 400 only if it appears. A 403 can also mean "API not enabled" or a restricted key (the key itself fine); only the 429 body is logged.
+- **Item 11 stays unexplained.** `connectedDebugAndroidTest` exits 1 with `OK (22 tests)`; the emulator run died at dependency download (PKIX) before any test. Run
+  `$env:ANDROID_SERIAL="emulator-5554"; .\gradlew.bat connectedDebugAndroidTest` in your own PowerShell, with the phone unplugged or the serial pinned.
+- **Share-sheet rotation gate** (`SettingsScreen.kt` ~80-87) is tested only at ViewModel level; the real test is a Compose + Hilt `ActivityScenario.recreate()` emulator test. Deferred.
+- **P3s from review:** the sync rotation keys off the day number, so syncs exactly 2 days apart with 800 blank ids and limit 400 check the same half each time
+  (random start would fix it); a failed 429 body peek is swallowed without a log line; the log seam runs before `response.close()` with no try/finally
+  (leaks only if a test forgets to stub the seam); `ToStringGuard` relies on declared field order and handles String/Boolean fields only; the key-header names
+  appear in three places (`CardScanShared.kt`, each scanner); `InvalidApiKeyException` still takes a provider `String`.
+- **Mutation evidence is thin for 8 of the 14 table rows** (the Coder's `mutation-batch1.log` records only "24 failed"; `mutation-batch2.log` was never written). The Tester re-proved 6; code-read confirms the rest.
+
 ## Refreshed — 2026-11-04 (session 24 — redundancy audit)
 
 **Audit scope note**: `ponytail-audit` read of deps, repositories, DAOs, interfaces; screens not opened. Tests 552/552. Archived history (sessions <=20) is in [gaps-archive.md](gaps-archive.md) and was not re-audited.
@@ -25,14 +48,11 @@ Three stale entries moved to [gaps-archive.md](gaps-archive.md) ("Closed 2026-11
 
 - **The 10 s scan `callTimeout` has no data behind it** (`SCAN_CALL_TIMEOUT_MS`, user decision). It covers upload + model time + body
   read and nothing streams. If healthy scans exceed 10 s, each provider fails after ~43.5 s (4 attempts) and every attempt is
-  billed; the screen then says "check your internet connection". Nothing logs elapsed ms per attempt. Add that log, then retune.
+  billed. Per-attempt `ms=` logging now exists (session 25); collect it on the phone, then retune.
 - **Encrypted-prefs recovery is built (2026-11-04) but not tried on a device.** `createOrResetOnDecryptFailure` in `SecurityPrefsModule.kt`
   deletes an unreadable `settings_secrets` / `publish_secrets` file and recreates it empty (GeneralSecurityException / IOException only;
   the keys must be re-entered). Caveat: a transient Keystore failure would also wipe the stored keys. The backup exclusions only
   apply to backups made after the hygiene build: press "Back up now" once after installing.
-- **Untested:** `ScannerViewModel` passing `e.provider` into `RateLimited` (the constructor default is gone, so the compiler now
-  enforces it); the `PerceptualHasherTest` cancellation test cannot fail for the leak it is written for (its final assert is always true).
-- **P3:** provider is a plain `String` although `ScanProvider` exists; the rate-limit text hardcodes `console.anthropic.com` for any non-Gemini provider.
 - **`ScannerScreen.kt` split (2026-11-04, pure move, no logic change):** geometry/detection -> `ScannerGeometry.kt`, camera focus/diagnostics -> `ScannerCamera.kt`; the file is 664 lines, down from 1,034. `CameraPreview` (~200 lines) and the nine-state `ScannerScreen` stay together and still have no camera tests.
 - **Stale in this file:** the session-15 "`SmartThresholdUseCase` can never mark high confidence when the number is null" entry predates the `HASH_MARGIN` path.
 
@@ -49,11 +69,6 @@ Three stale entries moved to [gaps-archive.md](gaps-archive.md) ("Closed 2026-11
   "api.anthropic.com"`; the phone was disconnected, so the `scan provider=none geminiError=… claudeError=…` log line was not
   captured. A real DNS outage cannot be fixed in the app (check Wi-Fi/mobile data, Settings > Private DNS, VPN/ad-blocker,
   captive portal). Next time, capture logcat tag `ScannerMatch` right after a failure.
-- **Wording gaps (P3):** a malformed Claude reply (`IOException("Empty Claude response")` / `"No text in Claude response"`,
-  `ClaudeCardScanner.kt:50,56`) is classified as a network failure and says "check your internet connection"; a Gemini
-  `InvalidApiKeyException` is folded into "Gemini failed"; a Gemini-only config with a network failure still shows raw text.
-- **Log line order:** `scan provider=none` is logged before the empty-Gemini result is returned, so a scan that returns a
-  result can log as `provider=none` (diagnostics only).
 - **`connectedDebugAndroidTest` exits 1 ("There were failing tests") even when the test log says `OK (22 tests)`**; cause
   unexplained. Read verdicts from `testlog/test-results.log` only; an absent `test_status` in the textproto is NOT a pass.
 - **The pipeline folders of this run were deleted with the worktree** (`.pipeline/` is not archived to `.pipeline-archive`).
@@ -73,11 +88,6 @@ Three Opus lenses: 93 / 92 / 88 (min 88, ship). Unit tests **529/529 green** on 
   whole-name match (tolerating a trailing ex/gx/v/vmax/vstar); it only matters when the reader drops the dex number. A
   variant outside the suffix list (e.g. fullwidth `ＥＸ`) shows as unverified, never auto-accepted wrongly.
 - **Product-download failure is remembered per group**, so the first failure for each distinct group (~83) still costs one call.
-- **Untested:** "a cooled-down group spends no `FetchBudget`" (swapping the two guard lines stays green); the
-  `CancellationException` rethrow in `ScannerViewModel`; the Gemini success-path `.use` body close.
-- **`AppSettings.toString` / `PublishConfig.toString` are hand-written**, so a new field silently drops out of the output.
-- **Small:** `EmptyScanException` is never thrown (log name only); the 401/403 `blocked` check is duplicated at
-  `TcgcsvJapanSource.kt:124,181` and `PRODUCTS_RETRY_MS` restates the 15-minute literal.
 - **Gradle loopback wall did not recur this session.** `./run_build.bat <task>` from Bash worked, including inside a
   worktree (needs `local.properties` copied in). The root `CLAUDE.md` line "often dies" is now overstated; left alone
   because Skyler's edits to that file are uncommitted.
@@ -98,12 +108,11 @@ Opus lenses (89 / 94 / 94 on the second pass). Unit tests **505/505 green**, `co
   and `fillBlankImageOnlyTouchesBlankRows` pass; `fillBlankImage` is still covered for `main_binder` only.
   Do not run `connectedDebugAndroidTest` against the phone: AGP uninstalls the app afterwards and would delete its data
   (pin the emulator with `ANDROID_SERIAL=emulator-5554`; boot it with `-gpu swiftshader_indirect -no-window`).
-- **`MAX_AUTO_IDS` ceiling:** the auto sync checks the first 400 blank ids (ko / zh-cn last); if >400 ja/en blanks never
-  resolve, later ones are starved until a manual sync.
+- **`MAX_AUTO_IDS` ceiling:** the auto sync checks 400 blank ids per run; since session 25 the window rotates daily, so later ids are
+  reached over several days (manual sync stays exhaustive). See the session 25 P3 on 2-day gaps.
 - **English has no backup image resolver.** `JapanTcgcsvResolver` returns null for non-`ja`, so an English card TCGdex
   lacks an image for gets no sync fallback (search-time TCGCSV English merge can still patch it). Skyler
   (2026-10-03): "working well for now"; build one only if he reports misses.
-- **Weak test:** the share-sheet rotation gate is only tested at ViewModel level.
 - **Only ~83 of 116 Japanese sets join to TCGCSV** (vintage `E*/neo*/PMCG*/PCG*`, `SM1p-5p`, `MC`, `SVLS` and part of
   `M-P`/`SV-P` don't): those stay image-less. U3 (Japanese backup search via TCGCSV when TCGdex is down) was deferred —
   a saved `tcgcsv_ja_` card would be orphaned once TCGdex adds the set. English TCGCSV still scans ~217 groups per manual
@@ -141,12 +150,11 @@ Tests 428/428 green; live-verified for Japanese cards on 2026-10-03 (see handoff
   Not built (Skyler 2026-10-03: "we don't necessarily have to build that now"). README figures unverified by me
   beyond the `data_jp` folder listing (329 entries). Until built, a Chinese/Korean card that TCGdex lacks falls to
   the "closest English printings" list, which Skyler accepts for now.
-- **Gemini quota cause unconfirmed** (free-tier daily vs per-minute); 429 body is not logged.
+- **Gemini quota cause unconfirmed** (free-tier daily vs per-minute); the 429 body is now logged (redacted, 300 chars), so read it after the next 429.
 - **TCGdex call budget:** worst case on a total miss is 11 requests (zh) / 8 (others), above the spec's 7 / 5. (After
   part 2 the ported name+number / dex+number steps raised the test's bound from 7 to 12.)
 - **Claude's English name can be wrong** (read Klawf as "Crabominable"); `printedName` + number + total saved
   the match.
-- **`ScannerViewModel`'s `NoApiKeyException` → state mapping has no JVM test** (needs camera objects).
 - **Saved card Language is not pre-filled from the detected language** (out of scope; touches 4+ assign flows).
 - **`scripts/claude_scan_bakeoff.py` never run** (Skyler's Python lacks `anyio`); prices in it are from the
   claude-api skill's cached table (2026-06-04) and the per-scan cost (~$0.002 Haiku / ~$0.006 Sonnet) is an

@@ -1471,3 +1471,18 @@ self-resolving — now with one added data point)
   `QuickScanViewModel` has a `ManualEntry` state (type in name/set/number/image URL) for cards
   missing from all 3 APIs; `ManualSearchScreen` (used by Connecting Art + Card History's "Add to
   Secondary") has no equivalent.
+
+
+## Closed 2026-11-06 (session 25, batch 1 — verified by unit tests + 3-lens review 90/90/91, not on device)
+
+- ~~Nothing logs elapsed ms per scan attempt~~ `attempt provider= n= ms= outcome=` line per attempt (`executeWithRetry`).
+- ~~`ScannerViewModel` passing `e.provider` into `RateLimited` untested~~, ~~`NoApiKeyException` -> state~~ and ~~`CancellationException` rethrow~~ now tested (mutation-checked).
+- ~~`PerceptualHasherTest` cancellation test cannot fail~~ rewritten (`requestCount <= 4`; `GlobalScope.async` mutation -> 8, red).
+- ~~Provider is a plain `String`; rate-limit text hardcodes `console.anthropic.com`~~ `ScanProvider` enum end to end (except `InvalidApiKeyException`), console URL per provider.
+- ~~Wording gaps~~ malformed replies get `MalformedReplyException` (not "check your internet"); Gemini key rejection and Gemini-only failures have fixed wording (`fromReply` maps Moshi parse errors).
+- ~~`scan provider=none` logged before the empty-Gemini result~~ now `provider=gemini`.
+- ~~Cooled-down group spends no `FetchBudget` untested~~, ~~Gemini success-path body close untested~~ (the `.use` is redundant: `string()` closes the source; the test pins a non-closing read), ~~`EmptyScanException` never thrown~~ (removed, label `EmptyReply`).
+- ~~`AppSettings.toString` / `PublishConfig.toString` drop new fields silently~~ reflection guard test (`ToStringGuard`).
+- ~~401/403 `blocked` check duplicated; `PRODUCTS_RETRY_MS` restates 15 min~~ one `retryDelayMs` helper, `RETRY_MS` / `BLOCKED_RETRY_MS` constants.
+- ~~`MAX_AUTO_IDS` starvation~~ daily rotating window (no storage). Residual P3 in `gaps.md`.
+- ~~Gemini 429 body not logged~~ logged, key redacted, 300 chars.
