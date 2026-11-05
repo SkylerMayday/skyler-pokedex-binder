@@ -1486,3 +1486,10 @@ self-resolving — now with one added data point)
 - ~~401/403 `blocked` check duplicated; `PRODUCTS_RETRY_MS` restates 15 min~~ one `retryDelayMs` helper, `RETRY_MS` / `BLOCKED_RETRY_MS` constants.
 - ~~`MAX_AUTO_IDS` starvation~~ daily rotating window (no storage). Residual P3 in `gaps.md`.
 - ~~Gemini 429 body not logged~~ logged, key redacted, 300 chars.
+
+
+## Closed 2026-11-06 (session 25, batch 2 — verified by unit tests 581/581 + review 94, not on device)
+
+- ~~`SqliteVersionReader` bound twice~~ constructor default removed from `DatabaseBackupManager`; `@Provides` is the only Hilt binding, `buildDatabase` builds the reader directly.
+- ~~`AssignCardUseCase` merge~~ now `BinderRepository.assignWithHistory(pokemonId, card): Boolean`; 3 tests moved to `BinderRepositoryTest` plus 2 new; mutation-checked.
+- ~~Five identical blank-image DAO query pairs~~, ~~`ConnectingArtRepository` pass-throughs~~, ~~duplicate section screens~~ closed as not a gap, evidence in `gaps.md` batch 2 section.
