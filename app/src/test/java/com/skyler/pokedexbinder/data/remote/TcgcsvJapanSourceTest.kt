@@ -320,6 +320,23 @@ class TcgcsvJapanSourceTest {
         coVerify(exactly = 1) { api.getJapanProducts(1) }
     }
 
+    // Mutation: swapping the cooldown check and budget.tryTake() in fetchProducts makes the
+    // second lookup spend budget (left 1) -> red.
+    @Test
+    fun `a cooled-down group spends no FetchBudget`() = runTest {
+        stubGroups(group(1, "M6"))
+        coEvery { api.getJapanProducts(1) } throws IOException("down")
+        val s = source()
+        val budget = FetchBudget(3)
+
+        s.imageUrl("M6", "048", budget)
+        assertEquals(2, budget.left)
+
+        s.imageUrl("M6", "048", budget)
+        assertEquals(2, budget.left)
+        coVerify(exactly = 1) { api.getJapanProducts(1) }
+    }
+
     @Test
     fun `failed product download is retried after 15 minutes`() = runTest {
         stubGroups(group(1, "M6"))

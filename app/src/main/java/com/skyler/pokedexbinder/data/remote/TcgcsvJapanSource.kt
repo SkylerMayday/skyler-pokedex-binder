@@ -121,8 +121,7 @@ class TcgcsvJapanSource @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            val blocked = e is HttpException && (e.code() == 401 || e.code() == 403)
-            groupsRetryAt = nowMs() + if (blocked) GROUPS_BLOCKED_RETRY_MS else GROUPS_RETRY_MS
+            groupsRetryAt = nowMs() + retryDelayMs(e)
             return@withLock cached // stale copy (or null) on failure
         }
         groupsRetryAt = 0L
@@ -178,11 +177,13 @@ class TcgcsvJapanSource @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            val blocked = e is HttpException && (e.code() == 401 || e.code() == 403)
-            productsRetryAt[group.g] = nowMs() + if (blocked) PRODUCTS_BLOCKED_RETRY_MS else PRODUCTS_RETRY_MS
+            productsRetryAt[group.g] = nowMs() + retryDelayMs(e)
             null
         }
     }
+
+    private fun retryDelayMs(e: Exception): Long =
+        if (e is HttpException && (e.code() == 401 || e.code() == 403)) BLOCKED_RETRY_MS else RETRY_MS
 
     /** Lowest productId with this number; "[Set of 2]" and "(... Pattern)" variants only if nothing else. */
     private fun pick(file: ProductsFile, number: Int): CachedItem? {
@@ -239,11 +240,9 @@ class TcgcsvJapanSource @Inject constructor(
         const val CDN = "https://tcgplayer-cdn.tcgplayer.com/product"
         const val DAY_MS = 24L * 60 * 60 * 1000
         const val SETTLED_AGE_MS = 90L * DAY_MS
-        const val GROUPS_RETRY_MS = 15L * 60 * 1000
+        const val RETRY_MS = 15L * 60 * 1000
         /** 401/403 is the host blocking us (it blocked a User-Agent after a burst): back off longer. */
-        const val GROUPS_BLOCKED_RETRY_MS = 6L * 60 * 60 * 1000
-        const val PRODUCTS_RETRY_MS = 15L * 60 * 1000
-        const val PRODUCTS_BLOCKED_RETRY_MS = GROUPS_BLOCKED_RETRY_MS
+        const val BLOCKED_RETRY_MS = 6L * 60 * 60 * 1000
         val NUMBER = Regex("""^\D*0*(\d+)""")
         val PRODUCT_FILE = Regex("""g(\d+)\.json""")
     }
