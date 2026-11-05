@@ -69,7 +69,7 @@ class DatabaseBackupManagerInstrumentedTest {
         // Real WAL sidecar content alongside the main file (Room's default journal mode).
         File(dbFile.path + "-wal").writeText("wal sidecar content")
 
-        DatabaseBackupManager().backupIfDestructiveMigrationImminent(
+        DatabaseBackupManager(FrameworkSqliteVersionReader()).backupIfDestructiveMigrationImminent(
             context = context,
             dbFileName = dbFileName,
             targetVersion = PokedexDatabase.SCHEMA_VERSION,
@@ -105,7 +105,7 @@ class DatabaseBackupManagerInstrumentedTest {
             seed.version = PokedexDatabase.SCHEMA_VERSION
         }
 
-        DatabaseBackupManager().backupIfDestructiveMigrationImminent(
+        DatabaseBackupManager(FrameworkSqliteVersionReader()).backupIfDestructiveMigrationImminent(
             context = context,
             dbFileName = dbFileName,
             targetVersion = PokedexDatabase.SCHEMA_VERSION,

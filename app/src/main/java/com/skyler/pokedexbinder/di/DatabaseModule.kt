@@ -36,7 +36,9 @@ object DatabaseModule {
         // Safety net: if Room's destructive fallback is about to drop + recreate every table
         // (no migration path from the on-disk version to SCHEMA_VERSION), back up the current
         // DB file first. No-op on the normal path (matching version or a clean migration chain).
-        DatabaseBackupManager().backupIfDestructiveMigrationImminent(
+        // Built directly (not injected): buildDatabase runs inside provideDatabase and is also
+        // called by androidTest wiring tests, so it has no injector.
+        DatabaseBackupManager(FrameworkSqliteVersionReader()).backupIfDestructiveMigrationImminent(
             context = context,
             dbFileName = dbFileName,
             targetVersion = PokedexDatabase.SCHEMA_VERSION,

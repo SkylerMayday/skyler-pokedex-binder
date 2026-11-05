@@ -9,7 +9,7 @@ import java.util.Date
 import java.util.Locale
 
 class DatabaseBackupManager(
-    private val versionReader: SqliteVersionReader = FrameworkSqliteVersionReader(),
+    private val versionReader: SqliteVersionReader,
     private val maxBackups: Int = MAX_BACKUPS
 ) {
     /**
