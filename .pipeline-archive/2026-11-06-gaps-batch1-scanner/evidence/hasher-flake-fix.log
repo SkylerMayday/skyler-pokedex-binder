@@ -1,0 +1,81 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.11.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateDebugBuildConfig
+> Task :app:generateDebugResValues
+> Task :app:checkDebugAarMetadata
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources
+> Task :app:packageDebugResources
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :app:parseDebugLocalResources
+> Task :app:mergeDebugResources
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:processDebugManifestForPackage
+> Task :app:javaPreCompileDebugUnitTest
+> Task :app:javaPreCompileDebug
+> Task :app:processDebugResources
+> Task :app:kspDebugKotlin
+
+> Task :app:compileDebugKotlin
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/main/java/com/skyler/pokedexbinder/ui/scanner/ScannerScreen.kt:125:26 'val LocalLifecycleOwner: ProvidableCompositionLocal<LifecycleOwner>' is deprecated. Moved to lifecycle-runtime-compose library in androidx.lifecycle.compose package.
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/main/java/com/skyler/pokedexbinder/ui/slotdetail/SlotDetailViewModel.kt:28:10 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+
+> Task :app:compileDebugJavaWithJavac
+> Task :app:hiltAggregateDepsDebug
+
+> Task :app:hiltJavaCompileDebug
+warning: Kapt support in Moshi Kotlin Code Gen is deprecated and will be removed in 2.0. Please migrate to KSP. https://github.com/square/moshi#codegen
+1 warning
+
+> Task :app:processDebugJavaRes
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:transformDebugClassesWithAsm
+> Task :app:kspDebugUnitTestKotlin
+> Task :app:bundleDebugClassesToRuntimeJar
+
+> Task :app:compileDebugUnitTestKotlin
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/domain/SyncCardImagesUseCaseTest.kt:207:9 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/repository/CardSearchRepositoryTest.kt:526:9 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/repository/CardSearchRepositoryTest.kt:529:9 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/MainBinderViewModelTest.kt:28:34 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/MainBinderViewModelTest.kt:38:39 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/MainBinderViewModelTest.kt:39:41 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/ManualSearchViewModelTest.kt:25:34 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/ManualSearchViewModelTest.kt:30:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/ManualSearchViewModelTest.kt:35:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/QuickScanViewModelTest.kt:41:34 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/QuickScanViewModelTest.kt:49:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/QuickScanViewModelTest.kt:54:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/SlotDetailViewModelTest.kt:23:34 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/SlotDetailViewModelTest.kt:26:39 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/SlotDetailViewModelTest.kt:27:41 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/connectingart/ConnectingArtViewModelTest.kt:27:34 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/connectingart/ConnectingArtViewModelTest.kt:35:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/connectingart/ConnectingArtViewModelTest.kt:42:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/personalcollection/PersonalCollectionViewModelTest.kt:25:34 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/personalcollection/PersonalCollectionViewModelTest.kt:33:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/personalcollection/PersonalCollectionViewModelTest.kt:41:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModelTest.kt:148:34 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModelTest.kt:157:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/scanner/ScannerViewModelTest.kt:168:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/unown/UnownBinderViewModelTest.kt:25:34 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/unown/UnownBinderViewModelTest.kt:31:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/app/src/test/java/com/skyler/pokedexbinder/ui/unown/UnownBinderViewModelTest.kt:37:21 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:hiltAggregateDepsDebugUnitTest
+> Task :app:hiltJavaCompileDebugUnitTest NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes
+> Task :app:transformDebugUnitTestClassesWithAsm
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+> Task :app:testDebugUnitTest
+[Incubating] Problems report is available at: file:///D:/Claude%20Projects/PokedexBinderV2/.claude/worktrees/gaps-batch1-scanner/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 1m 39s
+31 actionable tasks: 31 executed
