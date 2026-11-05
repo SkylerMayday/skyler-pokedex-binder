@@ -66,15 +66,17 @@ class SyncCardImagesUseCase @Inject constructor(
     private suspend fun run(limit: Int, now: Long, onProgress: (Int, Int) -> Unit): ImageSyncResult {
         val blankIds = (mainDao.blankImageCardIds() + unownDao.blankImageCardIds() +
             connectingArtDao.blankImageCardIds() + secondaryDao.blankImageCardIds() +
-            personalDao.blankImageCardIds()).distinct()
+            personalDao.blankImageCardIds()).distinct().sorted()
         val refs = blankIds.associateWith { TcgdexIds.parse(it) }
         val unsyncable = refs.count { it.value == null }
         // Languages TCGdex has no images for go last, so the capped auto run cannot spend itself on
-        // them every day while resolvable ids wait. ponytail: still starves if >MAX_AUTO_IDS
-        // resolvable-language ids stay image-less; rotate an offset if that ever happens.
-        val targets = refs.mapNotNull { (id, ref) -> ref?.let { id to it } }
-            .sortedBy { (_, ref) -> ref.lang in LANGS_WITHOUT_TCGDEX_IMAGES }
-            .take(limit)
+        // them every day while resolvable ids wait. The resolvable list rotates by day so every id is
+        // reached. ponytail: ids resolved mid-window shift the list, so a window may skip a few until
+        // the next day; manual sync (uncapped) is exhaustive.
+        val (last, first) = refs.mapNotNull { (id, ref) -> ref?.let { id to it } }
+            .partition { (_, ref) -> ref.lang in LANGS_WITHOUT_TCGDEX_IMAGES }
+        val start = if (limit < first.size) ((now / AUTO_SYNC_INTERVAL_MS) * limit % first.size).toInt() else 0
+        val targets = (first.drop(start) + first.take(start) + last).take(limit)
 
         val updated = AtomicInteger()
         val stillMissing = AtomicInteger()

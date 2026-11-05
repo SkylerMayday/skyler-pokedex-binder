@@ -160,6 +160,24 @@ class SyncCardImagesUseCaseTest {
         assertEquals(ids.size, useCase().sync().checked)
     }
 
+    // Mutation: forcing `start = 0` in SyncCardImagesUseCase.run leaves ids 401..405 unreached -> red.
+    @Test
+    fun `successive auto runs rotate so every blank id is reached`() = runTest {
+        val total = SyncCardImagesUseCase.MAX_AUTO_IDS + 5
+        val ids = (1..total).map { "tcgdex_s-%03d".format(it) }
+        coEvery { settings.getLastImageSyncAt() } returns 0L
+        coEvery { main.blankImageCardIds() } returns ids
+        coEvery { api.getCard(any(), any()) } returns detail("x", null)
+        val interval = SyncCardImagesUseCase.AUTO_SYNC_INTERVAL_MS
+
+        val day1 = useCase().syncIfDue(interval)
+        val day2 = useCase().syncIfDue(2 * interval)
+
+        assertEquals(SyncCardImagesUseCase.MAX_AUTO_IDS, day1?.checked)
+        assertEquals(SyncCardImagesUseCase.MAX_AUTO_IDS, day2?.checked)
+        for (n in 1..total) coVerify(atLeast = 1) { api.getCard("en", "s-%03d".format(n)) }
+    }
+
     @Test
     fun `capped auto run checks image-bearing languages before ko and zh-cn blanks`() = runTest {
         val noImage = (1..SyncCardImagesUseCase.MAX_AUTO_IDS / 2).flatMap {
