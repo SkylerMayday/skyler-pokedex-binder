@@ -95,4 +95,9 @@ class PublishSettingsRepositoryTest {
         assertFalse(text, text.contains("SECRET-HOOK"))
         assertTrue(text, text.contains("githubOwner="))
     }
+
+    @Test
+    fun `PublishConfig toString covers every field and leaks no secret String field`() {
+        assertToStringMasksSecrets(PublishConfig::class.java, allowedStringFields = setOf("githubOwner", "githubRepo"))
+    }
 }

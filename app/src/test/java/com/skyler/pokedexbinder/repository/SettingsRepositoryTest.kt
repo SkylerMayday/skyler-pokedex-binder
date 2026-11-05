@@ -114,4 +114,10 @@ class SettingsRepositoryTest {
         assertFalse(text, text.contains("SECRET-C"))
         assertTrue(text, text.contains("showMega="))
     }
+
+    // Mutations: adding `val extra: Boolean = false` -> missing-field red; printing geminiApiKey -> leak red.
+    @Test
+    fun `AppSettings toString covers every field and leaks no String field`() {
+        assertToStringMasksSecrets(AppSettings::class.java, allowedStringFields = emptySet())
+    }
 }

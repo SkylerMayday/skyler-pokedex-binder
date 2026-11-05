@@ -1,8 +1,29 @@
 package com.skyler.pokedexbinder.ui.scanner
 
+import android.graphics.Bitmap
+import android.util.Log
+import androidx.camera.core.ImageProxy
+import androidx.lifecycle.SavedStateHandle
 import com.skyler.pokedexbinder.data.model.TcgCard
+import com.skyler.pokedexbinder.domain.CardScanProvider
+import com.skyler.pokedexbinder.domain.NoApiKeyException
 import com.skyler.pokedexbinder.domain.ParsedCardInfo
+import com.skyler.pokedexbinder.domain.RateLimitException
+import com.skyler.pokedexbinder.domain.ScanProvider
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
+import io.mockk.verify
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Test
 
 /**
@@ -116,5 +137,83 @@ class ScannerViewModelTest {
         assertEquals(c, lowConfidenceCards(c, null, true))
         assertEquals(c, lowConfidenceCards(c, emptyList(), true))
         assertEquals(c, lowConfidenceCards(c, listOf("c-1" to 1), false))
+    }
+
+    // ---- processImage error mapping ----
+    // Mutations (each applied to ScannerViewModel.processImage, seen red, reverted):
+    //  - pass ScanProvider.GEMINI instead of e.provider        -> provider assert fails
+    //  - delete `catch (e: NoApiKeyException)`                  -> state is Error, not NoApiKey
+    //  - delete `catch (e: CancellationException) { throw e }`  -> state becomes Error
+
+    private val testDispatcher = UnconfinedTestDispatcher()
+    private val scanProvider = mockk<CardScanProvider>()
+    private val bitmap = mockk<Bitmap> {
+        every { width } returns 100
+        every { height } returns 100
+    }
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(testDispatcher)
+        mockkStatic("com.skyler.pokedexbinder.ui.scanner.ImageProxyExtKt")
+        every { any<ImageProxy>().toCroppedBitmap() } returns bitmap
+        mockkStatic(Log::class)
+        every { Log.i(any(), any()) } returns 0
+    }
+
+    @After
+    fun tearDown() {
+        unmockkStatic("com.skyler.pokedexbinder.ui.scanner.ImageProxyExtKt")
+        unmockkStatic(Log::class)
+        Dispatchers.resetMain()
+    }
+
+    private fun viewModel() = ScannerViewModel(
+        savedStateHandle = SavedStateHandle(),
+        cardScanProvider = scanProvider,
+        cardSearchRepository = mockk(),
+        perceptualHasher = mockk(),
+        smartThresholdUseCase = mockk(),
+        assignCardUseCase = mockk(),
+        binderRepository = mockk(),
+        secondaryBinderDao = mockk()
+    )
+
+    @Test
+    fun `RateLimited carries the exception's provider`() {
+        coEvery { scanProvider.scan(any()) } throws RateLimitException(ScanProvider.CLAUDE)
+        val vm = viewModel()
+        val proxy = mockk<ImageProxy>(relaxed = true)
+
+        vm.processImage(proxy)
+        assertEquals(ScannerState.RateLimited(1, ScanProvider.CLAUDE), vm.state.value)
+
+        vm.processImage(proxy)
+        assertEquals(ScannerState.RateLimited(2, ScanProvider.CLAUDE), vm.state.value)
+        verify(exactly = 2) { proxy.close() }
+    }
+
+    @Test
+    fun `NoApiKeyException maps to NoApiKey`() {
+        coEvery { scanProvider.scan(any()) } throws NoApiKeyException()
+        val vm = viewModel()
+        val proxy = mockk<ImageProxy>(relaxed = true)
+
+        vm.processImage(proxy)
+
+        assertEquals(ScannerState.NoApiKey, vm.state.value)
+        verify { proxy.close() }
+    }
+
+    @Test
+    fun `CancellationException is not turned into Error`() {
+        coEvery { scanProvider.scan(any()) } throws CancellationException("cancelled")
+        val vm = viewModel()
+        val proxy = mockk<ImageProxy>(relaxed = true)
+
+        vm.processImage(proxy)
+
+        assertEquals(ScannerState.Scanning, vm.state.value)
+        verify { proxy.close() }
     }
 }

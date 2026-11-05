@@ -9,6 +9,7 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
@@ -256,8 +257,12 @@ class PerceptualHasherTest {
 
             job.cancel()
             withTimeout(2_000) { job.join() }
+            // Real time: had the second wave been allowed to start, it would begin right after the
+            // first finishes (~1.2s) and show up here. Mutation: `async` -> `GlobalScope.async` in
+            // findBestMatch leaves the children running -> requestCount 8, not 4.
+            delay(1_800)
 
-            assertTrue(job.isCancelled)
+            assertEquals(4, server.requestCount)
         } finally {
             unmockkStatic(BitmapFactory::class)
         }
