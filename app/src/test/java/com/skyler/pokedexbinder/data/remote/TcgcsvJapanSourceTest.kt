@@ -276,6 +276,30 @@ class TcgcsvJapanSourceTest {
         coVerify(exactly = 2) { api.getJapanGroups() }
     }
 
+    @Test
+    fun `a 403 from the groups call also backs off for hours`() = runTest {
+        coEvery { api.getJapanGroups() } throws
+            HttpException(Response.error<Any>(403, "blocked".toResponseBody("text/plain".toMediaType())))
+        val s = source()
+
+        s.imageUrl("M6", "048")
+        now += hour
+        s.imageUrl("M6", "048")
+        coVerify(exactly = 1) { api.getJapanGroups() }
+    }
+
+    @Test
+    fun `a 503 from the groups call is retried after 15 minutes, not hours`() = runTest {
+        coEvery { api.getJapanGroups() } throws
+            HttpException(Response.error<Any>(503, "down".toResponseBody("text/plain".toMediaType())))
+        val s = source()
+
+        s.imageUrl("M6", "048")
+        now += 16 * 60 * 1000L
+        s.imageUrl("M6", "048")
+        coVerify(exactly = 2) { api.getJapanGroups() }
+    }
+
     private fun stubThreeSharedAbbreviationGroups() = stubGroups(
         group(1, "M6", name = "Old", published = "2026-01-01T00:00:00"),
         group(2, "M6", name = "Mid", published = "2026-06-01T00:00:00"),
