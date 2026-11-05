@@ -262,7 +262,8 @@ class PerceptualHasherTest {
             // findBestMatch leaves the children running -> requestCount 8, not 4.
             delay(1_800)
 
-            assertEquals(4, server.requestCount)
+            // <= 4, not == 4: a first-wave download cancelled before it reaches execute() sends nothing.
+            assertTrue("second wave started: ${server.requestCount}", server.requestCount <= 4)
         } finally {
             unmockkStatic(BitmapFactory::class)
         }
