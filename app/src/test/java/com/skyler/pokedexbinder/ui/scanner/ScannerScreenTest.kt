@@ -1,5 +1,6 @@
 package com.skyler.pokedexbinder.ui.scanner
 
+import com.skyler.pokedexbinder.domain.ScanProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -127,27 +128,36 @@ class ScannerScreenTest {
         assertEquals(
             "Still rate-limited after waiting — you may have hit your daily Gemini quota.\n\n" +
                 "Check your usage at aistudio.google.com or search manually for now.",
-            rateLimitMessage("Gemini", isRepeated = true, secondsLeft = 10)
+            rateLimitMessage(ScanProvider.GEMINI, isRepeated = true, secondsLeft = 10)
         )
         assertEquals(
             "Too many scans at once — Gemini needs a moment.\n\nRetry in 42 seconds.",
-            rateLimitMessage("Gemini", isRepeated = false, secondsLeft = 42)
+            rateLimitMessage(ScanProvider.GEMINI, isRepeated = false, secondsLeft = 42)
         )
-        assertEquals("Ready to scan again!", rateLimitMessage("Gemini", isRepeated = false, secondsLeft = 0))
+        assertEquals("Ready to scan again!", rateLimitMessage(ScanProvider.GEMINI, isRepeated = false, secondsLeft = 0))
+    }
+
+    // Mutation: hardcoding console.anthropic.com for Gemini turns this red.
+    @Test
+    fun `rateLimitMessage Gemini repeated points at aistudio not anthropic`() {
+        val msg = rateLimitMessage(ScanProvider.GEMINI, isRepeated = true, secondsLeft = 10)
+        assertTrue(msg.contains("aistudio.google.com"))
+        assertTrue(!msg.contains("anthropic"))
     }
 
     @Test
     fun `rateLimitMessage Claude repeated names Claude not Gemini`() {
-        val msg = rateLimitMessage("Claude", isRepeated = true, secondsLeft = 10)
+        val msg = rateLimitMessage(ScanProvider.CLAUDE, isRepeated = true, secondsLeft = 10)
         assertTrue(msg.contains("Claude"))
         assertTrue(!msg.contains("Gemini") && !msg.contains("aistudio"))
+        assertTrue(msg.contains("console.anthropic.com"))
     }
 
     @Test
     fun `rateLimitMessage Claude countdown names Claude`() {
-        val msg = rateLimitMessage("Claude", isRepeated = false, secondsLeft = 42)
+        val msg = rateLimitMessage(ScanProvider.CLAUDE, isRepeated = false, secondsLeft = 42)
         assertTrue(msg.contains("Claude needs a moment"))
         assertTrue(msg.contains("Retry in 42 seconds"))
-        assertEquals("Ready to scan again!", rateLimitMessage("Claude", isRepeated = false, secondsLeft = 0))
+        assertEquals("Ready to scan again!", rateLimitMessage(ScanProvider.CLAUDE, isRepeated = false, secondsLeft = 0))
     }
 }

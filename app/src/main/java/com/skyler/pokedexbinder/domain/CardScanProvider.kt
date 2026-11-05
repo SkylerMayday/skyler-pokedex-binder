@@ -10,7 +10,7 @@ import java.net.UnknownHostException
 import javax.inject.Inject
 import javax.inject.Singleton
 
-internal enum class ScanProvider { GEMINI, CLAUDE }
+enum class ScanProvider(val displayName: String) { GEMINI("Gemini"), CLAUDE("Claude") }
 
 private const val GEMINI_COOLDOWN_MS = 10L * 60 * 1000
 
@@ -20,7 +20,12 @@ private val HTTP_ERROR = Regex(".*error: \\d{3}.*")
 private fun isNetworkFailure(t: Throwable): Boolean =
     t is UnknownHostException || t is ConnectException || t is InterruptedIOException ||
         (t is IOException && t !is RateLimitException && t !is InvalidApiKeyException &&
-            !HTTP_ERROR.matches(t.message.orEmpty()))
+            t !is MalformedReplyException && !HTTP_ERROR.matches(t.message.orEmpty()))
+
+/** Single-provider failure text; fixed strings only, never the exception message. */
+private fun singleProviderMessage(provider: ScanProvider, e: Exception): String =
+    if (isNetworkFailure(e)) "Can't reach ${provider.displayName} — check your internet connection"
+    else "${provider.displayName} failed — try again"
 
 /** Fixed strings only: never the exception message, which can carry hostnames. */
 private fun failureMessage(gemini: Exception?, geminiCooling: Boolean, claude: Exception): String {
@@ -28,14 +33,15 @@ private fun failureMessage(gemini: Exception?, geminiCooling: Boolean, claude: E
     val geminiPart = when {
         geminiCooling || gemini is RateLimitException -> "Gemini unavailable (quota)"
         gemini == null -> null
+        gemini is InvalidApiKeyException -> "Gemini key rejected"
         isNetworkFailure(gemini) -> "Gemini unreachable"
         else -> "Gemini failed"
     }
     val advice = if (claudeNetwork) "check your internet connection" else "try again"
-    return when {
-        geminiPart != null -> "$geminiPart and ${if (claudeNetwork) "Claude unreachable" else "Claude failed"} — $advice"
-        claudeNetwork -> "Can't reach Claude — $advice"
-        else -> "Claude failed — $advice"
+    return if (geminiPart != null) {
+        "$geminiPart and ${if (claudeNetwork) "Claude unreachable" else "Claude failed"} — $advice"
+    } else {
+        singleProviderMessage(ScanProvider.CLAUDE, claude)
     }
 }
 
@@ -48,7 +54,8 @@ internal fun selectProviders(geminiKey: String, claudeKey: String): List<ScanPro
 /**
  * Tries Gemini first; on any non-cancellation failure, or an all-null reply, resends the bitmap to
  * Claude (when a Claude key is set). After a Gemini 429, Gemini is skipped for 10 min. Logs carry
- * provider and exception class names only — never keys or messages.
+ * provider and exception class names, per-attempt timings, and a short key-redacted snippet of a
+ * 429 body — never keys, URLs, or exception messages.
  */
 @Singleton
 class CardScanProvider @Inject constructor(
@@ -79,19 +86,25 @@ class CardScanProvider @Inject constructor(
             try {
                 val result = gemini.scan(bitmap, geminiKey)
                 if (!result.isEmpty || !hasClaude) return result.also { log("scan provider=gemini") }
-                geminiError = EmptyScanException()
                 geminiEmpty = result
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 if (e is RateLimitException) geminiSkipUntil = nowMs() + GEMINI_COOLDOWN_MS
-                if (!hasClaude) throw e
+                if (!hasClaude) {
+                    if (e is RateLimitException || e is InvalidApiKeyException) throw e
+                    throw ScanFailedException(singleProviderMessage(ScanProvider.GEMINI, e), e)
+                }
                 geminiError = e
             }
         }
 
-        val fallbackReason = if (geminiCooling) "GeminiCooldown"
-        else geminiError?.let { it::class.java.simpleName } ?: "none"
+        val fallbackReason = when {
+            geminiCooling -> "GeminiCooldown"
+            geminiError != null -> geminiError::class.java.simpleName
+            geminiEmpty != null -> "EmptyReply"
+            else -> "none"
+        }
         try {
             return claude.scan(bitmap, claudeKey).also {
                 log("scan provider=claude fallbackReason=$fallbackReason")
@@ -100,9 +113,16 @@ class CardScanProvider @Inject constructor(
             throw e
         } catch (e: Exception) {
             geminiError?.let { e.addSuppressed(it) }
-            log("scan provider=none geminiError=$fallbackReason claudeError=${e::class.java.simpleName}")
-            if (e is RateLimitException || e is InvalidApiKeyException) throw e
-            geminiEmpty?.let { return it }
+            val claudeError = e::class.java.simpleName
+            if (e is RateLimitException || e is InvalidApiKeyException) {
+                log("scan provider=none geminiError=$fallbackReason claudeError=$claudeError")
+                throw e
+            }
+            geminiEmpty?.let {
+                log("scan provider=gemini fallbackReason=$fallbackReason claudeError=$claudeError")
+                return it
+            }
+            log("scan provider=none geminiError=$fallbackReason claudeError=$claudeError")
             throw ScanFailedException(failureMessage(geminiError, geminiCooling, e), e)
         }
     }

@@ -59,7 +59,7 @@ class ClaudeCardScannerTest {
         }
         server = MockWebServer()
         server.start()
-        scanner = ClaudeCardScanner(OkHttpClient(), moshi).also { it.baseUrl = server.url("/").toString() }
+        scanner = ClaudeCardScanner(OkHttpClient(), moshi).also { it.baseUrl = server.url("/").toString(); it.log = {} }
     }
 
     @After
@@ -67,7 +67,7 @@ class ClaudeCardScannerTest {
 
     private fun scannerWithShortTimeout() {
         val client = OkHttpClient.Builder().readTimeout(200, TimeUnit.MILLISECONDS).build()
-        scanner = ClaudeCardScanner(client, moshi).also { it.baseUrl = server.url("/").toString() }
+        scanner = ClaudeCardScanner(client, moshi).also { it.baseUrl = server.url("/").toString(); it.log = {} }
     }
 
     private suspend fun scanCatching(): Exception? =
@@ -165,7 +165,7 @@ class ClaudeCardScannerTest {
         val caught = scanCatching()
 
         assertTrue("Expected RateLimitException but got $caught", caught is RateLimitException)
-        assertEquals("Claude", (caught as RateLimitException).provider)
+        assertEquals(ScanProvider.CLAUDE, (caught as RateLimitException).provider)
         assertTrue(caught!!.message!!.contains("Claude"))
         assertEquals(1, server.requestCount)
     }
@@ -237,15 +237,43 @@ class ClaudeCardScannerTest {
     }
 
     @Test
-    fun `scan throws IOException when there is no text block`() = runTest {
-        server.enqueue(MockResponse().setBody("""{"content":[]}"""))
-        assertTrue(scanCatching() is IOException)
+    fun `scan throws MalformedReplyException when there is no text block`() = runTest {
+        for (body in listOf("""{"content":[]}""", """{"content":[{"type":"tool_use"}]}""", """{}""", "")) {
+            server.enqueue(MockResponse().setBody(body))
+            val caught = scanCatching()
+            assertTrue("body=[$body] got $caught", caught is MalformedReplyException)
+        }
+    }
 
-        server.enqueue(MockResponse().setBody("""{"content":[{"type":"tool_use"}]}"""))
-        assertTrue(scanCatching() is IOException)
+    @Test
+    fun `scan logs one attempt line per request and never the key`() = runTest {
+        val logs = mutableListOf<String>()
+        scanner.log = { logs += it }
+        server.enqueue(MockResponse().setResponseCode(529))
+        server.enqueue(MockResponse().setBody(CLAUDE_SUCCESS_BODY))
 
-        server.enqueue(MockResponse().setBody("""{}"""))
-        assertTrue(scanCatching() is IOException)
+        scanner.scan(bitmap, "test-key")
+
+        assertEquals(2, logs.size)
+        assertTrue(logs[0], logs[0].startsWith("attempt provider=claude n=1 ms=") && logs[0].endsWith("outcome=http529"))
+        assertTrue(logs[1], logs[1].startsWith("attempt provider=claude n=2 ms=") && logs[1].endsWith("outcome=ok"))
+        assertTrue(logs.none { it.contains("test-key") })
+    }
+
+    @Test
+    fun `scan 429 logs the redacted body snippet`() = runTest {
+        val logs = mutableListOf<String>()
+        scanner.log = { logs += it }
+        server.enqueue(
+            MockResponse().setResponseCode(429)
+                .setBody("""{"type":"error","error":{"type":"rate_limit_error","message":"limit for key test-key"}}""")
+        )
+
+        assertTrue(scanCatching() is RateLimitException)
+
+        val line = logs.single { it.startsWith("rateLimit provider=claude body=") }
+        assertTrue(line, line.contains("rate_limit_error"))
+        assertFalse(line, line.contains("test-key"))
     }
 
     @Test

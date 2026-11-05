@@ -2,6 +2,8 @@ package com.skyler.pokedexbinder.domain
 
 import android.graphics.Bitmap
 import android.util.Base64
+import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.JsonDataException
 import kotlinx.coroutines.delay
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -12,18 +14,30 @@ import java.io.InterruptedIOException
 import java.util.concurrent.TimeUnit
 
 /** Messages here must never contain an API key or request URL/headers. */
-class RateLimitException(val provider: String = "Gemini") : IOException("Rate limited by $provider API")
+class RateLimitException(val provider: ScanProvider = ScanProvider.GEMINI) :
+    IOException("Rate limited by ${provider.displayName} API")
 
 class InvalidApiKeyException(provider: String, code: Int) :
     IOException("$provider rejected the API key (HTTP $code)")
 
-/** Gemini answered but returned no field at all; used only as a fallback reason, never shown. */
-internal class EmptyScanException : IOException("Scanner returned no fields")
+/** The provider answered 2xx but the body had no usable structure; not a connectivity problem. */
+class MalformedReplyException(provider: ScanProvider) :
+    IOException("${provider.displayName} returned an unreadable reply")
 
 /** Every scan provider failed; [message] is user-safe (fixed strings only), the real error is [cause]. */
 class ScanFailedException(message: String, cause: Throwable) : IOException(message, cause)
 
 class NoApiKeyException : IllegalStateException("No scanner API key configured")
+
+/** Parses a provider reply envelope; unparseable or empty JSON is a [MalformedReplyException], not a network error. */
+internal fun <T : Any> JsonAdapter<T>.fromReply(raw: String, provider: ScanProvider): T =
+    try {
+        fromJson(raw)
+    } catch (e: IOException) {
+        null
+    } catch (e: JsonDataException) {
+        null
+    } ?: throw MalformedReplyException(provider)
 
 // Bumped from 2 (500ms fixed) after live sessions saw 11/12 requests 503 in one sitting (2026-09-22)
 // and it recurred 2026-09-24 — a fixed 500ms/1.5s total budget doesn't outlast a real overload
@@ -33,6 +47,11 @@ private const val MAX_SCAN_RETRIES = 3
 private const val SCAN_RETRY_BASE_DELAY_MS = 500L
 
 private const val JPEG_QUALITY = 80
+
+private const val RATE_LIMIT_BODY_LOG_CHARS = 300
+private const val RATE_LIMIT_BODY_PEEK_BYTES = 2048L
+private const val NANOS_PER_MS = 1_000_000L
+private val WHITESPACE_RUN = Regex("\\s+")
 
 /** Per-attempt cap on a scan request (connect + headers + body); a hung provider costs 10s, not 30s. */
 internal const val SCAN_CALL_TIMEOUT_MS = 10_000L
@@ -81,48 +100,74 @@ private fun scaleBitmap(bitmap: Bitmap, maxDim: Int): Bitmap {
 
 /**
  * Retries only on a 5xx response or a client-side timeout ([InterruptedIOException]: read timeout or
- * OkHttp call timeout); 429, [invalidKeyCodes] and other failures fail immediately.
+ * OkHttp call timeout); 429, [invalidKeyCodes] and other failures fail immediately. Emits one
+ * `attempt ...` line per try via [log]; never the URL, headers or exception messages.
  */
 internal suspend fun OkHttpClient.executeWithRetry(
     request: Request,
-    provider: String,
-    invalidKeyCodes: Set<Int> = emptySet()
+    provider: ScanProvider,
+    invalidKeyCodes: Set<Int> = emptySet(),
+    log: (String) -> Unit
 ): Response {
+    val tag = provider.name.lowercase()
     var lastTimeout: InterruptedIOException? = null
     for (attempt in 0..MAX_SCAN_RETRIES) {
+        val startNs = System.nanoTime()
+        fun logAttempt(outcome: String) = log(
+            "attempt provider=$tag n=${attempt + 1} ms=${(System.nanoTime() - startNs) / NANOS_PER_MS} outcome=$outcome"
+        )
         val response = try {
             newCall(request).execute()
         } catch (e: InterruptedIOException) {
+            logAttempt("timeout")
             lastTimeout = e
             if (attempt < MAX_SCAN_RETRIES) {
                 delay(backoffDelayMs(attempt))
                 continue
             }
             throw e
+        } catch (e: IOException) {
+            logAttempt("io:${e::class.java.simpleName}")
+            throw e
         }
         if (response.code == 429) {
+            logAttempt("http429")
+            logRateLimitBody(response, request, tag, log)
             response.close()
             throw RateLimitException(provider)
         }
         if (response.code in invalidKeyCodes) {
+            logAttempt("invalidKey${response.code}")
             response.close()
-            throw InvalidApiKeyException(provider, response.code)
+            throw InvalidApiKeyException(provider.displayName, response.code)
         }
         if (response.code in 500..599) {
+            logAttempt("http${response.code}")
             response.close() // must close before retrying — avoid leaking the connection
             if (attempt < MAX_SCAN_RETRIES) {
                 delay(backoffDelayMs(attempt))
                 continue
             }
-            throw IOException("$provider error: ${response.code}")
+            throw IOException("${provider.displayName} error: ${response.code}")
         }
         if (!response.isSuccessful) {
+            logAttempt("http${response.code}")
             response.close()
-            throw IOException("$provider error: ${response.code}")
+            throw IOException("${provider.displayName} error: ${response.code}")
         }
+        logAttempt("ok")
         return response
     }
-    throw lastTimeout ?: IOException("$provider scan failed after retries")
+    throw lastTimeout ?: IOException("${provider.displayName} scan failed after retries")
+}
+
+/** Logs why a 429 happened (quota id, retryDelay); the request's key is masked in case a body echoes it. */
+private fun logRateLimitBody(response: Response, request: Request, providerTag: String, log: (String) -> Unit) {
+    var body = runCatching { response.peekBody(RATE_LIMIT_BODY_PEEK_BYTES).string() }.getOrNull() ?: return
+    for (header in listOf("x-goog-api-key", "x-api-key")) {
+        request.header(header)?.takeIf { it.isNotBlank() }?.let { body = body.replace(it, "<redacted>") }
+    }
+    log("rateLimit provider=$providerTag body=${body.replace(WHITESPACE_RUN, " ").take(RATE_LIMIT_BODY_LOG_CHARS)}")
 }
 
 /** Exponential backoff: 500ms, 1000ms, 2000ms for attempts 0/1/2. */

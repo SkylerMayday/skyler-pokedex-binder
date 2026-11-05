@@ -14,6 +14,7 @@ import com.skyler.pokedexbinder.domain.NoApiKeyException
 import com.skyler.pokedexbinder.domain.ParsedCardInfo
 import com.skyler.pokedexbinder.domain.PerceptualHasher
 import com.skyler.pokedexbinder.domain.RateLimitException
+import com.skyler.pokedexbinder.domain.ScanProvider
 import com.skyler.pokedexbinder.domain.SmartThresholdUseCase
 import com.skyler.pokedexbinder.repository.BinderRepository
 import com.skyler.pokedexbinder.repository.CardSearchRepository
@@ -29,7 +30,7 @@ sealed class ScannerState {
     data class IdleWithGrace(val graceEndsAt: Long) : ScannerState() // post-rate-limit cooldown
     object Scanning : ScannerState()
     object NoApiKey : ScannerState()
-    data class RateLimited(val consecutiveHits: Int, val provider: String) : ScannerState()
+    data class RateLimited(val consecutiveHits: Int, val provider: ScanProvider) : ScannerState()
     data class HighConfidence(val card: TcgCard) : ScannerState()
     data class LowConfidence(val cards: List<TcgCard>, val crossLanguage: Boolean = false) : ScannerState()
     data class Error(val message: String) : ScannerState()

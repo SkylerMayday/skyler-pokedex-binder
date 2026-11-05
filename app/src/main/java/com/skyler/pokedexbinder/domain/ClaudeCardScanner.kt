@@ -10,7 +10,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import java.io.IOException
 import javax.inject.Inject
 
 internal const val CLAUDE_MODEL = "claude-sonnet-5-5"
@@ -33,6 +32,9 @@ class ClaudeCardScanner @Inject constructor(
     /** Overridden in tests to redirect requests to MockWebServer. */
     internal var baseUrl: String = CLAUDE_BASE_URL
 
+    /** Test seam: Log is unavailable in JVM unit tests. */
+    internal var log: (String) -> Unit = { android.util.Log.i("ScannerMatch", it) }
+
     private val scanClient by lazy { okHttpClient.forScan() }
     private val responseAdapter by lazy { moshi.adapter(ClaudeResponse::class.java) }
     private val cardResultAdapter by lazy { moshi.adapter(ScannedCardJson::class.java) }
@@ -46,15 +48,14 @@ class ClaudeCardScanner @Inject constructor(
             .post(body.toRequestBody("application/json".toMediaType()))
             .build()
 
-        val responseText = scanClient.executeWithRetry(request, "Claude", CLAUDE_INVALID_KEY_CODES).use {
+        val responseText = scanClient.executeWithRetry(request, ScanProvider.CLAUDE, CLAUDE_INVALID_KEY_CODES, log).use {
             it.body?.string()
-        } ?: throw IOException("Empty Claude response")
+        } ?: throw MalformedReplyException(ScanProvider.CLAUDE)
 
-        val claudeResponse = responseAdapter.fromJson(responseText)
-            ?: throw IOException("Empty Claude response")
+        val claudeResponse = responseAdapter.fromReply(responseText, ScanProvider.CLAUDE)
         val text = claudeResponse.content
             ?.firstOrNull { it.type == "text" && it.text != null }?.text
-            ?: throw IOException("No text in Claude response")
+            ?: throw MalformedReplyException(ScanProvider.CLAUDE)
 
         val result = runCatching { cardResultAdapter.fromJson(extractJsonObject(text)) }.getOrNull()
             ?: ScannedCardJson()

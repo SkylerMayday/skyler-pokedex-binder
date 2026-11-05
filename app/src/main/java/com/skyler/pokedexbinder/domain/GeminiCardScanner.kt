@@ -10,7 +10,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import java.io.IOException
 import javax.inject.Inject
 
 @JsonClass(generateAdapter = true)
@@ -46,12 +45,18 @@ data class ScannedCardJson(
 private const val GEMINI_BASE_URL =
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent"
 
+// 400 is deliberately excluded: Gemini also returns it for malformed requests.
+private val GEMINI_INVALID_KEY_CODES = setOf(401, 403)
+
 class GeminiCardScanner @Inject constructor(
     private val okHttpClient: OkHttpClient,
     private val moshi: Moshi
 ) {
     /** Overridden in tests to redirect requests to MockWebServer. */
     internal var baseUrl: String = GEMINI_BASE_URL
+
+    /** Test seam: Log is unavailable in JVM unit tests. */
+    internal var log: (String) -> Unit = { android.util.Log.i("ScannerMatch", it) }
 
     private val scanClient by lazy { okHttpClient.forScan() }
     private val responseAdapter by lazy { moshi.adapter(GeminiResponse::class.java) }
@@ -66,13 +71,13 @@ class GeminiCardScanner @Inject constructor(
             .post(body.toRequestBody("application/json".toMediaType()))
             .build()
 
-        val raw = scanClient.executeWithRetry(request, "Gemini").use { it.body?.string() }
-            ?: throw IOException("Empty Gemini response")
-        val geminiResponse = responseAdapter.fromJson(raw)
-            ?: throw IOException("Empty Gemini response")
+        val raw = scanClient.executeWithRetry(request, ScanProvider.GEMINI, GEMINI_INVALID_KEY_CODES, log)
+            .use { it.body?.string() }
+            ?: throw MalformedReplyException(ScanProvider.GEMINI)
+        val geminiResponse = responseAdapter.fromReply(raw, ScanProvider.GEMINI)
         val text = geminiResponse.candidates
             ?.firstOrNull()?.content?.parts?.firstOrNull()?.text
-            ?: throw IOException("No text in Gemini response")
+            ?: throw MalformedReplyException(ScanProvider.GEMINI)
 
         val result = runCatching { cardResultAdapter.fromJson(text) }.getOrNull() ?: ScannedCardJson()
         result.toParsedCardInfo()

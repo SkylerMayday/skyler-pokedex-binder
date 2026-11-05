@@ -38,6 +38,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.skyler.pokedexbinder.data.model.TcgCard
+import com.skyler.pokedexbinder.domain.ScanProvider
 import kotlinx.coroutines.delay
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
@@ -646,19 +647,17 @@ private fun CardSelectionList(
     }
 }
 
-internal fun rateLimitMessage(provider: String, isRepeated: Boolean, secondsLeft: Int): String = when {
-    provider == "Gemini" -> when {
+internal fun rateLimitMessage(provider: ScanProvider, isRepeated: Boolean, secondsLeft: Int): String {
+    val (limit, console) = when (provider) {
+        ScanProvider.GEMINI -> "daily Gemini quota" to "aistudio.google.com"
+        ScanProvider.CLAUDE -> "Claude usage limit" to "console.anthropic.com"
+    }
+    return when {
         isRepeated ->
-            "Still rate-limited after waiting — you may have hit your daily Gemini quota.\n\n" +
-                "Check your usage at aistudio.google.com or search manually for now."
+            "Still rate-limited after waiting — you may have hit your $limit.\n\n" +
+                "Check your usage at $console or search manually for now."
         secondsLeft > 0 ->
-            "Too many scans at once — Gemini needs a moment.\n\nRetry in $secondsLeft seconds."
+            "Too many scans at once — ${provider.displayName} needs a moment.\n\nRetry in $secondsLeft seconds."
         else -> "Ready to scan again!"
     }
-    isRepeated ->
-        "Still rate-limited after waiting — you may have hit your $provider usage limit.\n\n" +
-            "Check your usage at console.anthropic.com or search manually for now."
-    secondsLeft > 0 ->
-        "Too many scans at once — $provider needs a moment.\n\nRetry in $secondsLeft seconds."
-    else -> "Ready to scan again!"
 }

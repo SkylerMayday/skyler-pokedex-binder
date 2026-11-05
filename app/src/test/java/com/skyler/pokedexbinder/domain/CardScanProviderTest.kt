@@ -159,8 +159,8 @@ class CardScanProviderTest {
 
     @Test
     fun `both rate limited surfaces RateLimitException`() = runTest {
-        coEvery { gemini.scan(any(), any()) } throws RateLimitException("Gemini")
-        coEvery { claude.scan(any(), any()) } throws RateLimitException("Claude")
+        coEvery { gemini.scan(any(), any()) } throws RateLimitException(ScanProvider.GEMINI)
+        coEvery { claude.scan(any(), any()) } throws RateLimitException(ScanProvider.CLAUDE)
 
         try {
             provider().scan(bitmap)
@@ -188,7 +188,7 @@ class CardScanProviderTest {
         coEvery { claude.scan(any(), any()) } returns claudeResult
 
         assertSame(claudeResult, provider().scan(bitmap))
-        assertTrue(logs.any { it.contains("provider=claude fallbackReason=EmptyScanException") })
+        assertTrue(logs.any { it.contains("provider=claude fallbackReason=EmptyReply") })
         assertNoKeysLogged()
     }
 
@@ -294,7 +294,53 @@ class CardScanProviderTest {
         coEvery { claude.scan(any(), any()) } throws UnknownHostException("api.anthropic.com")
 
         assertSame(emptyResult, provider().scan(bitmap))
+        // Mutation (log order): logging provider=none before the empty-result return turns this red.
+        assertTrue(logs.toString(), logs.any { it.contains("provider=gemini fallbackReason=EmptyReply claudeError=UnknownHostException") })
+        assertTrue(logs.toString(), logs.none { it.contains("provider=none") })
         assertNoKeysLogged()
+    }
+
+    // Mutation (wording): dropping `!is MalformedReplyException` in isNetworkFailure makes this "internet".
+    @Test
+    fun `a malformed claude reply reads as failed not as an internet problem`() = runTest {
+        coEvery { claude.scan(any(), any()) } throws MalformedReplyException(ScanProvider.CLAUDE)
+
+        assertEquals("Claude failed — try again", scanFailure(provider(geminiKey = "")).message)
+    }
+
+    @Test
+    fun `a rejected gemini key is named in the combined message`() = runTest {
+        coEvery { gemini.scan(any(), any()) } throws InvalidApiKeyException("Gemini", 403)
+        coEvery { claude.scan(any(), any()) } throws IOException("Claude error: 500")
+
+        assertEquals("Gemini key rejected and Claude failed — try again", scanFailure(provider()).message)
+    }
+
+    @Test
+    fun `gemini-only network failure is wrapped without the hostname`() = runTest {
+        val dns = UnknownHostException("generativelanguage.googleapis.com")
+        coEvery { gemini.scan(any(), any()) } throws dns
+
+        val e = scanFailure(provider(claudeKey = ""))
+
+        assertEquals("Can't reach Gemini — check your internet connection", e.message)
+        assertFalse(e.message!!.contains("googleapis"))
+        assertSame(dns, e.cause)
+    }
+
+    @Test
+    fun `gemini-only non-network failure reads as failed and a rejected key stays raw`() = runTest {
+        coEvery { gemini.scan(any(), any()) } throws MalformedReplyException(ScanProvider.GEMINI)
+        assertEquals("Gemini failed — try again", scanFailure(provider(claudeKey = "")).message)
+
+        val rejected = InvalidApiKeyException("Gemini", 403)
+        coEvery { gemini.scan(any(), any()) } throws rejected
+        try {
+            provider(claudeKey = "").scan(bitmap)
+            fail("expected InvalidApiKeyException")
+        } catch (e: InvalidApiKeyException) {
+            assertSame(rejected, e)
+        }
     }
 
     @Test
@@ -375,7 +421,7 @@ class CardScanProviderTest {
     @Test
     fun `empty gemini reply plus claude rate limit or bad key propagates unwrapped`() = runTest {
         coEvery { gemini.scan(any(), any()) } returns emptyResult
-        for (f in listOf<Exception>(RateLimitException("Claude"), InvalidApiKeyException("Claude", 401))) {
+        for (f in listOf<Exception>(RateLimitException(ScanProvider.CLAUDE), InvalidApiKeyException("Claude", 401))) {
             coEvery { claude.scan(any(), any()) } throws f
             try {
                 provider().scan(bitmap)
@@ -389,7 +435,7 @@ class CardScanProviderTest {
     @Test
     fun `gemini 429 plus claude rate limit still throws RateLimitException`() = runTest {
         coEvery { gemini.scan(any(), any()) } throws RateLimitException()
-        coEvery { claude.scan(any(), any()) } throws RateLimitException("Claude")
+        coEvery { claude.scan(any(), any()) } throws RateLimitException(ScanProvider.CLAUDE)
 
         try {
             provider().scan(bitmap)

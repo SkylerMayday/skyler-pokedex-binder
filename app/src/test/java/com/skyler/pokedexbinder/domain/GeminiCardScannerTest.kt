@@ -9,6 +9,8 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
+import okhttp3.ResponseBody.Companion.asResponseBody
+import okio.buffer
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.SocketPolicy
@@ -59,7 +61,7 @@ class GeminiCardScannerTest {
         server = MockWebServer()
         server.start()
         val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
-        scanner = GeminiCardScanner(OkHttpClient(), moshi).also { it.baseUrl = server.url("/").toString() }
+        scanner = GeminiCardScanner(OkHttpClient(), moshi).also { it.baseUrl = server.url("/").toString(); it.log = {} }
     }
 
     @After
@@ -135,7 +137,7 @@ class GeminiCardScannerTest {
         var caught: Exception? = null
         try { scanner.scan(bitmap, "test-key") } catch (e: Exception) { caught = e }
         assert(caught is RateLimitException) { "Expected RateLimitException but got $caught" }
-        assert((caught as RateLimitException).provider == "Gemini")
+        assertEquals(ScanProvider.GEMINI, (caught as RateLimitException).provider)
     }
 
     @Test
@@ -174,7 +176,7 @@ class GeminiCardScannerTest {
             .readTimeout(200, TimeUnit.MILLISECONDS)
             .build()
         scanner = GeminiCardScanner(shortTimeoutClient, Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build())
-            .also { it.baseUrl = server.url("/").toString() }
+            .also { it.baseUrl = server.url("/").toString(); it.log = {} }
         server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE))
         server.enqueue(MockResponse().setBody(SUCCESS_BODY.trimIndent()))
 
@@ -190,7 +192,7 @@ class GeminiCardScannerTest {
             .readTimeout(200, TimeUnit.MILLISECONDS)
             .build()
         scanner = GeminiCardScanner(shortTimeoutClient, Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build())
-            .also { it.baseUrl = server.url("/").toString() }
+            .also { it.baseUrl = server.url("/").toString(); it.log = {} }
         repeat(4) { server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE)) }
 
         var caught: Exception? = null
@@ -201,5 +203,88 @@ class GeminiCardScannerTest {
             caught is java.net.SocketTimeoutException
         )
         assertEquals(4, server.requestCount)
+    }
+
+    @Test
+    fun `scan throws InvalidApiKeyException on 401 and 403 after exactly one request`() = runTest {
+        for (code in listOf(401, 403)) {
+            val before = server.requestCount
+            server.enqueue(MockResponse().setResponseCode(code))
+            var caught: Exception? = null
+            try { scanner.scan(bitmap, "test-key") } catch (e: Exception) { caught = e }
+            assertTrue("Expected InvalidApiKeyException but got $caught", caught is InvalidApiKeyException)
+            assertTrue(caught!!.message!!.contains("$code") && !caught.message!!.contains("test-key"))
+            assertEquals(1, server.requestCount - before)
+        }
+    }
+
+    @Test
+    fun `scan throws MalformedReplyException for a 200 without usable structure`() = runTest {
+        for (body in listOf("", "{}", """{"candidates":[]}""", """{"candidates":[{"content":{"parts":[]}}]}""")) {
+            server.enqueue(MockResponse().setBody(body))
+            var caught: Exception? = null
+            try { scanner.scan(bitmap, "test-key") } catch (e: Exception) { caught = e }
+            assertTrue("body=[$body] got $caught", caught is MalformedReplyException)
+        }
+    }
+
+    @Test
+    fun `scan logs one attempt line per request and never the key`() = runTest {
+        val logs = mutableListOf<String>()
+        scanner.log = { logs += it }
+        server.enqueue(MockResponse().setResponseCode(503))
+        server.enqueue(MockResponse().setBody(SUCCESS_BODY.trimIndent()))
+
+        scanner.scan(bitmap, "test-key")
+
+        assertEquals(2, logs.size)
+        assertTrue(logs[0], logs[0].startsWith("attempt provider=gemini n=1 ms=") && logs[0].endsWith("outcome=http503"))
+        assertTrue(logs[1], logs[1].startsWith("attempt provider=gemini n=2 ms=") && logs[1].endsWith("outcome=ok"))
+        assertTrue(logs.none { it.contains("test-key") })
+    }
+
+    @Test
+    fun `scan 429 logs the redacted body snippet`() = runTest {
+        val logs = mutableListOf<String>()
+        scanner.log = { logs += it }
+        server.enqueue(
+            MockResponse().setResponseCode(429)
+                .setBody("""{"error":{"status":"RESOURCE_EXHAUSTED","message":"PerDay limit, key test-key"}}""")
+        )
+
+        try { scanner.scan(bitmap, "test-key") } catch (e: RateLimitException) { }
+
+        val line = logs.single { it.startsWith("rateLimit provider=gemini body=") }
+        assertTrue(line, line.contains("RESOURCE_EXHAUSTED") && line.contains("PerDay"))
+        assertTrue(line, !line.contains("test-key"))
+    }
+
+    // Guards the response body being read through a closing path. Caveat: ResponseBody.string() itself
+    // closes the source, so deleting the `.use` in GeminiCardScanner alone stays green (it is redundant
+    // belt-and-braces). Mutation: replacing the read with `body?.byteStream()?.readBytes()?.decodeToString()`
+    // (no close) turns `closed` false -> red.
+    @Test
+    fun `scan closes the response body source after a successful read`() = runTest {
+        var closed = false
+        val tracking = OkHttpClient.Builder().addInterceptor { chain ->
+            val response = chain.proceed(chain.request())
+            val original = response.body!!
+            val forwarding = object : okio.ForwardingSource(original.source()) {
+                override fun close() {
+                    closed = true
+                    super.close()
+                }
+            }
+            response.newBuilder()
+                .body(forwarding.buffer().asResponseBody(original.contentType(), original.contentLength()))
+                .build()
+        }.build()
+        scanner = GeminiCardScanner(tracking, Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build())
+            .also { it.baseUrl = server.url("/").toString(); it.log = {} }
+        server.enqueue(MockResponse().setBody(SUCCESS_BODY.trimIndent()))
+
+        scanner.scan(bitmap, "test-key")
+
+        assertTrue("response body source was not closed", closed)
     }
 }
