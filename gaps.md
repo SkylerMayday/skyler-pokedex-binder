@@ -4,6 +4,26 @@ Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove ent
 actually fixed and verified, not when merely planned. Struck-through (closed) entries live in
 [gaps-archive.md](gaps-archive.md).
 
+## Refreshed — 2026-11-06 (session 25, batch 3 — Keystore AES-GCM replaces `security-crypto`, branch `gaps-batch3-keystore`)
+
+**Audit scope note**: new `di/KeystoreSecretStore.kt`; rewrote `SecurityPrefsModule.kt` (verified legacy migration, `createOrResetOnDecryptFailure` deleted); guard in
+`SettingsRepository`; backup-exclude XMLs now list `settings_secrets_v2` / `publish_secrets_v2`. Unit tests **607/607** (fresh XMLs, `--rerun-tasks`); 3-lens Opus review 90 / 87 / 92
+(min 87, ship) plus review-fix pass. **Not run on a device. `KeystoreSecretStoreInstrumentedTest` was written by reading only and has never compiled** (PKIX): this migration is unproven on real AndroidKeyStore until you run it.
+
+### Needs Skyler (before the old dependency is dropped)
+
+1. In your own PowerShell: `.\gradlew.bat compileDebugAndroidTestKotlin`, then `$env:ANDROID_SERIAL="emulator-5554"; .\gradlew.bat connectedDebugAndroidTest` (emulator only; AGP uninstalls the app from whatever device it targets).
+2. Phone: write down your 4 secrets (Gemini key, Anthropic key, GitHub PAT, Discord webhook) first. `installDebug`, open Settings and Publish, confirm all 4 are still there, look for `migrated 2 of 2` (or `migrated N of N`) in logcat tag `SecurityPrefs`, and confirm only the `*_v2.xml` files remain under `shared_prefs`. Press "Back up now" once.
+3. Reply with the result. Only then run the "drop `security-crypto`" change.
+
+### New, not fixed
+
+- **Drop-`security-crypto` checklist (separate later change, gated on items 1-2 above):** remove `migrateLegacySecrets`, `LEGACY_RESERVED_PREFIX` and the ESP/MasterKey imports in `SecurityPrefsModule.kt`; delete `SecurityPrefsModuleTest.kt` (migration tests); drop the toml entry and `build.gradle.kts` dependency lines; remove the three legacy backup-exclude blocks (or keep for one release); fix the `FakeSecurityPrefsModule` doc comment; delete the legacy `settings_secrets` / `publish_secrets` files unconditionally; optionally delete the old `_androidx_security_master_key_` Keystore entry.
+- **Downgrade then re-upgrade can lose a newer secret (P2).** Rollback by `adb install -r -d` of an older APK, re-entering keys in the old app, then upgrading again: stale v2 values still decrypt, so nothing is copied (new store wins) and the legacy file holding the newer keys is deleted. A rotated GitHub PAT would be lost. Do not downgrade after the migration without exporting secrets; no code fix planned.
+- **Unreadable v2 values read as empty, never wipe (D8).** A backup restored to a new device (Keystore key absent) shows empty key fields; re-enter them. Restored `*_v2.xml` is excluded from backups, so this should only happen via adb or device-to-device copies of app data.
+- **P3s:** a failed migration rollback removes a pre-existing but transiently unreadable v2 value instead of restoring a snapshot; `apply()` is synchronous and a transient encrypt failure silently drops a newly typed key (D13 accepted); `clear()` drops puts made earlier in the same editor (no caller uses it); the store implements `getAll`/`contains`/`remove`/`clear` that no production code calls (~20 lines); two log-leak tests are near-tautological (all log messages are fixed templates); the instrumented test's `@Before` file delete can never find a file and `ivIsTwelveBytes` checks total blob size; a possible `deleteEntry` throw in its `@After` on a missing alias (unconfirmed).
+- **Main-thread Keystore reads:** the settings and publish flows decrypt on Main (~1 ms per read, key now cached after first successful load).
+
 ## Refreshed — 2026-11-06 (session 25, batch 2 — structure cleanup, branch `gaps-batch2-structure`)
 
 **Audit scope note**: touched `DatabaseBackupManager`, `DatabaseModule`, `BinderRepository`, `QuickScanViewModel`, `ScannerViewModel` + tests; read the five `fillBlankImage` DAOs,
@@ -61,10 +81,8 @@ Three stale entries moved to [gaps-archive.md](gaps-archive.md) ("Closed 2026-11
 - **The 10 s scan `callTimeout` has no data behind it** (`SCAN_CALL_TIMEOUT_MS`, user decision). It covers upload + model time + body
   read and nothing streams. If healthy scans exceed 10 s, each provider fails after ~43.5 s (4 attempts) and every attempt is
   billed. Per-attempt `ms=` logging now exists (session 25); collect it on the phone, then retune.
-- **Encrypted-prefs recovery is built (2026-11-04) but not tried on a device.** `createOrResetOnDecryptFailure` in `SecurityPrefsModule.kt`
-  deletes an unreadable `settings_secrets` / `publish_secrets` file and recreates it empty (GeneralSecurityException / IOException only;
-  the keys must be re-entered). Caveat: a transient Keystore failure would also wipe the stored keys. The backup exclusions only
-  apply to backups made after the hygiene build: press "Back up now" once after installing.
+- **Encrypted-prefs recovery superseded (session 25 batch 3):** `createOrResetOnDecryptFailure` was deleted; the new Keystore store reads an unreadable value as
+  empty and never deletes anything (see the batch 3 section). The backup exclusions only apply to backups made after the hygiene build: press "Back up now" once after installing.
 - **`ScannerScreen.kt` split (2026-11-04, pure move, no logic change):** geometry/detection -> `ScannerGeometry.kt`, camera focus/diagnostics -> `ScannerCamera.kt`; the file is 664 lines, down from 1,034. `CameraPreview` (~200 lines) and the nine-state `ScannerScreen` stay together and still have no camera tests.
 - **Stale in this file:** the session-15 "`SmartThresholdUseCase` can never mark high confidence when the number is null" entry predates the `HASH_MARGIN` path.
 
@@ -171,19 +189,15 @@ Tests 428/428 green; live-verified for Japanese cards on 2026-10-03 (see handoff
 - **`scripts/claude_scan_bakeoff.py` never run** (Skyler's Python lacks `anyio`); prices in it are from the
   claude-api skill's cached table (2026-06-04) and the per-scan cost (~$0.002 Haiku / ~$0.006 Sonnet) is an
   estimate, not measured.
-- **Gemini API key still unrotated** (carried from session 20).
 
 ## Parked — 2026-09-30 (session 20, from the security/dependency pass) — circle back after the current fixes are test-green
 
 Read-only pass (manifest + `libs.versions.toml`); no CVE database lookups were run.
 
-- **`security-crypto` is deprecated.** Project is on `1.1.0-alpha06`; Google deprecated the library
-  in `1.1.0-alpha07` (Reddit post quoting the release; the Jetpack releases page does not list
-  it), so no further fixes. It backs the Gemini key, GitHub PAT and Discord webhook
-  (`SecurityPrefsModule.kt`, `SettingsRepository`, `PublishSettingsRepository`). Works today, no
-  known vulnerability. Option when picked up: Keystore AES-GCM (or Tink) behind the existing
-  DataStore/SharedPreferences seams, with a migration for the three secrets. Risk: a migration
-  bug could wipe stored keys, so plan it (`planning` + pipeline), don't quick-edit.
+- **`security-crypto` is deprecated; replaced by `KeystoreSecretStore` in session 25 batch 3, dependency still present for the migration.**
+  Confirmed on the Jetpack releases page: all APIs deprecated in `1.1.0-alpha07` (2025-04-09), `1.1.0` stable (2025-07-30) is the same deprecated
+  library, no further releases. Project is still on `1.1.0-alpha06` until the drop change (checklist in the batch 3 section), which waits on your
+  emulator run and phone check.
 - **Stale dependencies, no audit cadence.** `navigation-compose` 2.7.7, `room` 2.6.1, `coil` 2.6.0,
   `coreKtx` 1.13.1, `accompanist-permissions` 0.34.0, `lifecycle` 2.8.3 are behind. `okhttp`
   4.12.0 is current for 4.x. Each bump needs a Gradle build and carries regression risk; no known
