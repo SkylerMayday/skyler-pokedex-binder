@@ -148,6 +148,64 @@ class KeystoreSecretStoreTest {
     }
 
     @Test
+    fun `empty, unicode and very long values round trip`() {
+        val raw = FakeSharedPreferences()
+        val s = store(raw)
+        val long = "x".repeat(200_000)
+        s.edit().putString("empty", "").putString("uni", "kéy-日本-🔑").putString("long", long).commit()
+        assertEquals("", s.getString("empty", "def"))
+        assertEquals("kéy-日本-🔑", s.getString("uni", null))
+        assertEquals(long, s.getString("long", null))
+    }
+
+    @Test
+    fun `blob of exactly IV size or tag-less size returns default`() {
+        val raw = FakeSharedPreferences()
+        val s = store(raw)
+        val enc = Base64.getEncoder()
+        raw.edit().putString("iv", enc.encodeToString(ByteArray(12)))
+            .putString("noTag", enc.encodeToString(ByteArray(20)))
+            .putString("blank", "").commit()
+        assertEquals("def", s.getString("iv", "def"))
+        assertEquals("def", s.getString("noTag", "def"))
+        assertEquals("def", s.getString("blank", "def"))
+        assertTrue(raw.contains("iv") && raw.contains("noTag") && raw.contains("blank"))
+    }
+
+    @Test
+    fun `clear then put in one editor keeps only the new value`() {
+        val raw = FakeSharedPreferences()
+        val s = store(raw)
+        s.edit().putString("old", "1").commit()
+        assertTrue(s.edit().clear().putString("new", "2").commit())
+        assertFalse(raw.contains("old"))
+        assertEquals("2", s.getString("new", null))
+    }
+
+    @Test
+    fun `repository call patterns work and overwrite replaces the value`() {
+        val s = store(FakeSharedPreferences())
+        assertEquals("", s.getString("gemini_api_key", "") ?: "")
+        s.edit().putString("gemini_api_key", "k1").apply()
+        assertEquals("k1", s.getString("gemini_api_key", ""))
+        s.edit().putString("gemini_api_key", "k2").commit()
+        assertEquals("k2", s.getString("gemini_api_key", null))
+        s.edit().putString("gemini_api_key", "").apply()
+        assertEquals("", s.getString("gemini_api_key", "def"))
+    }
+
+    @Test
+    fun `logged exceptions never carry the plaintext`() {
+        val raw = FakeSharedPreferences()
+        val s = store(raw)
+        s.edit().putString("a", "TOP-SECRET-VALUE").commit()
+        raw.edit().putString("b", raw.getString("a", null)).putString("c", "!!bad!!").commit()
+        s.getString("b", null); s.getString("c", null)
+        assertTrue(logged.isNotEmpty())
+        logged.forEach { assertFalse(it.message.orEmpty().contains("TOP-SECRET-VALUE")) }
+    }
+
+    @Test
     fun `unsupported types throw`() {
         val s = store(FakeSharedPreferences())
         try { s.getInt("x", 0); fail() } catch (_: UnsupportedOperationException) {}

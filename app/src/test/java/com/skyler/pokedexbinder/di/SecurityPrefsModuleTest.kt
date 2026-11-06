@@ -113,6 +113,47 @@ class SecurityPrefsModuleTest {
     }
 
     @Test
+    fun `process death after copy before delete is recovered next launch`() {
+        fillOld()
+        val death = AssertionError("process killed")
+        try {
+            migrateLegacySecrets(
+                newStore, newRaw, oldHasData = { true }, openOld = { old },
+                deleteOld = { throw death }, log = {}
+            )
+            org.junit.Assert.fail("Error must propagate (simulated death)")
+        } catch (e: AssertionError) {
+            assertSame(death, e)
+        }
+        assertEquals("gem-1", newStore.getString("gemini_api_key", null)) // copy survived, no rollback ran
+        assertSame(newStore, migrate()) // next launch
+        assertEquals("gem-1", newStore.getString("gemini_api_key", null))
+        assertEquals("ant-2", newStore.getString("anthropic_api_key", null))
+        assertEquals(1, deletes)
+        assertTrue(logs.contains("migrated 0 of 2"))
+    }
+
+    @Test
+    fun `unreadable legacy getAll serves old and deletes nothing`() {
+        fillOld()
+        val broken = object : SharedPreferences by old {
+            override fun getAll(): MutableMap<String, *> = throw SecurityException("cannot decrypt")
+        }
+        assertSame(broken, migrate(openOld = { broken }))
+        assertEquals(0, deletes)
+        assertTrue(newRaw.all.isEmpty())
+    }
+
+    @Test
+    fun `empty legacy value migrates and logs carry no secret`() {
+        old.edit().putString("e", "").putString("s", "LEGACY-SECRET").commit()
+        assertSame(newStore, migrate())
+        assertEquals("", newStore.getString("e", "def"))
+        assertEquals("LEGACY-SECRET", newStore.getString("s", null))
+        logs.forEach { assertFalse(it.contains("LEGACY-SECRET")) }
+    }
+
+    @Test
     fun `non-String legacy value serves old and deletes nothing`() {
         old.edit().putString("k", "v").putInt("n", 1).commit()
         assertSame(old, migrate())
