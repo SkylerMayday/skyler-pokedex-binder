@@ -1,4 +1,4 @@
-# Handoff — Session 25, Batch 1 merged (2026-11-06)
+# Handoff — Session 25, Batches 1-2 merged (2026-11-06)
 
 ## 1. Goals
 
@@ -6,10 +6,10 @@ Clear all of `gaps.md` and tech debt (Gemini key rotation dropped). Four sequent
 
 ## 2. Current State
 
-- **Batch 1 merged** (ff) into `master` at `9cf4fb6`; pipeline artifacts archived in `.pipeline-archive/2026-11-06-gaps-batch1-scanner/`. Worktree `.claude/worktrees/gaps-batch1-scanner` and branch `worktree-gaps-batch1-scanner` still exist (remove once pushed).
-- Unit tests **579/579** on `master` (fresh XMLs, `--rerun-tasks`, recounted). 3-lens Opus review 90 / 90 / 91.
-- **Not verified:** anything on the phone; `lintDebug`; `compileDebugAndroidTestKotlin`; `connectedDebugAndroidTest` (sandbox PKIX wall on uncached artifacts).
-- Batches 2-4 not started.
+- **Batch 1 merged** (ff) at `9cf4fb6` (3-lens Opus review 90 / 90 / 91). **Batch 2 merged** (ff) from `gaps-batch2-structure` (`3e72b19`, review 94): `SqliteVersionReader` constructor default removed; `AssignCardUseCase` merged into `BinderRepository.assignWithHistory`; the five DAO pairs, `ConnectingArtRepository` and the duplicate screens closed as not a gap with evidence. Pipeline artifacts in `.pipeline-archive/2026-11-06-gaps-batch{1-scanner,2-structure}/`.
+- Unit tests **581/581** on `master` (fresh XMLs, `--rerun-tasks`, recounted).
+- **Not verified:** anything on the phone; `lintDebug`; `compileDebugAndroidTestKotlin` (incl. the two `DatabaseBackupManagerInstrumentedTest` edits and `DatabaseModuleWiringTest`); `connectedDebugAndroidTest` (sandbox PKIX wall on uncached artifacts).
+- Batches 3-4 not started.
 
 ## 3. Active files
 
@@ -30,8 +30,8 @@ Clear all of `gaps.md` and tech debt (Gemini key rotation dropped). Four sequent
 
 ## 6. Next Steps
 
-1. **Push** `master` (done in this session if the push line below says so), then run Batch 2 (structure cleanup) through the pipeline.
-2. Then Batch 3 (Keystore replacement, Opus planner), Batch 4 (dependency bumps; Skyler runs the builds).
+1. Run Batch 3 (Keystore AES-GCM replacing `security-crypto`; Opus planner, fail-safe migration) through the pipeline.
+2. Then Batch 4 (dependency bumps; Skyler runs the builds).
 3. In your own shell: `./run_build.bat lintDebug`, `./run_build.bat compileDebugAndroidTestKotlin`, and `$env:ANDROID_SERIAL="emulator-5554"; .\gradlew.bat connectedDebugAndroidTest`. Install, scan, watch `adb logcat -s ScannerMatch` for the new `attempt ... ms=` lines and any `outcome=http400`; press "Back up now" once.
 
 Blocked on Skyler: item 3.
