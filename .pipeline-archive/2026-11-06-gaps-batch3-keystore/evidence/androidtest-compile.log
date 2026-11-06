@@ -1,0 +1,26 @@
+=== compileDebugAndroidTestKotlin
+         > Could not get resource 'https://dl.google.com/dl/android/maven2/androidx/test/runner/1.6.1/runner-1.6.1.aar'.
+            > Could not HEAD 'https://dl.google.com/dl/android/maven2/androidx/test/runner/1.6.1/runner-1.6.1.aar'.
+               > The server may not support the client's requested TLS protocol versions: (TLSv1.2, TLSv1.3). You may need to configure the client to allow other protocols to be used. For more on this, please refer to https://docs.gradle.org/8.11.1/userguide/build_environment.html#sec:gradle_system_properties in the Gradle documentation.
+                  > PKIX path validation failed: java.security.cert.CertPathValidatorException: Path does not chain with any of the trust anchors
+   > Failed to transform monitor-1.7.1.aar (androidx.test:monitor:1.7.1) to match attributes {artifactType=android-manifest, org.gradle.category=library, org.gradle.libraryelements=jar, org.gradle.status=release, org.gradle.usage=java-runtime}.
+      > Could not download monitor-1.7.1.aar (androidx.test:monitor:1.7.1)
+         > Could not get resource 'https://dl.google.com/dl/android/maven2/androidx/test/monitor/1.7.1/monitor-1.7.1.aar'.
+            > Could not HEAD 'https://dl.google.com/dl/android/maven2/androidx/test/monitor/1.7.1/monitor-1.7.1.aar'.
+               > The server may not support the client's requested TLS protocol versions: (TLSv1.2, TLSv1.3). You may need to configure the client to allow other protocols to be used. For more on this, please refer to https://docs.gradle.org/8.11.1/userguide/build_environment.html#sec:gradle_system_properties in the Gradle documentation.
+                  > PKIX path validation failed: java.security.cert.CertPathValidatorException: Path does not chain with any of the trust anchors
+   > Failed to transform multidex-2.0.1.aar (androidx.multidex:multidex:2.0.1) to match attributes {artifactType=android-manifest, org.gradle.category=library, org.gradle.status=release}.
+      > Could not download multidex-2.0.1.aar (androidx.multidex:multidex:2.0.1)
+         > Could not get resource 'https://dl.google.com/dl/android/maven2/androidx/multidex/multidex/2.0.1/multidex-2.0.1.aar'.
+            > Could not GET 'https://dl.google.com/dl/android/maven2/androidx/multidex/multidex/2.0.1/multidex-2.0.1.aar'.
+               > The server may not support the client's requested TLS protocol versions: (TLSv1.2, TLSv1.3). You may need to configure the client to allow other protocols to be used. For more on this, please refer to https://docs.gradle.org/8.11.1/userguide/build_environment.html#sec:gradle_system_properties in the Gradle documentation.
+                  > PKIX path validation failed: java.security.cert.CertPathValidatorException: Path does not chain with any of the trust anchors
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 16s
+22 actionable tasks: 1 executed, 21 up-to-date

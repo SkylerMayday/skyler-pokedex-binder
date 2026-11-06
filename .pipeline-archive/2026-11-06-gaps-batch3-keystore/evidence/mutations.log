@@ -1,0 +1,49 @@
+== S1 skip encrypt: exit=1 RED=yes
+  KeystoreSecretStoreTest > transient key failure returns default, keeps raw, recovers FAILED
+  KeystoreSecretStoreTest > ciphertext copied to another key returns default FAILED
+  KeystoreSecretStoreTest > remove, put null and clear delete entries FAILED
+  KeystoreSecretStoreTest > getAll decrypts good entries and omits a bad one, contains stays raw presence FAILED
+  KeystoreSecretStoreTest > same value twice gives different ciphertext and 12 byte IVs FAILED
+  KeystoreSecretStoreTest > round trip via commit and apply, raw is not plaintext FAILED
+  SecurityPrefsModuleTest > failed delete serves new store and retries next launch FAILED
+  SecurityPrefsModuleTest > undecryptable new entry is replaced by the legacy value FAILED
+  SecurityPrefsModuleTest > newer value in new store beats older legacy value FAILED
+  SecurityPrefsModuleTest > copies string entries, skips reserved keys, deletes old once FAILED
+== S2 drop updateAAD both: exit=1 RED=yes
+  KeystoreSecretStoreTest > ciphertext copied to another key returns default FAILED
+  KeystoreSecretStoreTest > ciphertext moved to another store name returns default FAILED
+== S3 AAD key only: exit=1 RED=yes
+  KeystoreSecretStoreTest > ciphertext moved to another store name returns default FAILED
+== S4 narrow catch: exit=1 RED=yes
+  KeystoreSecretStoreTest > transient key failure returns default, keeps raw, recovers FAILED
+  KeystoreSecretStoreTest > getAll decrypts good entries and omits a bad one, contains stays raw presence FAILED
+  KeystoreSecretStoreTest > flipped byte, non base64 and short blob return default without throwing FAILED
+  SecurityPrefsModuleTest > undecryptable new entry is replaced by the legacy value FAILED
+== S5 fixed IV: exit=1 RED=yes
+  KeystoreSecretStoreTest > same value twice gives different ciphertext and 12 byte IVs FAILED
+== S6 delete on failure: exit=1 RED=yes
+  KeystoreSecretStoreTest > transient key failure returns default, keeps raw, recovers FAILED
+  KeystoreSecretStoreTest > getAll decrypts good entries and omits a bad one, contains stays raw presence FAILED
+== S7 write raw before encrypting all: exit=1 RED=yes
+  KeystoreSecretStoreTest > failed encrypt writes nothing, commit false, apply does not throw FAILED
+== S8 remove fast path: exit=1 RED=yes
+  KeystoreSecretStoreTest > absent key never touches the key lambda FAILED
+== N1 drop reserved filter: exit=1 RED=yes
+  SecurityPrefsModuleTest > copies string entries, skips reserved keys, deletes old once FAILED
+== N2 drop step1 guard: exit=1 RED=yes
+  SecurityPrefsModuleTest > no old data never opens old FAILED
+== N3 delete in openOld catch: exit=1 RED=yes
+  SecurityPrefsModuleTest > openOld failure serves new store and deletes nothing FAILED
+== N4 return newStore on failure: exit=1 RED=yes
+  SecurityPrefsModuleTest > non-String legacy value serves old and deletes nothing FAILED
+  SecurityPrefsModuleTest > write failure serves old, keeps it, leaves new empty FAILED
+  SecurityPrefsModuleTest > read-back mismatch serves old and rolls back copied keys FAILED
+== N5 drop verify: exit=1 RED=yes
+  SecurityPrefsModuleTest > read-back mismatch serves old and rolls back copied keys FAILED
+== N5b drop rollback: exit=1 RED=yes
+  SecurityPrefsModuleTest > read-back mismatch serves old and rolls back copied keys FAILED
+== N7 drop D11 filter: exit=1 RED=yes
+  SecurityPrefsModuleTest > newer value in new store beats older legacy value FAILED
+== N8 contains instead of getString: exit=1 RED=yes
+  SecurityPrefsModuleTest > undecryptable new entry is replaced by the legacy value FAILED
+== BASELINE after revert: exit=0

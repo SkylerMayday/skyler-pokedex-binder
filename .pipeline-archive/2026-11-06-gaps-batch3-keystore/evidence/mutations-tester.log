@@ -1,0 +1,35 @@
+## M1 drop updateAAD both (replacements=2) exit=1
+> Task :app:testDebugUnitTest FAILED
+KeystoreSecretStoreTest > ciphertext copied to another key returns default FAILED
+KeystoreSecretStoreTest > ciphertext moved to another store name returns default FAILED
+BUILD FAILED in 39s
+## M2 AAD key only (replacements=1) exit=1
+> Task :app:testDebugUnitTest FAILED
+KeystoreSecretStoreTest > ciphertext moved to another store name returns default FAILED
+BUILD FAILED in 41s
+## M3 fixed IV (replacements=1) exit=1
+> Task :app:testDebugUnitTest FAILED
+KeystoreSecretStoreTest > same value twice gives different ciphertext and 12 byte IVs FAILED
+BUILD FAILED in 35s
+## M4 narrow catch to AEADBadTag (replacements=1) exit=1
+> Task :app:testDebugUnitTest FAILED
+KeystoreSecretStoreTest > transient key failure returns default, keeps raw, recovers FAILED
+KeystoreSecretStoreTest > getAll decrypts good entries and omits a bad one, contains stays raw presence FAILED
+KeystoreSecretStoreTest > flipped byte, non base64 and short blob return default without throwing FAILED
+BUILD FAILED in 30s
+## M5 drop read-back verify (replacements=1) exit=1
+> Task :app:testDebugUnitTest FAILED
+SecurityPrefsModuleTest > read-back mismatch serves old and rolls back copied keys FAILED
+BUILD FAILED in 32s
+## M6 drop rollback (replacements=1) exit=1
+> Task :app:testDebugUnitTest FAILED
+SecurityPrefsModuleTest > read-back mismatch serves old and rolls back copied keys FAILED
+BUILD FAILED in 44s
+## M7 drop D11 filter (replacements=1) exit=1
+> Task :app:testDebugUnitTest FAILED
+SecurityPrefsModuleTest > newer value in new store beats older legacy value FAILED
+BUILD FAILED in 37s
+## M8 delete in openOld catch (replacements=1) exit=1
+> Task :app:testDebugUnitTest FAILED
+SecurityPrefsModuleTest > openOld failure serves new store and deletes nothing FAILED
+BUILD FAILED in 38s

@@ -1,0 +1,8 @@
+== R1 remove F1 guard: exit=1 RED=yes
+  SettingsRepositoryTest > failed secure commit keeps the legacy plaintext key and retries the migration FAILED
+== R2 narrow catch (P3-2): exit=1 RED=yes
+  KeystoreSecretStoreTest > unexpected key-load exceptions return default instead of escaping getString FAILED
+  KeystoreSecretStoreTest > blob of exactly IV size or tag-less size returns default FAILED
+== R3 cache failures (P3-3): exit=1 RED=yes
+  KeystoreSecretStoreTest > cacheOnSuccess retries after a failed load and then caches FAILED
+== BASELINE after revert: exit=0
