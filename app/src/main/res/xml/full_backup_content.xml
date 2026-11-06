@@ -5,7 +5,7 @@
 -->
 <full-backup-content>
     <!-- EncryptedSharedPreferences: ciphertext is useless without this device's Keystore master key;
-         restoring it crashes on decrypt. -->
+         a restored copy cannot be opened; the failure is caught and the migration retries on the next launch. -->
     <exclude domain="sharedpref" path="settings_secrets.xml" />
     <exclude domain="sharedpref" path="publish_secrets.xml" />
     <!-- KeystoreSecretStore (v2): the AES key never leaves this device, so the ciphertext is useless elsewhere. -->

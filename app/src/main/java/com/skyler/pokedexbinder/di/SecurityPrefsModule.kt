@@ -40,7 +40,7 @@ object SecurityPrefsModule {
     private fun openSecrets(context: Context, oldName: String, newName: String): SharedPreferences {
         val newRaw = context.getSharedPreferences(newName, Context.MODE_PRIVATE)
         val store = KeystoreSecretStore(
-            newRaw, newName, { androidKeystoreAesKey(SECRETS_KEY_ALIAS) },
+            newRaw, newName, cacheOnSuccess { androidKeystoreAesKey(SECRETS_KEY_ALIAS) },
             log = { Log.w(TAG, "$newName value unreadable (${it::class.java.simpleName})") }
         )
         return migrateLegacySecrets(
@@ -103,7 +103,7 @@ internal fun migrateLegacySecrets(
         try {
             val rollback = newRaw.edit()
             toCopy.keys.forEach { rollback.remove(it) }
-            rollback.commit()
+            if (!rollback.commit()) log("rollback commit failed")
         } catch (r: Exception) {
             log("rollback failed (${r::class.java.simpleName})")
         }

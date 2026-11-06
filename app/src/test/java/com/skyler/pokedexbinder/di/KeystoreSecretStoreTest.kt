@@ -110,10 +110,31 @@ class KeystoreSecretStoreTest {
         assertFalse(ed.commit())
         assertEquals(before, raw.getString("keep", null))
         assertFalse(raw.contains("other"))
-        calls = 1 // second encrypt of the apply() attempt fails again
+        calls = 1 // reset the counter so the apply() attempt hits the failing 2nd encrypt again
         ed.apply()
         assertEquals(before, raw.getString("keep", null))
         assertFalse(raw.contains("other"))
+    }
+
+    @Test
+    fun `unexpected key-load exceptions return default instead of escaping getString`() {
+        val raw = FakeSharedPreferences()
+        store(raw).edit().putString("a", "v").commit()
+        val io = store(raw) { throw java.io.IOException("keystore load") }
+        assertEquals("def", io.getString("a", "def"))
+        val ise = store(raw) { throw IllegalStateException("vendor bug") }
+        assertEquals("def", ise.getString("a", "def"))
+        assertTrue(raw.contains("a"))
+    }
+
+    @Test
+    fun `cacheOnSuccess retries after a failed load and then caches`() {
+        var loads = 0
+        val cached = cacheOnSuccess { if (++loads == 1) throw KeyStoreException("hiccup") else aes }
+        try { cached(); fail("expected KeyStoreException") } catch (_: KeyStoreException) {}
+        assertEquals(aes, cached())
+        assertEquals(aes, cached())
+        assertEquals(2, loads)
     }
 
     @Test
@@ -185,7 +206,7 @@ class KeystoreSecretStoreTest {
     @Test
     fun `repository call patterns work and overwrite replaces the value`() {
         val s = store(FakeSharedPreferences())
-        assertEquals("", s.getString("gemini_api_key", "") ?: "")
+        assertEquals("", s.getString("gemini_api_key", ""))
         s.edit().putString("gemini_api_key", "k1").apply()
         assertEquals("k1", s.getString("gemini_api_key", ""))
         s.edit().putString("gemini_api_key", "k2").commit()

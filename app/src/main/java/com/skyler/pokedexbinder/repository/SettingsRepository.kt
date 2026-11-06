@@ -80,7 +80,7 @@ class SettingsRepository @Inject constructor(
             if (shouldMigrateGeminiKey(securePrefs.getString(SecureKeys.GEMINI_API_KEY, null))) {
                 val legacy = dataStore.data.map { it[Keys.GEMINI_API_KEY] ?: "" }.first()
                 if (legacy.isNotEmpty()) {
-                    withContext(Dispatchers.IO) {
+                    val saved = withContext(Dispatchers.IO) {
                         // commit(), not apply(): the plaintext clear right below suspends until
                         // its own write is durable, so an async apply() here could still be
                         // in-flight when that clear lands — a process death in that window would
@@ -88,6 +88,9 @@ class SettingsRepository @Inject constructor(
                         // here is free. Same reasoning as BackupImporter.kt's PendingImportError.persist().
                         securePrefs.edit().putString(SecureKeys.GEMINI_API_KEY, legacy).commit()
                     }
+                    // A transient Keystore failure makes commit() return false: keep the plaintext
+                    // and leave the flag unset so the next launch retries.
+                    if (!saved) return@withLock
                     dataStore.edit { it.remove(Keys.GEMINI_API_KEY) }
                 }
             }

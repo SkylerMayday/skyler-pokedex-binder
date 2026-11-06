@@ -1,5 +1,6 @@
 package com.skyler.pokedexbinder.repository
 
+import android.content.SharedPreferences
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -60,6 +61,31 @@ class SettingsRepositoryTest {
 
         assertEquals("legacy-key-123", repository.getGeminiApiKey())
         assertEquals("legacy-key-123", securePrefs.getString("gemini_api_key", null))
+        assertNull(dataStore.data.first()[legacyKey])
+    }
+
+    @Test
+    fun `failed secure commit keeps the legacy plaintext key and retries the migration`() = runTest {
+        dataStore.edit { it[legacyKey] = "legacy-key-123" }
+        var failing = true
+        val flaky = object : SharedPreferences by securePrefs {
+            override fun edit(): SharedPreferences.Editor {
+                val real = securePrefs.edit()
+                return object : SharedPreferences.Editor by real {
+                    // delegation returns `real` from putString, so re-wrap to keep the chain failing
+                    override fun putString(key: String, value: String?) = apply { real.putString(key, value) }
+                    override fun commit(): Boolean = if (failing) false else real.commit()
+                }
+            }
+        }
+        val repo = SettingsRepository(dataStore, flaky)
+
+        repo.getGeminiApiKey()
+        assertEquals("legacy-key-123", dataStore.data.first()[legacyKey])
+        assertNull(securePrefs.getString("gemini_api_key", null))
+
+        failing = false
+        assertEquals("legacy-key-123", repo.getGeminiApiKey())
         assertNull(dataStore.data.first()[legacyKey])
     }
 

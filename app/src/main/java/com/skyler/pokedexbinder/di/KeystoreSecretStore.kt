@@ -3,10 +3,8 @@ package com.skyler.pokedexbinder.di
 import android.content.SharedPreferences
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
-import java.security.GeneralSecurityException
 import java.security.KeyStore
 import java.security.KeyStoreException
-import java.security.ProviderException
 import java.util.Base64
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -41,6 +39,12 @@ internal fun androidKeystoreAesKey(alias: String): SecretKey = synchronized(keyC
     KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
         .apply { init(spec) }
         .generateKey()
+}
+
+/** Caches [load]'s result only on success: a throwing load is retried on the next call (Kotlin `lazy` does not cache exceptions). */
+internal fun <T> cacheOnSuccess(load: () -> T): () -> T {
+    val cached = lazy(load)
+    return { cached.value }
 }
 
 /**
@@ -81,7 +85,6 @@ class KeystoreSecretStore(
     private fun decryptOrNull(k: String, stored: String): String? = try {
         decrypt(k, stored)
     } catch (e: Exception) {
-        if (e !is GeneralSecurityException && e !is ProviderException && e !is IllegalArgumentException) throw e
         log(e)
         null
     }
@@ -119,6 +122,7 @@ class KeystoreSecretStore(
 
         override fun commit(): Boolean = write()
 
+        // Synchronous commit is deliberate (D13): failures are logged and never thrown into callers.
         override fun apply() { write() }
 
         /** Encrypts everything first; any failure writes nothing (D13). */
