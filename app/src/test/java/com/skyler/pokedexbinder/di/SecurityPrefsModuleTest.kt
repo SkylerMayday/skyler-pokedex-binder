@@ -1,78 +1,121 @@
 package com.skyler.pokedexbinder.di
 
 import android.content.SharedPreferences
-import io.mockk.mockk
+import com.skyler.pokedexbinder.repository.FakeSharedPreferences
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
 import org.junit.Test
-import java.io.IOException
 import java.security.GeneralSecurityException
-import javax.crypto.AEADBadTagException
+import java.security.KeyStoreException
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
 
 class SecurityPrefsModuleTest {
-    private val prefs = mockk<SharedPreferences>()
+    private val aes: SecretKey = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
+    private val newRaw = FakeSharedPreferences()
+    private var key: () -> SecretKey = { aes }
+    private val newStore = KeystoreSecretStore(newRaw, "new", { key() }) {}
+    private val old = FakeSharedPreferences()
+    private var opens = 0
+    private var deletes = 0
+    private var deleteResult = true
+    private val logs = mutableListOf<String>()
 
-    private class Calls {
-        var creates = 0
-        var deletes = 0
-        val logged = mutableListOf<Exception>()
+    private fun fillOld() {
+        old.edit().putString("gemini_api_key", "gem-1").putString("anthropic_api_key", "ant-2")
+            .putString("__androidx_security_crypto_encrypted_prefs_key_keyset__", "reserved").commit()
     }
 
-    private fun run(calls: Calls, create: (Int) -> SharedPreferences): SharedPreferences =
-        createOrResetOnDecryptFailure(
-            create = { create(++calls.creates) },
-            deleteFile = { calls.deletes++ },
-            log = { calls.logged += it }
-        )
+    private fun migrate(
+        store: SharedPreferences = newStore,
+        openOld: () -> SharedPreferences = { opens++; old }
+    ) = migrateLegacySecrets(
+        store, newRaw,
+        oldHasData = { old.all.isNotEmpty() },
+        openOld = openOld,
+        deleteOld = { deletes++; deleteResult },
+        log = { logs += it }
+    )
 
     @Test
-    fun `healthy create is returned untouched`() {
-        val calls = Calls()
-        assertSame(prefs, run(calls) { prefs })
-        assertEquals(1, calls.creates)
-        assertEquals(0, calls.deletes)
-    }
-
-    @Test
-    fun `decrypt failure deletes the file and recreates once`() {
-        val calls = Calls()
-        val result = run(calls) { n -> if (n == 1) throw AEADBadTagException("bad tag") else prefs }
-        assertSame(prefs, result)
-        assertEquals(2, calls.creates)
-        assertEquals(1, calls.deletes)
-        assertTrue(calls.logged.single() is AEADBadTagException)
-    }
-
-    @Test
-    fun `io failure from a corrupt keyset is also recovered`() {
-        val calls = Calls()
-        run(calls) { n -> if (n == 1) throw IOException("corrupt keyset") else prefs }
-        assertEquals(1, calls.deletes)
+    fun `copies string entries, skips reserved keys, deletes old once`() {
+        fillOld()
+        assertSame(newStore, migrate())
+        assertEquals("gem-1", newStore.getString("gemini_api_key", null))
+        assertEquals("ant-2", newStore.getString("anthropic_api_key", null))
+        assertFalse(newRaw.contains("__androidx_security_crypto_encrypted_prefs_key_keyset__"))
+        assertEquals(1, deletes)
+        assertTrue(logs.contains("migrated 2 of 2"))
     }
 
     @Test
-    fun `second failure propagates after a single reset`() {
-        val calls = Calls()
-        try {
-            run(calls) { throw GeneralSecurityException("keystore gone") }
-            fail("expected GeneralSecurityException")
-        } catch (e: GeneralSecurityException) {
-            assertEquals(2, calls.creates)
-            assertEquals(1, calls.deletes)
+    fun `no old data never opens old`() {
+        assertSame(newStore, migrate())
+        assertEquals(0, opens)
+        assertEquals(0, deletes)
+    }
+
+    @Test
+    fun `openOld failure serves new store and deletes nothing`() {
+        fillOld()
+        assertSame(newStore, migrate(openOld = { throw GeneralSecurityException("keystore") }))
+        assertEquals(0, deletes)
+        assertTrue(newRaw.all.isEmpty())
+    }
+
+    @Test
+    fun `write failure serves old, keeps it, leaves new empty`() {
+        fillOld()
+        key = { throw KeyStoreException("down") }
+        assertSame(old, migrate())
+        assertEquals(0, deletes)
+        assertTrue(newRaw.all.isEmpty())
+    }
+
+    @Test
+    fun `read-back mismatch serves old and rolls back copied keys`() {
+        fillOld()
+        val lying = object : SharedPreferences by newStore {
+            override fun getString(key: String, defValue: String?): String? =
+                newStore.getString(key, defValue)?.reversed()
         }
+        assertSame(old, migrate(store = lying))
+        assertEquals(0, deletes)
+        assertTrue(newRaw.all.isEmpty())
     }
 
     @Test
-    fun `unrelated exceptions are not swallowed and delete nothing`() {
-        val calls = Calls()
-        try {
-            run(calls) { throw IllegalStateException("not a crypto problem") }
-            fail("expected IllegalStateException")
-        } catch (e: IllegalStateException) {
-            assertEquals(1, calls.creates)
-            assertEquals(0, calls.deletes)
-        }
+    fun `failed delete serves new store and retries next launch`() {
+        fillOld()
+        deleteResult = false
+        assertSame(newStore, migrate())
+        assertSame(newStore, migrate())
+        assertEquals("gem-1", newStore.getString("gemini_api_key", null))
+        assertEquals(2, deletes)
+    }
+
+    @Test
+    fun `newer value in new store beats older legacy value`() {
+        newStore.edit().putString("k", "newer").commit()
+        old.edit().putString("k", "older").commit()
+        migrate()
+        assertEquals("newer", newStore.getString("k", null))
+    }
+
+    @Test
+    fun `undecryptable new entry is replaced by the legacy value`() {
+        newRaw.edit().putString("k", "AAAA").commit()
+        old.edit().putString("k", "legacy").commit()
+        migrate()
+        assertEquals("legacy", newStore.getString("k", null))
+    }
+
+    @Test
+    fun `non-String legacy value serves old and deletes nothing`() {
+        old.edit().putString("k", "v").putInt("n", 1).commit()
+        assertSame(old, migrate())
+        assertEquals(0, deletes)
     }
 }
