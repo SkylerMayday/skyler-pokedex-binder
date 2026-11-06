@@ -1,4 +1,4 @@
-# Handoff — Session 25, Batches 1-3 merged (2026-11-06)
+# Handoff — Session 25, Batches 1-3 merged, Batch 4 on a branch (2026-11-06)
 
 ## 1. Goals
 
@@ -10,7 +10,7 @@ Clear all of `gaps.md` and tech debt (Gemini key rotation dropped). Four sequent
 - **Batch 3 merged** (ff) from `gaps-batch3-keystore` (`e53921e`; 3-lens Opus review 90 / 87 / 92 + review-fix pass): `security-crypto` replaced by `KeystoreSecretStore` (AES-GCM over AndroidKeyStore, per-key AAD, files `*_v2`), verified fail-safe migration from the old encrypted prefs, `createOrResetOnDecryptFailure` deleted (unreadable values read as empty, nothing is wiped), Gemini plaintext-key migration guarded on commit result. **`security-crypto` is still in the build** (the migration reads the old store with it); the drop change waits on Skyler's checks below.
 - Unit tests **607/607** on `master` (fresh XMLs, `--rerun-tasks`, recounted).
 - **Not verified:** anything on the phone or a real AndroidKeyStore; `lintDebug`; `compileDebugAndroidTestKotlin` (incl. `KeystoreSecretStoreInstrumentedTest`, written by reading only, plus the `DatabaseBackupManagerInstrumentedTest` edits and `DatabaseModuleWiringTest`); `connectedDebugAndroidTest` (sandbox PKIX wall).
-- Batch 4 (dependency bumps) not started.
+- **Batch 4 (dependency bumps) is on local branch `deps/bump-2026-11`, NOT merged, UNBUILT** (sandbox cannot download the artifacts): 5 commits, one per library (coil 2.7.0, core-ktx 1.17.0, lifecycle 2.10.0, navigation-compose 2.9.8, room 2.8.5), each capped by the toolchain (AGP 8.9.1, compileSdk 36); details in `gaps.md`. Branch is not pushed.
 
 ## 3. Active files
 
@@ -31,8 +31,8 @@ Clear all of `gaps.md` and tech debt (Gemini key rotation dropped). Four sequent
 
 ## 6. Next Steps
 
-1. Run Batch 4 (dependency bumps: navigation-compose, room, coil, coreKtx, lifecycle; one commit per library; Skyler runs the builds) through the pipeline.
-2. After Skyler's checks pass, the "drop `security-crypto`" change (checklist in `gaps.md` batch 3 section).
+1. **Skyler: build `deps/bump-2026-11` in your shell** (`git switch deps/bump-2026-11`, then `./run_build.bat testDebugUnitTest --rerun-tasks`, `lintDebug`, `compileDebugAndroidTestKotlin`), tap through every drawer section on the phone, then tell me which commits pass; I merge those and revert the failing one.
+2. After the Keystore checks pass (items 3-5 below), the "drop `security-crypto`" change (checklist in `gaps.md` batch 3 section).
 3. In your own shell: `./run_build.bat lintDebug`, `./run_build.bat compileDebugAndroidTestKotlin`, and `$env:ANDROID_SERIAL="emulator-5554"; .\gradlew.bat connectedDebugAndroidTest` (emulator only).
 4. **Phone check for the Keystore migration:** write down your 4 secrets (Gemini key, Anthropic key, GitHub PAT, Discord webhook) first; `installDebug`; confirm all 4 still present in Settings/Publish; logcat tag `SecurityPrefs` shows `migrated N of N`; only `*_v2.xml` remain in `shared_prefs`. Do not downgrade the APK afterwards without exporting secrets (a rotated PAT can be lost).
 5. Install, scan, watch `adb logcat -s ScannerMatch` for the new `attempt ... ms=` lines and any `outcome=http400`; press "Back up now" once.

@@ -4,6 +4,12 @@ Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove ent
 actually fixed and verified, not when merely planned. Struck-through (closed) entries live in
 [gaps-archive.md](gaps-archive.md).
 
+## Session 25 deferred on purpose (2026-11-06)
+
+Not built, each with its reason: Korean / Traditional Chinese PTCG-database source and English image fallback and Japanese backup search (Skyler: not now / only on reported misses);
+`accompanist-permissions` and `material` removal (need a device look); art-hash 20-45 band (needs a labelled calibration set); TCGdex data gaps (external); `claude_scan_bakeoff.py` (his Python lacks `anyio`).
+Gemini key rotation: dropped by Skyler.
+
 ## Refreshed — 2026-11-06 (session 25, batch 3 — Keystore AES-GCM replaces `security-crypto`, branch `gaps-batch3-keystore`)
 
 **Audit scope note**: new `di/KeystoreSecretStore.kt`; rewrote `SecurityPrefsModule.kt` (verified legacy migration, `createOrResetOnDecryptFailure` deleted); guard in
@@ -84,7 +90,6 @@ Three stale entries moved to [gaps-archive.md](gaps-archive.md) ("Closed 2026-11
 - **Encrypted-prefs recovery superseded (session 25 batch 3):** `createOrResetOnDecryptFailure` was deleted; the new Keystore store reads an unreadable value as
   empty and never deletes anything (see the batch 3 section). The backup exclusions only apply to backups made after the hygiene build: press "Back up now" once after installing.
 - **`ScannerScreen.kt` split (2026-11-04, pure move, no logic change):** geometry/detection -> `ScannerGeometry.kt`, camera focus/diagnostics -> `ScannerCamera.kt`; the file is 664 lines, down from 1,034. `CameraPreview` (~200 lines) and the nine-state `ScannerScreen` stay together and still have no camera tests.
-- **Stale in this file:** the session-15 "`SmartThresholdUseCase` can never mark high confidence when the number is null" entry predates the `HASH_MARGIN` path.
 
 ## Refreshed — 2026-10-04 (session 22, part 2 — androidTest DataStore fix, clearer scan failure)
 
@@ -118,9 +123,6 @@ Three Opus lenses: 93 / 92 / 88 (min 88, ship). Unit tests **529/529 green** on 
   whole-name match (tolerating a trailing ex/gx/v/vmax/vstar); it only matters when the reader drops the dex number. A
   variant outside the suffix list (e.g. fullwidth `ＥＸ`) shows as unverified, never auto-accepted wrongly.
 - **Product-download failure is remembered per group**, so the first failure for each distinct group (~83) still costs one call.
-- **Gradle loopback wall did not recur this session.** `./run_build.bat <task>` from Bash worked, including inside a
-  worktree (needs `local.properties` copied in). The root `CLAUDE.md` line "often dies" is now overstated; left alone
-  because Skyler's edits to that file are uncommitted.
 - **`security-crypto` stays** (Parked section). A plaintext-storage revert was built, reviewed (93/92/88) and then backed out
   before merge at Skyler's request (he had read the name as cryptocurrency-related); nothing from it reached `master`.
 
@@ -198,7 +200,10 @@ Read-only pass (manifest + `libs.versions.toml`); no CVE database lookups were r
   Confirmed on the Jetpack releases page: all APIs deprecated in `1.1.0-alpha07` (2025-04-09), `1.1.0` stable (2025-07-30) is the same deprecated
   library, no further releases. Project is still on `1.1.0-alpha06` until the drop change (checklist in the batch 3 section), which waits on your
   emulator run and phone check.
-- **Stale dependencies, no audit cadence.** `navigation-compose` 2.7.7, `room` 2.6.1, `coil` 2.6.0,
-  `coreKtx` 1.13.1, `accompanist-permissions` 0.34.0, `lifecycle` 2.8.3 are behind. `okhttp`
-  4.12.0 is current for 4.x. Each bump needs a Gradle build and carries regression risk; no known
-  payoff. Run `dependency-management` when a bump is actually wanted.
+- **Dependency bumps are on branch `deps/bump-2026-11`, UNBUILT** (session 25 batch 4; the sandbox cannot download them, PKIX). Five commits, one per library, so a failure bisects:
+  `coil` 2.6.0 -> 2.7.0, `core-ktx` 1.13.1 -> 1.17.0, `lifecycle` 2.8.3 -> 2.10.0, `navigation-compose` 2.7.7 -> 2.9.8, `room` 2.6.1 -> 2.8.5. Versions are capped by the toolchain
+  (AGP 8.9.1, compileSdk 36, Kotlin 2.1.20): `lifecycle` 2.11 and `navigation-compose` 2.10 need AGP 9.2+ (Compose compileSdk 37), `core-ktx` 1.18+ needs compileSdk 36.1.
+  Room watch-list: Kotlin codegen is on by default with KSP since 2.7.0 (no abstract DAO properties or nullable collection returns found, so likely fine; a compile error there
+  can be sidestepped with ksp arg `room.generateKotlin=false`); 2.8.x suspending queries throw after the DB is closed. Navigation: 2.8.1 stopped deep-linking into destinations without explicit deep links
+  (the app only navigates by string route). In your own shell on that branch run `./run_build.bat testDebugUnitTest --rerun-tasks`, `lintDebug`, `compileDebugAndroidTestKotlin`, then a quick tap through every drawer section on the phone;
+  merge the commits that pass (`git cherry-pick` or revert the failing one). Left alone: `accompanist-permissions` 0.34.0 (deferred with the permission re-check), `okhttp` 4.12.0 (current for 4.x).
