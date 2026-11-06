@@ -8,6 +8,9 @@
          restoring it crashes on decrypt. -->
     <exclude domain="sharedpref" path="settings_secrets.xml" />
     <exclude domain="sharedpref" path="publish_secrets.xml" />
+    <!-- KeystoreSecretStore (v2): the AES key never leaves this device, so the ciphertext is useless elsewhere. -->
+    <exclude domain="sharedpref" path="settings_secrets_v2.xml" />
+    <exclude domain="sharedpref" path="publish_secrets_v2.xml" />
     <exclude domain="file" path="exports/" />
     <!-- One-shot pending-error message, must never survive a device transfer. -->
     <exclude domain="sharedpref" path="backup_import_state.xml" />

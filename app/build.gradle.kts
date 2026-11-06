@@ -124,6 +124,7 @@ dependencies {
     implementation(libs.datastore.preferences)
 
     // EncryptedSharedPreferences (publish secrets: GitHub PAT, Discord webhook URL)
+    // security-crypto: read-only, migrates legacy ESP into KeystoreSecretStore; drop after phone confirms
     implementation(libs.androidx.security.crypto)
 
     // Accompanist
