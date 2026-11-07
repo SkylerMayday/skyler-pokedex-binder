@@ -14,11 +14,11 @@ Gemini key rotation: dropped by Skyler.
 
 **Audit scope note**: new `di/KeystoreSecretStore.kt`; rewrote `SecurityPrefsModule.kt` (verified legacy migration, `createOrResetOnDecryptFailure` deleted); guard in
 `SettingsRepository`; backup-exclude XMLs now list `settings_secrets_v2` / `publish_secrets_v2`. Unit tests **607/607** (fresh XMLs, `--rerun-tasks`); 3-lens Opus review 90 / 87 / 92
-(min 87, ship) plus review-fix pass. **Not run on a device. `KeystoreSecretStoreInstrumentedTest` was written by reading only and has never compiled** (PKIX): this migration is unproven on real AndroidKeyStore until you run it.
+(min 87, ship) plus review-fix pass. **Not run on a device.** `KeystoreSecretStoreInstrumentedTest` now compiles (verified on `master` 2026-11-06 after the sandbox PKIX fix, see root `CLAUDE.md`) but has never run: the migration is unproven on real AndroidKeyStore until the emulator run and phone check below.
 
 ### Needs Skyler (before the old dependency is dropped)
 
-1. In your own PowerShell: `.\gradlew.bat compileDebugAndroidTestKotlin`, then `$env:ANDROID_SERIAL="emulator-5554"; .\gradlew.bat connectedDebugAndroidTest` (emulator only; AGP uninstalls the app from whatever device it targets).
+1. Emulator run (compile already passes): `$env:ANDROID_SERIAL="emulator-5554"; .\gradlew.bat connectedDebugAndroidTest` (emulator only; AGP uninstalls the app from whatever device it targets). I can run this for you if you ask.
 2. Phone: write down your 4 secrets (Gemini key, Anthropic key, GitHub PAT, Discord webhook) first. `installDebug`, open Settings and Publish, confirm all 4 are still there, look for `migrated 2 of 2` (or `migrated N of N`) in logcat tag `SecurityPrefs`, and confirm only the `*_v2.xml` files remain under `shared_prefs`. Press "Back up now" once.
 3. Reply with the result. Only then run the "drop `security-crypto`" change.
 
@@ -34,7 +34,7 @@ Gemini key rotation: dropped by Skyler.
 
 **Audit scope note**: touched `DatabaseBackupManager`, `DatabaseModule`, `BinderRepository`, `QuickScanViewModel`, `ScannerViewModel` + tests; read the five `fillBlankImage` DAOs,
 `ConnectingArtRepository` and its consumers, and the four section screens. Unit tests **581/581** (fresh XMLs, `--rerun-tasks`); single-reviewer score 94 (ship).
-**Not run on the phone; `compileDebugAndroidTestKotlin` could not run** (PKIX): the two `DatabaseBackupManagerInstrumentedTest` edits and `DatabaseModuleWiringTest` are unverified, run it in your own shell.
+**Not run on the phone.** `compileDebugAndroidTestKotlin` now passes on `master` (2026-11-06), so the `DatabaseBackupManagerInstrumentedTest` edits compile; `DatabaseModuleWiringTest` and the instrumented suite have not been run.
 
 ### New, not fixed
 
@@ -47,7 +47,7 @@ Gemini key rotation: dropped by Skyler.
 **Audit scope note**: touched `CardScanShared`, `CardScanProvider`, `ClaudeCardScanner`, `GeminiCardScanner`, `ScannerScreen`,
 `ScannerViewModel`, `TcgcsvJapanSource`, `SyncCardImagesUseCase` + tests. Unit tests **579/579** (fresh XMLs, `--rerun-tasks`, recounted by
 the orchestrator); 3-lens Opus review 90 / 90 / 91 (min 90, ship). **Not run on the phone.** `lintDebug` and
-`connectedDebugAndroidTest` still blocked in the sandbox (PKIX on uncached artifacts); run both in your own shell. Fixed entries moved to
+`connectedDebugAndroidTest` were blocked by sandbox PKIX; fixed later (Windows-ROOT trust store), `lintDebug` now passes, the emulator run is still open. Fixed entries moved to
 [gaps-archive.md](gaps-archive.md) ("Closed 2026-11-06"). The Gemini key rotation gap is dropped by Skyler's decision.
 
 ### New, not fixed
@@ -56,7 +56,7 @@ the orchestrator); 3-lens Opus review 90 / 90 / 91 (min 90, ship). **Not run on 
   response headers (`logAttempt("ok")` fires before the body is read), so a timeout during the body read still logs `outcome=ok`.
 - **Gemini bad-key HTTP code is unverified.** 401/403 are classed as invalid key; Gemini may return 400. After one wrong key on the phone, read
   `outcome=` in logcat and add 400 only if it appears. A 403 can also mean "API not enabled" or a restricted key (the key itself fine); only the 429 body is logged.
-- **Item 11 stays unexplained.** `connectedDebugAndroidTest` exits 1 with `OK (22 tests)`; the emulator run died at dependency download (PKIX) before any test. Run
+- **Item 11 stays unexplained.** `connectedDebugAndroidTest` exits 1 with `OK (22 tests)`; the sandbox emulator run died at dependency download (PKIX, now fixable) before any test. Run
   `$env:ANDROID_SERIAL="emulator-5554"; .\gradlew.bat connectedDebugAndroidTest` in your own PowerShell, with the phone unplugged or the serial pinned.
 - **Share-sheet rotation gate** (`SettingsScreen.kt` ~80-87) is tested only at ViewModel level; the real test is a Compose + Hilt `ActivityScenario.recreate()` emulator test. Deferred.
 - **P3s from review:** the sync rotation keys off the day number, so syncs exactly 2 days apart with 800 blank ids and limit 400 check the same half each time
@@ -200,10 +200,9 @@ Read-only pass (manifest + `libs.versions.toml`); no CVE database lookups were r
   Confirmed on the Jetpack releases page: all APIs deprecated in `1.1.0-alpha07` (2025-04-09), `1.1.0` stable (2025-07-30) is the same deprecated
   library, no further releases. Project is still on `1.1.0-alpha06` until the drop change (checklist in the batch 3 section), which waits on your
   emulator run and phone check.
-- **Dependency bumps are on branch `deps/bump-2026-11`, UNBUILT** (session 25 batch 4; the sandbox cannot download them, PKIX). Five commits, one per library, so a failure bisects:
-  `coil` 2.6.0 -> 2.7.0, `core-ktx` 1.13.1 -> 1.17.0, `lifecycle` 2.8.3 -> 2.10.0, `navigation-compose` 2.7.7 -> 2.9.8, `room` 2.6.1 -> 2.8.5. Versions are capped by the toolchain
-  (AGP 8.9.1, compileSdk 36, Kotlin 2.1.20): `lifecycle` 2.11 and `navigation-compose` 2.10 need AGP 9.2+ (Compose compileSdk 37), `core-ktx` 1.18+ needs compileSdk 36.1.
-  Room watch-list: Kotlin codegen is on by default with KSP since 2.7.0 (no abstract DAO properties or nullable collection returns found, so likely fine; a compile error there
-  can be sidestepped with ksp arg `room.generateKotlin=false`); 2.8.x suspending queries throw after the DB is closed. Navigation: 2.8.1 stopped deep-linking into destinations without explicit deep links
-  (the app only navigates by string route). In your own shell on that branch run `./run_build.bat testDebugUnitTest --rerun-tasks`, `lintDebug`, `compileDebugAndroidTestKotlin`, then a quick tap through every drawer section on the phone;
-  merge the commits that pass (`git cherry-pick` or revert the failing one). Left alone: `accompanist-permissions` 0.34.0 (deferred with the permission re-check), `okhttp` 4.12.0 (current for 4.x).
+- **Dependency bumps merged (session 25 batch 4), phone tap-through still owed.** `coil` 2.7.0, `core-ktx` 1.17.0, `lifecycle` 2.10.0, `navigation-compose` 2.9.8, `room` 2.8.5; one commit per library on `master`,
+  so a failing section reverts one commit. Verified on `master` 2026-11-06: `testDebugUnitTest --rerun-tasks` 607/607, `lintDebug`, `compileDebugAndroidTestKotlin` pass. Versions are capped by the toolchain
+  (AGP 8.9.1, compileSdk 36, Kotlin 2.1.20): `lifecycle` 2.11 and `navigation-compose` 2.10 need AGP 9.2+ (Compose compileSdk 37), `core-ktx` 1.18+ needs compileSdk 36.1; revisit when AGP is upgraded.
+  **Do on the phone:** tap through every drawer section (navigation and Room paths have no UI tests). Watch-list: Room Kotlin codegen is on by default with KSP since 2.7.0 (compiled fine; fallback is ksp arg
+  `room.generateKotlin=false`), Room 2.8.x suspending queries throw after the DB is closed, navigation 2.8.1 stopped deep-linking into destinations without explicit deep links (the app only navigates by string route).
+  Left alone: `accompanist-permissions` 0.34.0 (deferred with the permission re-check), `okhttp` 4.12.0 (current for 4.x).

@@ -1,4 +1,4 @@
-# Handoff — Session 25, Batches 1-3 merged, Batch 4 on a branch (2026-11-06)
+# Handoff — Session 25, all four batches merged (2026-11-06)
 
 ## 1. Goals
 
@@ -9,8 +9,9 @@ Clear all of `gaps.md` and tech debt (Gemini key rotation dropped). Four sequent
 - **Batch 1 merged** (ff) at `9cf4fb6` (3-lens Opus review 90 / 90 / 91). **Batch 2 merged** (ff) from `gaps-batch2-structure` (`3e72b19`, review 94): `SqliteVersionReader` constructor default removed; `AssignCardUseCase` merged into `BinderRepository.assignWithHistory`; the five DAO pairs, `ConnectingArtRepository` and the duplicate screens closed as not a gap with evidence. Pipeline artifacts in `.pipeline-archive/2026-11-06-gaps-batch{1-scanner,2-structure}/`.
 - **Batch 3 merged** (ff) from `gaps-batch3-keystore` (`e53921e`; 3-lens Opus review 90 / 87 / 92 + review-fix pass): `security-crypto` replaced by `KeystoreSecretStore` (AES-GCM over AndroidKeyStore, per-key AAD, files `*_v2`), verified fail-safe migration from the old encrypted prefs, `createOrResetOnDecryptFailure` deleted (unreadable values read as empty, nothing is wiped), Gemini plaintext-key migration guarded on commit result. **`security-crypto` is still in the build** (the migration reads the old store with it); the drop change waits on Skyler's checks below.
 - Unit tests **607/607** on `master` (fresh XMLs, `--rerun-tasks`, recounted).
-- **Not verified:** anything on the phone or a real AndroidKeyStore; `lintDebug`; `compileDebugAndroidTestKotlin` (incl. `KeystoreSecretStoreInstrumentedTest`, written by reading only, plus the `DatabaseBackupManagerInstrumentedTest` edits and `DatabaseModuleWiringTest`); `connectedDebugAndroidTest` (sandbox PKIX wall).
-- **Batch 4 (dependency bumps) is on local branch `deps/bump-2026-11`, NOT merged, UNBUILT** (sandbox cannot download the artifacts): 5 commits, one per library (coil 2.7.0, core-ktx 1.17.0, lifecycle 2.10.0, navigation-compose 2.9.8, room 2.8.5), each capped by the toolchain (AGP 8.9.1, compileSdk 36); details in `gaps.md`. Branch is not pushed.
+- **Batch 4 merged** (dependency bumps, one commit per library on `master`): coil 2.7.0, core-ktx 1.17.0, lifecycle 2.10.0, navigation-compose 2.9.8, room 2.8.5, each capped by the toolchain (AGP 8.9.1, compileSdk 36); details in `gaps.md`. Verified on `master`: `testDebugUnitTest --rerun-tasks` 607/607, `lintDebug`, `compileDebugAndroidTestKotlin` all pass.
+- **Sandbox PKIX fixed:** `export JAVA_TOOL_OPTIONS="-Djavax.net.ssl.trustStoreType=Windows-ROOT"` before `./run_build.bat <task>` lets Gradle download uncached artifacts (recorded in root `CLAUDE.md`).
+- **Not verified:** anything on the phone or a real AndroidKeyStore; `connectedDebugAndroidTest` / `KeystoreSecretStoreInstrumentedTest` (compiles, never run); `DatabaseModuleWiringTest`; the drawer-section tap-through after the nav/room/lifecycle bumps.
 
 ## 3. Active files
 
@@ -25,15 +26,15 @@ Clear all of `gaps.md` and tech debt (Gemini key rotation dropped). Four sequent
 
 ## 5. Failed attempts / skipped on purpose
 
-- Item 11 (`connectedDebugAndroidTest` exit 1 with `OK (22 tests)`): emulator run died at dependency download (PKIX) before any test; cause still unexplained.
+- Item 11 (`connectedDebugAndroidTest` exit 1 with `OK (22 tests)`): the sandbox emulator run died at dependency download (PKIX, since fixed) before any test; cause still unexplained, not retried yet.
 - Share-sheet rotation gate Compose test: deferred (emulator-only `ActivityScenario.recreate()` test).
 - Worktree tool branched from stub `origin/main`; reset to `master` before work. Check the base of any new worktree.
 
 ## 6. Next Steps
 
-1. **Skyler: build `deps/bump-2026-11` in your shell** (`git switch deps/bump-2026-11`, then `./run_build.bat testDebugUnitTest --rerun-tasks`, `lintDebug`, `compileDebugAndroidTestKotlin`), tap through every drawer section on the phone, then tell me which commits pass; I merge those and revert the failing one.
+1. **Phone tap-through of every drawer section** after installing master (nav, Room and lifecycle bumps have no UI tests); revert the one library commit that breaks a section.
 2. After the Keystore checks pass (items 3-5 below), the "drop `security-crypto`" change (checklist in `gaps.md` batch 3 section).
-3. In your own shell: `./run_build.bat lintDebug`, `./run_build.bat compileDebugAndroidTestKotlin`, and `$env:ANDROID_SERIAL="emulator-5554"; .\gradlew.bat connectedDebugAndroidTest` (emulator only).
+3. Emulator run: `$env:ANDROID_SERIAL="emulator-5554"; .\gradlew.bat connectedDebugAndroidTest` (emulator only; Claude can run it on request).
 4. **Phone check for the Keystore migration:** write down your 4 secrets (Gemini key, Anthropic key, GitHub PAT, Discord webhook) first; `installDebug`; confirm all 4 still present in Settings/Publish; logcat tag `SecurityPrefs` shows `migrated N of N`; only `*_v2.xml` remain in `shared_prefs`. Do not downgrade the APK afterwards without exporting secrets (a rotated PAT can be lost).
 5. Install, scan, watch `adb logcat -s ScannerMatch` for the new `attempt ... ms=` lines and any `outcome=http400`; press "Back up now" once.
 
