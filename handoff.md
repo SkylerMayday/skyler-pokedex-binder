@@ -9,7 +9,7 @@ Finish the item left over from session 27: turn on Room schema export (`exportSc
 - **Done, merged (ff) to `master` as `760aafd`:** `exportSchema = true`, KSP arg `room.schemaLocation`, `app/schemas/.../9.json` committed, androidTest assets dir, new `Schema9ValidationTest`, and a `resolutionStrategy.force` of kotlinx-serialization 1.9.0 on `ksp*` + `debugAndroidTestRuntimeClasspath` (catalog entry `kotlinxSerialization`). DB stays at version 9.
 - **Root cause (session 27's guess was wrong):** kotlinx-serialization 1.8.1 on the KSP processor classpath vs Room serializers built for >= 1.9; fails only on the second build, once `9.json` exists. No Kotlin/KSP bump was needed.
 - Verified fresh on `master`: unit tests **595/595** (`--rerun-tasks`, `9.json` present), `compileDebugAndroidTestKotlin`, `lintDebug` alone. On the branch: emulator `OK (31 tests)`, runtime classpaths identical to before, cause proven by removing/restoring the force. Pipeline: Planner, Coder, Tester, single Reviewer 89/100.
-- **Not verified:** the phone; `assembleRelease` (no keystore in the worktree; `kspReleaseKotlin`, `compileReleaseKotlin`, `minifyReleaseWithR8` pass).
+- **Not verified:** the phone; `assembleRelease` was since run in the main checkout, see below (`kspReleaseKotlin`, `compileReleaseKotlin`, `minifyReleaseWithR8` pass).
 
 ## 3. Active files
 
@@ -25,7 +25,7 @@ The first attempt (session 27) pinned the version as a constraint / buildscript 
 
 ## 6. Next Steps
 
-1. First real `assembleRelease` in the main checkout (confirms the release config).
+1. ~~First real `assembleRelease`~~ done 2026-11-12: `--rerun-tasks`, 53 tasks, BUILD SUCCESSFUL, signed app-release.apk 4.7 MB.
 2. Run `lintDebug` alone, never in the same Gradle call as the compile/test tasks (pre-existing race, `gaps.md`).
 3. Revisit the ksp force on any Room/KSP/Kotlin bump (note in `build.gradle.kts`).
 4. Optional: test or `Log.w` for the id-set / url-null slot. (4-across grid and "Back up now" confirmed by Skyler 2026-11-12.)
