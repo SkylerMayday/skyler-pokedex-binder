@@ -123,9 +123,6 @@ dependencies {
     // DataStore (settings persistence)
     implementation(libs.datastore.preferences)
 
-    // security-crypto: read-only, migrates legacy ESP into KeystoreSecretStore; drop after phone confirms
-    implementation(libs.androidx.security.crypto)
-
     // Accompanist
     implementation(libs.accompanist.permissions)
 

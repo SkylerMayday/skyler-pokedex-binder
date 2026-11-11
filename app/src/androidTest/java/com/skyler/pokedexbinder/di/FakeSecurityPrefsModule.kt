@@ -18,8 +18,8 @@ import javax.inject.Singleton
 /**
  * Replaces [SecurityPrefsModule] for every `@HiltAndroidTest`. `HiltAndroidRule` builds a fresh
  * SingletonComponent per test, so the real module opened a second DataStore on the same on-device
- * file each time ("multiple DataStores active for the same file"). It also needs the Keystore (key creation,
- * legacy ESP migration) and touches real settings/publish data.
+ * file each time ("multiple DataStores active for the same file"). It also needs the Keystore (key creation)
+ * and touches real settings/publish data.
  *
  * Each binding here gets its own uniquely named temp DataStore file / plain SharedPreferences, so
  * components never collide or leak into each other and the real files are never opened. Every

@@ -10,10 +10,6 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- EncryptedSharedPreferences: ciphertext is useless without this device's Keystore master key;
-             a restored copy cannot be opened; the failure is caught and the migration retries on the next launch. -->
-        <exclude domain="sharedpref" path="settings_secrets.xml" />
-        <exclude domain="sharedpref" path="publish_secrets.xml" />
         <!-- KeystoreSecretStore (v2): the AES key never leaves this device, so the ciphertext is useless elsewhere. -->
         <exclude domain="sharedpref" path="settings_secrets_v2.xml" />
         <exclude domain="sharedpref" path="publish_secrets_v2.xml" />
@@ -22,10 +18,6 @@
         <exclude domain="sharedpref" path="backup_import_state.xml" />
     </cloud-backup>
     <device-transfer>
-        <!-- EncryptedSharedPreferences: ciphertext is useless without this device's Keystore master key;
-             a restored copy cannot be opened; the failure is caught and the migration retries on the next launch. -->
-        <exclude domain="sharedpref" path="settings_secrets.xml" />
-        <exclude domain="sharedpref" path="publish_secrets.xml" />
         <!-- KeystoreSecretStore (v2): the AES key never leaves this device, so the ciphertext is useless elsewhere. -->
         <exclude domain="sharedpref" path="settings_secrets_v2.xml" />
         <exclude domain="sharedpref" path="publish_secrets_v2.xml" />
