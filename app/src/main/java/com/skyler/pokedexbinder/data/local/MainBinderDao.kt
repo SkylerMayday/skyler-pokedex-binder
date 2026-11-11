@@ -17,6 +17,22 @@ interface MainBinderDao {
     @Upsert
     suspend fun upsert(entry: MainBinderEntry)
 
+    @Insert
+    suspend fun insertHistory(entry: SecondaryBinderEntry)
+
+    @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM secondary_binder")
+    suspend fun nextHistoryPosition(): Int
+
+    /**
+     * Atomically moves [displaced] (if any) to the end of Card History and writes [updated] to the slot.
+     * One transaction: a failure in either statement rolls back both.
+     */
+    @Transaction
+    suspend fun assignDisplacing(displaced: SecondaryBinderEntry?, updated: MainBinderEntry) {
+        if (displaced != null) insertHistory(displaced.copy(position = nextHistoryPosition()))
+        upsert(updated)
+    }
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(entries: List<MainBinderEntry>)
 

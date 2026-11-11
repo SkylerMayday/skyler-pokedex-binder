@@ -93,9 +93,10 @@ fun SlotDetailScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (slot?.isOccupied == true && slot!!.assignedCardImageUrl != null) {
+            val imageUrl = slot?.takeIf { it.isOccupied }?.assignedCardImageUrl
+            if (imageUrl != null) {
                 AsyncImage(
-                    model = slot!!.assignedCardImageUrl,
+                    model = imageUrl,
                     contentDescription = "Assigned card",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxWidth().weight(1f)
