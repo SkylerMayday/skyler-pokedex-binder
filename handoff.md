@@ -1,6 +1,41 @@
-# Handoff — Session 25, all four batches merged (2026-11-06)
+# Handoff — Session 26, grid layout + `security-crypto` dropped (2026-11-11)
 
 ## 1. Goals
+
+Pokédex binder to 4 across for base + regional, 3 across for alt forms / megas / VMax; then drop `security-crypto` once the Keystore migration was proven on the phone.
+
+## 2. Current State
+
+- **Done, committed, pushed to `origin/master`:** `22ec8c5` (grid: 12 columns, BASE/REGIONAL span 3, ALTERNATE_FORM/MEGA/GMAX span 4; Card History, Personal Collection, Connecting Art stay 3x3, Unown already 4) and `ab85185` (`security-crypto` + `migrateLegacySecrets` + its 12 tests + legacy backup excludes removed).
+- Verified: unit tests **595/595** fresh, `lintDebug`, `compileDebugAndroidTestKotlin`. Phone (SM-S948B): migration `migrated 2 of 2` x2, only `*_v2.xml` remain, no plaintext prefixes in them, 4 keys visible; relaunch after the drop shows no `SecurityPrefs` warnings and unchanged `_v2` files.
+- **Not verified:** how the 4-across tiles look (Skyler to eyeball); drawer tap-through after the dependency bumps; "Back up now"; emulator `connectedDebugAndroidTest`.
+- Work was done inline on `master` (no pipeline, no worktree): small removal plus a layout tweak.
+
+## 3. Active files
+
+`ui/mainbinder/MainBinderScreen.kt`, `di/SecurityPrefsModule.kt`, `gaps.md`.
+
+## 4. Changes made
+
+See section 2. Search results stay a flat list, so mixed tile sizes can appear in one row while searching.
+
+## 5. Failed attempts / skipped on purpose
+
+A `cat` of the `_v2` prefs files was blocked by the auto-mode classifier (it would print secrets); replaced by counting plaintext-prefix matches. The old `_androidx_security_master_key_` Keystore entry was left in place (optional).
+
+## 6. Next Steps
+
+1. Skyler: look at the Pokédex grid; tell Claude if search-result rows should use one tile size, or if the web snapshot should mirror 4/3.
+2. Phone tap-through of every drawer section (nav / Room / lifecycle bumps have no UI tests); press "Back up now" once.
+3. Emulator run: `$env:ANDROID_SERIAL="emulator-5554"; .\gradlew.bat connectedDebugAndroidTest` (emulator only; Claude can run it on request).
+4. Remaining debt is in `gaps.md`; most of it is deferred on purpose.
+
+Blocked on Skyler: items 1-2.
+
+---
+Previous handoff (session 25) follows.
+
+## (s25) 1. Goals
 
 Clear all of `gaps.md` and tech debt (Gemini key rotation dropped). Four sequential batches, each through `dev-team-pipeline`: 1 scanner behaviour + tests, 2 structure cleanup, 3 replace `security-crypto` with direct Keystore AES-GCM, 4 dependency bumps. Plan: `C:\Users\SkylerMayday\.claude\plans\spicy-wiggling-fern.md`. Deferred on purpose (recorded, not built): Korean/TC PTCG-database source, English image fallback, Japanese backup search (U3), `accompanist-permissions` / `material` removal (need a device look), art-hash 20-45 band (needs calibration data), TCGdex data gaps (external), `claude_scan_bakeoff.py`.
 

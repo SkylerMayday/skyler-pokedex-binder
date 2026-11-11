@@ -4,6 +4,18 @@ Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove ent
 actually fixed and verified, not when merely planned. Struck-through (closed) entries live in
 [gaps-archive.md](gaps-archive.md).
 
+## Refreshed — 2026-11-11 (session 26 — grid layout, `security-crypto` dropped; commits `22ec8c5`, `ab85185` on `master`, pushed)
+
+**Audit scope note**: touched `MainBinderScreen.kt`, `SecurityPrefsModule.kt`, `FakeSecurityPrefsModule.kt`, both backup XMLs, `build.gradle.kts`, `libs.versions.toml`; deleted `SecurityPrefsModuleTest.kt`. Unit tests **595/595** (fresh, `--rerun-tasks`; 607 minus the 12 deleted migration tests), `lintDebug` and `compileDebugAndroidTestKotlin` pass. No pipeline run (small removal; no reviewer pass). On the phone: Keystore migration confirmed (logcat `migrated 2 of 2` for both stores, only `*_v2.xml` left, no plaintext key prefixes in them, 4 keys visible in Settings).
+
+### Closed
+- **Drop `security-crypto`** (batch 3 checklist): done except the optional deletion of the old `_androidx_security_master_key_` Keystore entry (harmless, left). The "Downgrade then re-upgrade" P2 below still applies to the old APK only.
+
+### New, not fixed
+- **Pokédex grid is 12 columns** (BASE/REGIONAL span 3, ALTERNATE_FORM/MEGA/GMAX span 4). While searching, results are a flat list with mixed types, so rows can hold mixed tile sizes. No test covers the grid; the 4-across tile look was not confirmed on screen by Claude.
+- **Published web snapshot** has no grid setting in this repo; whether it should mirror the 4/3 split is undecided.
+- **Not run:** emulator `connectedDebugAndroidTest` (item 1 below), drawer-section tap-through, "Back up now" tap.
+
 ## Session 25 deferred on purpose (2026-11-06)
 
 Not built, each with its reason: Korean / Traditional Chinese PTCG-database source and English image fallback and Japanese backup search (Skyler: not now / only on reported misses);
@@ -16,7 +28,7 @@ Gemini key rotation: dropped by Skyler.
 `SettingsRepository`; backup-exclude XMLs now list `settings_secrets_v2` / `publish_secrets_v2`. Unit tests **607/607** (fresh XMLs, `--rerun-tasks`); 3-lens Opus review 90 / 87 / 92
 (min 87, ship) plus review-fix pass. **Not run on a device.** `KeystoreSecretStoreInstrumentedTest` now compiles (verified on `master` 2026-11-06 after the sandbox PKIX fix, see root `CLAUDE.md`) but has never run: the migration is unproven on real AndroidKeyStore until the emulator run and phone check below.
 
-### Needs Skyler (before the old dependency is dropped)
+### Needs Skyler (items 2-3 done 2026-11-11; item 1 still open)
 
 1. Emulator run (compile already passes): `$env:ANDROID_SERIAL="emulator-5554"; .\gradlew.bat connectedDebugAndroidTest` (emulator only; AGP uninstalls the app from whatever device it targets). I can run this for you if you ask.
 2. Phone: write down your 4 secrets (Gemini key, Anthropic key, GitHub PAT, Discord webhook) first. `installDebug`, open Settings and Publish, confirm all 4 are still there, look for `migrated 2 of 2` (or `migrated N of N`) in logcat tag `SecurityPrefs`, and confirm only the `*_v2.xml` files remain under `shared_prefs`. Press "Back up now" once.
