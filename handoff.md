@@ -28,7 +28,7 @@ The first attempt (session 27) pinned the version as a constraint / buildscript 
 1. First real `assembleRelease` in the main checkout (confirms the release config).
 2. Run `lintDebug` alone, never in the same Gradle call as the compile/test tasks (pre-existing race, `gaps.md`).
 3. Revisit the ksp force on any Room/KSP/Kotlin bump (note in `build.gradle.kts`).
-4. Carry-overs from sessions 26-27: look at the 4-across grid, press "Back up now" once, optional test or `Log.w` for the id-set / url-null slot.
+4. Optional: test or `Log.w` for the id-set / url-null slot. (4-across grid and "Back up now" confirmed by Skyler 2026-11-12.)
 
 Blocked on Skyler: nothing.
 

@@ -39,10 +39,10 @@ actually fixed and verified, not when merely planned. Struck-through (closed) en
 - **Drop `security-crypto`** (batch 3 checklist): done except the optional deletion of the old `_androidx_security_master_key_` Keystore entry (harmless, left). The "Downgrade then re-upgrade" P2 below still applies to the old APK only.
 
 ### New, not fixed
-- **Pokédex grid is 12 columns** (BASE/REGIONAL span 3, ALTERNATE_FORM/MEGA/GMAX span 4). While searching, results are a flat list with mixed types, so rows can hold mixed tile sizes. No test covers the grid; the 4-across tile look was not confirmed on screen by Claude.
+- **Pokédex grid is 12 columns** (BASE/REGIONAL span 3, ALTERNATE_FORM/MEGA/GMAX span 4). While searching, results are a flat list with mixed types, so rows can hold mixed tile sizes. No test covers the grid; 4-across tile look confirmed by Skyler on the phone 2026-11-12.
 - **Published web snapshot** has no grid setting in this repo; whether it should mirror the 4/3 split is undecided.
 - **Emulator run done 2026-11-11** (`pokedex_test` AVD, pinned `ANDROID_SERIAL=emulator-5554`, phone untouched): `testlog/test-results.log` says `OK (26 tests)`, 26 start + 26 pass codes, including `KeystoreSecretStoreInstrumentedTest` (first run against a real AndroidKeyStore) and `DatabaseModuleWiringTest`. Gradle still exits 1 with `Failed to receive the UTP test results`, the long-standing item 11 symptom: it is a UTP result-collection failure, not a test failure; read the verdict from `test-results.log`.
-- **Not run:** drawer-section tap-through (Skyler said sections look okay 2026-11-11), "Back up now" tap.
+- **Not run:** drawer-section tap-through (Skyler said sections look okay 2026-11-11; "Back up now" confirmed 2026-11-12).
 
 ## Session 25 deferred on purpose (2026-11-06)
 
