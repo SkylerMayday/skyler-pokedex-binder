@@ -58,7 +58,10 @@ android {
         compose = true
         buildConfig = true
     }
+    sourceSets.getByName("androidTest").assets.srcDir("$projectDir/schemas")
 }
+
+ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
 // Android Studio Narwhal (AI-253 / Kotlin plugin 2.2.x) requests this task during project sync
 tasks.register("prepareKotlinBuildScriptModel")
@@ -72,6 +75,25 @@ tasks.register("prepareKotlinBuildScriptModel")
 configurations.all {
     resolutionStrategy {
         force("androidx.graphics:graphics-path:1.1.0")
+    }
+}
+
+// Room 2.8.x schema export: the KSP processor classpath resolves kotlinx-serialization 1.8.1 (room-migration BOM
+// pin) but Room's bundle serializers were built against >=1.9 (no typeParametersSerializers()), so the 2nd build
+// with an existing schema JSON dies with AbstractMethodError. ksp* and androidTest runtime configs only
+// (MigrationTestHelper hits the same error at runtime): never reaches the APK.
+// Must be force(), not a constraint. See Google issue 447154195 / kotlinx.serialization#2968.
+// Revisit/remove on any Room/KSP/Kotlin bump: check kspDebugKotlinProcessorClasspath for
+// kotlinx-serialization >= 1.9 without the force.
+val kotlinxSerializationVersion = libs.versions.kotlinxSerialization.get()
+configurations.matching { it.name.startsWith("ksp") || it.name.endsWith("AndroidTestRuntimeClasspath") }.configureEach {
+    resolutionStrategy {
+        force(
+            "org.jetbrains.kotlinx:kotlinx-serialization-core:$kotlinxSerializationVersion",
+            "org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:$kotlinxSerializationVersion",
+            "org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion",
+            "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:$kotlinxSerializationVersion",
+        )
     }
 }
 

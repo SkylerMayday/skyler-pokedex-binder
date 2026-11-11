@@ -16,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         UnownBinderEntry::class
     ],
     version = PokedexDatabase.SCHEMA_VERSION,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class PokedexDatabase : RoomDatabase() {
     abstract fun mainBinderDao(): MainBinderDao

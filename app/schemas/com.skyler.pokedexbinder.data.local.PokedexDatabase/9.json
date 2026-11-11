@@ -1,0 +1,408 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 9,
+    "identityHash": "587c50029bdde81767d2709cc2fb8d85",
+    "entities": [
+      {
+        "tableName": "main_binder",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`pokemonId` TEXT NOT NULL, `pokemonName` TEXT NOT NULL, `dexNumber` INTEGER NOT NULL, `dexOrder` INTEGER NOT NULL, `slotType` TEXT NOT NULL, `assignedCardId` TEXT, `assignedCardImageUrl` TEXT, `assignedCardName` TEXT, `assignedCardSetName` TEXT, `language` TEXT NOT NULL, `remarks` TEXT, `isLocked` INTEGER NOT NULL, PRIMARY KEY(`pokemonId`))",
+        "fields": [
+          {
+            "fieldPath": "pokemonId",
+            "columnName": "pokemonId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pokemonName",
+            "columnName": "pokemonName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dexNumber",
+            "columnName": "dexNumber",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dexOrder",
+            "columnName": "dexOrder",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "slotType",
+            "columnName": "slotType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "assignedCardId",
+            "columnName": "assignedCardId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "assignedCardImageUrl",
+            "columnName": "assignedCardImageUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "assignedCardName",
+            "columnName": "assignedCardName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "assignedCardSetName",
+            "columnName": "assignedCardSetName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "language",
+            "columnName": "language",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "remarks",
+            "columnName": "remarks",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isLocked",
+            "columnName": "isLocked",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "pokemonId"
+          ]
+        }
+      },
+      {
+        "tableName": "secondary_binder",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `pokemonId` TEXT NOT NULL, `pokemonName` TEXT NOT NULL, `cardId` TEXT NOT NULL, `cardImageUrl` TEXT NOT NULL, `position` INTEGER NOT NULL, `language` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pokemonId",
+            "columnName": "pokemonId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pokemonName",
+            "columnName": "pokemonName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cardId",
+            "columnName": "cardId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cardImageUrl",
+            "columnName": "cardImageUrl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "language",
+            "columnName": "language",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "connecting_art_group",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `rows` INTEGER NOT NULL, `cols` INTEGER NOT NULL, `position` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rows",
+            "columnName": "rows",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cols",
+            "columnName": "cols",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "connecting_art_slot",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `groupId` INTEGER NOT NULL, `slotIndex` INTEGER NOT NULL, `cardId` TEXT, `cardName` TEXT, `cardImageUrl` TEXT, `owned` INTEGER NOT NULL, `language` TEXT NOT NULL, FOREIGN KEY(`groupId`) REFERENCES `connecting_art_group`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "groupId",
+            "columnName": "groupId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "slotIndex",
+            "columnName": "slotIndex",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cardId",
+            "columnName": "cardId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cardName",
+            "columnName": "cardName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cardImageUrl",
+            "columnName": "cardImageUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "owned",
+            "columnName": "owned",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "language",
+            "columnName": "language",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_connecting_art_slot_groupId",
+            "unique": false,
+            "columnNames": [
+              "groupId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_connecting_art_slot_groupId` ON `${TABLE_NAME}` (`groupId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "connecting_art_group",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "groupId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "personal_collection_cache",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`cardId` TEXT NOT NULL, `pokemonKey` TEXT NOT NULL, `name` TEXT NOT NULL, `imageUrl` TEXT NOT NULL, `setName` TEXT NOT NULL, `releaseDate` TEXT NOT NULL, PRIMARY KEY(`cardId`))",
+        "fields": [
+          {
+            "fieldPath": "cardId",
+            "columnName": "cardId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pokemonKey",
+            "columnName": "pokemonKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "imageUrl",
+            "columnName": "imageUrl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "setName",
+            "columnName": "setName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "releaseDate",
+            "columnName": "releaseDate",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "cardId"
+          ]
+        }
+      },
+      {
+        "tableName": "personal_collection_entry",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`cardId` TEXT NOT NULL, `owned` INTEGER NOT NULL, `language` TEXT NOT NULL, PRIMARY KEY(`cardId`))",
+        "fields": [
+          {
+            "fieldPath": "cardId",
+            "columnName": "cardId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "owned",
+            "columnName": "owned",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "language",
+            "columnName": "language",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "cardId"
+          ]
+        }
+      },
+      {
+        "tableName": "unown_binder",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`letterId` TEXT NOT NULL, `position` INTEGER NOT NULL, `assignedCardId` TEXT, `assignedCardImageUrl` TEXT, `assignedCardName` TEXT, `assignedCardSetName` TEXT, `language` TEXT NOT NULL, `remarks` TEXT, `isLocked` INTEGER NOT NULL, PRIMARY KEY(`letterId`))",
+        "fields": [
+          {
+            "fieldPath": "letterId",
+            "columnName": "letterId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "assignedCardId",
+            "columnName": "assignedCardId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "assignedCardImageUrl",
+            "columnName": "assignedCardImageUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "assignedCardName",
+            "columnName": "assignedCardName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "assignedCardSetName",
+            "columnName": "assignedCardSetName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "language",
+            "columnName": "language",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "remarks",
+            "columnName": "remarks",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isLocked",
+            "columnName": "isLocked",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "letterId"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '587c50029bdde81767d2709cc2fb8d85')"
+    ]
+  }
+}
