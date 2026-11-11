@@ -1493,3 +1493,7 @@ self-resolving — now with one added data point)
 - ~~`SqliteVersionReader` bound twice~~ constructor default removed from `DatabaseBackupManager`; `@Provides` is the only Hilt binding, `buildDatabase` builds the reader directly.
 - ~~`AssignCardUseCase` merge~~ now `BinderRepository.assignWithHistory(pokemonId, card): Boolean`; 3 tests moved to `BinderRepositoryTest` plus 2 new; mutation-checked.
 - ~~Five identical blank-image DAO query pairs~~, ~~`ConnectingArtRepository` pass-throughs~~, ~~duplicate section screens~~ closed as not a gap, evidence in `gaps.md` batch 2 section.
+
+## Closed 2026-11-11 (session 27)
+
+- ~~**Assign is not transactional**~~ (batch 2 carry-over): a crash between `insertAtEnd` (Card History) and the slot upsert in `BinderRepository.assignWithHistory` could leave a duplicate in Card History. Fixed by `MainBinderDao.assignDisplacing` (one `@Transaction` over the history insert and the slot upsert), commit `abd3b66`. Proven by `AssignWithHistoryTransactionTest` on the emulator: without `@Transaction` it fails ("history insert must be rolled back"), with it 4/4 pass.

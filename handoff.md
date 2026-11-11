@@ -1,4 +1,39 @@
-# Handoff — Session 26, grid layout + `security-crypto` dropped (2026-11-11)
+# Handoff — Session 27, transactional Card History assign (2026-11-11)
+
+## 1. Goals
+
+From the 2026-11-11 gaps audit: (1) make `assignWithHistory` transactional, (2) turn on Room schema export.
+
+## 2. Current State
+
+- **Change 1 done, merged (ff) to `master` as `abd3b66`:** `MainBinderDao.assignDisplacing` (`@Transaction`) does the Card History insert and the slot upsert together; `BinderRepository` now takes only `MainBinderDao`; `slot!!` removed from `SlotDetailScreen`. Pipeline run (Planner, Coder, Tester, single Reviewer 91/100, ship). Verified fresh on `master`: unit tests **595/595** (`--rerun-tasks`), `compileDebugAndroidTestKotlin`; on the branch the Tester also ran `lintDebug`, `assembleDebug` and the emulator (`OK (30 tests)`, pinned `emulator-5554`). Rollback proof by mutation, done twice.
+- **Change 2 NOT done, reverted:** `exportSchema = true` breaks the second build with a KSP `AbstractMethodError ... FieldBundle$$serializer` (likely Room 2.8.5 vs Kotlin 2.1.20 / KSP; unverified). Three fixes failed. Details in `gaps.md`.
+- **Not verified:** the change on the phone; the id-set / url-null corner (no test).
+
+## 3. Active files
+
+`data/local/MainBinderDao.kt`, `repository/BinderRepository.kt`, `ui/slotdetail/SlotDetailScreen.kt`, new `androidTest/.../AssignWithHistoryTransactionTest.kt`, `gaps.md`, `gaps-archive.md`.
+
+## 4. Changes made
+
+See section 2. The worktree tool branched from the stub `origin/main` again; reset to `master` before work (known; check the base of any new worktree).
+
+## 5. Failed attempts / skipped on purpose
+
+Schema export: pinned `kotlinx-serialization-json` 1.9.0 (KSP classpath, then root buildscript) and tried `kotlin.compiler.execution.strategy=in-process`; all still fail. Reverted, `app/schemas/` and `Schema9ValidationTest` removed.
+
+## 6. Next Steps
+
+1. Decide whether to bump Kotlin + KSP (check the AGP 8.9.1 cap), then redo schema export as its own task (`gaps.md`, session 27 section).
+2. Optional small follow-up: pin the id-set / url-null corner with a test or a `Log.w`.
+3. Carry-overs from session 26 below (grid eyeball, "Back up now" tap).
+
+Blocked on Skyler: nothing; the Kotlin/KSP bump is his call.
+
+---
+Previous handoff (session 26) follows.
+
+# (s26) Handoff — Session 26, grid layout + `security-crypto` dropped (2026-11-11)
 
 ## 1. Goals
 

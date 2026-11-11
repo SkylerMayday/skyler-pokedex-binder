@@ -4,6 +4,19 @@ Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove ent
 actually fixed and verified, not when merely planned. Struck-through (closed) entries live in
 [gaps-archive.md](gaps-archive.md).
 
+## Refreshed — 2026-11-11 (session 27 — transactional Card History assign, commit `abd3b66` on `master`)
+
+**Audit scope note**: touched `MainBinderDao`, `BinderRepository`, `SlotDetailScreen`, `BinderRepositoryTest`, new `AssignWithHistoryTransactionTest`. Unit tests **595/595** (fresh XMLs, `--rerun-tasks`, on `master`), `lintDebug`, `assembleDebug`, `compileDebugAndroidTestKotlin` pass; emulator `OK (30 tests)` (26 + 4 new, pinned `emulator-5554`). Rollback proven twice by mutation (without `@Transaction` the new test fails 1 of 4). Pipeline run (Planner, Coder, Tester, single Reviewer 91/100, ship). Not run on the phone.
+
+### Closed
+- **Assign is not transactional** (batch 2 carry-over): `MainBinderDao.assignDisplacing` does the history insert and the slot upsert in one `@Transaction`. Moved to [gaps-archive.md](gaps-archive.md).
+
+### New, not fixed
+- **Room schema export is off and cannot be turned on yet.** `exportSchema = false` in `PokedexDatabase.kt`. With `exportSchema = true` plus KSP `room.schemaLocation`, the first `assembleDebug` writes `9.json`; the next build fails in `kspDebugKotlin` with `AbstractMethodError ... FieldBundle$$serializer.typeParametersSerializers()`. Tried and failed: pinning `kotlinx-serialization-json` 1.9.0 on the KSP classpath and in the root buildscript, and `kotlin.compiler.execution.strategy=in-process`. Likely a Room 2.8.5 vs Kotlin 2.1.20 / KSP 2.1.20-1.0.32 mismatch (unverified). Next step: its own task, bump Kotlin + KSP first (check the AGP 8.9.1 cap), then redo. Rebuild with `--rerun-tasks` after generating the JSON, or the failure hides. Until then a future entity change has no migration test.
+- **P2: id-set / url-null slot now overwrites with no history row** (`assignDisplacing` receives `displaced = null`); master threw an NPE there. Probably unreachable (`withCard` writes id and url together). Untested and silent; pin with a test or a `Log.w`.
+- **P3s:** read-then-write race remains (`getByPokemonId` runs outside the transaction and the stale copy is written back wholesale); next-position SQL duplicated in `MainBinderDao` and `SecondaryBinderDao` (drift risk); the real-SQL test does not assert the moved row's name or image URL (only the mock unit test does); the rollback test injects failure on UPDATE only; the `ScannerViewModel`/`QuickScanViewModel`/`SecondaryBinderViewModel`/`RestoreRepository` paths that call `insertAtEnd` remain non-transactional with their own writes.
+- **Remaining `!!`:** `PublishRepository.kt:501-521` (six, snapshot diff). Not changed.
+
 ## Refreshed — 2026-11-11 (session 26 — grid layout, `security-crypto` dropped; commits `22ec8c5`, `ab85185` on `master`, pushed)
 
 **Audit scope note**: touched `MainBinderScreen.kt`, `SecurityPrefsModule.kt`, `FakeSecurityPrefsModule.kt`, both backup XMLs, `build.gradle.kts`, `libs.versions.toml`; deleted `SecurityPrefsModuleTest.kt`. Unit tests **595/595** (fresh, `--rerun-tasks`; 607 minus the 12 deleted migration tests), `lintDebug` and `compileDebugAndroidTestKotlin` pass. No pipeline run (small removal; no reviewer pass). On the phone: Keystore migration confirmed (logcat `migrated 2 of 2` for both stores, only `*_v2.xml` left, no plaintext key prefixes in them, 4 keys visible in Settings).
@@ -51,7 +64,6 @@ Gemini key rotation: dropped by Skyler.
 
 ### New, not fixed
 
-- **Assign is not transactional** (pre-existing, carried over by the merge): a crash between `insertAtEnd` (Card History) and the slot upsert in `BinderRepository.assignWithHistory` leaves a duplicate in Card History. Untested.
 - **Weak assertions in `BinderRepositoryTest`:** `coVerify(exactly = 0) { secondaryDao.insert(any()) }` in the empty-slot test can never fail (`assignWithHistory` never calls `insert`); the locked-slot test only catches guard removal because its fixture is both occupied and locked. The `insertAtEnd`-removal mutation was proven by the Coder only, not re-run by the Tester.
 - **Closed as "not a gap" with evidence:** the five `fillBlankImage` pairs differ in table/column names and Room needs literal SQL per table; `ConnectingArtRepository` has non-ViewModel consumers (`BackupExporter`, `PublishRepository`, `RestoreRepository`) and does real work; the duplicate-screen pairs differ on 244 of ~366 and 431 of ~580 lines.
 
@@ -209,10 +221,8 @@ Tests 428/428 green; live-verified for Japanese cards on 2026-10-03 (see handoff
 
 Read-only pass (manifest + `libs.versions.toml`); no CVE database lookups were run.
 
-- **`security-crypto` is deprecated; replaced by `KeystoreSecretStore` in session 25 batch 3, dependency still present for the migration.**
-  Confirmed on the Jetpack releases page: all APIs deprecated in `1.1.0-alpha07` (2025-04-09), `1.1.0` stable (2025-07-30) is the same deprecated
-  library, no further releases. Project is still on `1.1.0-alpha06` until the drop change (checklist in the batch 3 section), which waits on your
-  emulator run and phone check.
+- **`security-crypto` is deprecated; replaced by `KeystoreSecretStore` in session 25 batch 3 and dropped from the build in session 26 (`ab85185`).**
+  Closed; the Jetpack releases-page evidence (all APIs deprecated in `1.1.0-alpha07`, no further releases) is why it was dropped.
 - **Dependency bumps merged (session 25 batch 4), phone tap-through still owed.** `coil` 2.7.0, `core-ktx` 1.17.0, `lifecycle` 2.10.0, `navigation-compose` 2.9.8, `room` 2.8.5; one commit per library on `master`,
   so a failing section reverts one commit. Verified on `master` 2026-11-06: `testDebugUnitTest --rerun-tasks` 607/607, `lintDebug`, `compileDebugAndroidTestKotlin` pass. Versions are capped by the toolchain
   (AGP 8.9.1, compileSdk 36, Kotlin 2.1.20): `lifecycle` 2.11 and `navigation-compose` 2.10 need AGP 9.2+ (Compose compileSdk 37), `core-ktx` 1.18+ needs compileSdk 36.1; revisit when AGP is upgraded.
