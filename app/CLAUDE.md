@@ -22,6 +22,8 @@ Budget for all seven before proposing a new section. Missing #7 is the usual sil
 
 `data/local/PokedexDatabase.kt` declares the schema. **Any entity change needs a migration** — check the current `version` in that file rather than assuming; do not bump it without writing the migration.
 
+**Schema export is on** (`exportSchema = true`, written to `app/schemas/`): after any entity change and version bump, rebuild, commit the new `<version>.json`, and add a `runMigrationsAndValidate` test (see `Schema9ValidationTest`). Always rebuild with `--rerun-tasks` once a JSON exists: the old kotlinx-serialization failure showed only on the second build. The `resolutionStrategy.force` in `build.gradle.kts` makes this work; revisit it on any Room/KSP/Kotlin bump.
+
 ## Build
 
 See the root `CLAUDE.md` (Running it, Sharp edges) — Windows-only Gradle; verify another stage's build claim with `--rerun-tasks`.

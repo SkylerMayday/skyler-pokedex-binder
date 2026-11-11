@@ -1497,3 +1497,7 @@ self-resolving — now with one added data point)
 ## Closed 2026-11-11 (session 27)
 
 - ~~**Assign is not transactional**~~ (batch 2 carry-over): a crash between `insertAtEnd` (Card History) and the slot upsert in `BinderRepository.assignWithHistory` could leave a duplicate in Card History. Fixed by `MainBinderDao.assignDisplacing` (one `@Transaction` over the history insert and the slot upsert), commit `abd3b66`. Proven by `AssignWithHistoryTransactionTest` on the emulator: without `@Transaction` it fails ("history insert must be rolled back"), with it 4/4 pass.
+
+## Closed 2026-11-12 (session 28)
+
+- ~~**Room schema export blocked (`exportSchema = false`)**~~: with `exportSchema = true`, the second build with `9.json` present failed in `kspDebugKotlin` with `AbstractMethodError ... FieldBundle$$serializer.typeParametersSerializers()`. Session 27's guess (Room 2.8.5 vs Kotlin 2.1.20 / KSP mismatch, needs a bump) was wrong; the three session 27 fixes failed because a constraint or a root-buildscript pin does not reach the KSP processor classpath. Real cause: kotlinx-serialization 1.8.1 on that classpath (room-migration BOM pin) vs Room serializers built for >= 1.9 (Google issue 447154195, kotlinx.serialization#2968). Fixed in `760aafd` by `resolutionStrategy.force` to 1.9.0 on `ksp*` and `debugAndroidTestRuntimeClasspath`; proven by removing/restoring the force, and by two consecutive `--rerun-tasks` builds with `9.json` present.

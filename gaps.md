@@ -4,6 +4,20 @@ Weakness register. Refreshed at every `wrapcon` via a codebase audit. Remove ent
 actually fixed and verified, not when merely planned. Struck-through (closed) entries live in
 [gaps-archive.md](gaps-archive.md).
 
+## Refreshed — 2026-11-12 (session 28 — Room schema export on, commit `760aafd` on `master`)
+
+**Audit scope note**: touched `app/build.gradle.kts`, `gradle/libs.versions.toml`, `PokedexDatabase.kt`, new `app/schemas/.../9.json`, new `Schema9ValidationTest`. On `master` after the merge: unit tests **595/595** (fresh XMLs, `--rerun-tasks`, with `9.json` present), `compileDebugAndroidTestKotlin` and `lintDebug` (alone) pass. On the branch: emulator `OK (31 tests)` (`emulator-5554` only), `debugRuntimeClasspath` / `releaseRuntimeClasspath` / `debugUnitTestRuntimeClasspath` identical to `master`. Pipeline run (Planner, Coder, Tester, single Reviewer 89/100, two text-only fixes applied). Not run on the phone.
+
+### Closed
+- **Room schema export blocked by `AbstractMethodError`**: root cause was kotlinx-serialization 1.8.1 on the KSP processor classpath (room-migration BOM pin) against Room bundle serializers built for >= 1.9. Fixed with `resolutionStrategy.force` to 1.9.0 on `ksp*` and `debugAndroidTestRuntimeClasspath` only (a constraint does not work; no Kotlin/KSP bump needed). Cause proven by removing/restoring the force. Moved to [gaps-archive.md](gaps-archive.md).
+
+### New, not fixed
+- **The force must be revisited on any Room/KSP/Kotlin bump:** check `kspDebugKotlinProcessorClasspath` for kotlinx-serialization >= 1.9 without it, then delete the block and `kotlinxSerialization` from the catalog (note in `build.gradle.kts`).
+- **`Schema9ValidationTest` cannot detect drift between `9.json` and the entities** (renamed column, changed `identityHash`, extra column in `createSql` all pass; only corrupt SQL fails): at equal start/end versions `MigrationTestHelper` validates the JSON against itself. Drift shows as a `git diff` on `9.json` because Room rewrites it on each KSP build. A real guard comes with the first 8->9 `runMigrationsAndValidate` test once an `8.json` exists. Only version 9 is exported; older migrations stay untestable.
+- **`lintDebug` fails when run in the same Gradle call as the compile and test tasks** (`FileNotFoundException` on a KSP-generated `*_GeneratedInjector.java` in `lintAnalyzeDebugUnitTest` / `lintAnalyzeDebugAndroidTest`). Pre-existing: it fails identically on `master` `cf144e6`. Run `lintDebug` alone.
+- **`assembleRelease` not run on the new config** (no keystore in the worktree): `kspReleaseKotlin`, `compileReleaseKotlin`, `minifyReleaseWithR8` pass and `releaseRuntimeClasspath` is unchanged. The first real `assembleRelease` in the main checkout is the confirmation.
+- **Worktree hygiene:** the worktree tool branches from the stub `origin/main` (reset to `master` each time), and Windows path length breaks `git worktree remove` after a Gradle build; delete the leftover folder with `rmdir /s /q "\\?\<path>"`.
+
 ## Refreshed — 2026-11-11 (session 27 — transactional Card History assign, commit `abd3b66` on `master`)
 
 **Audit scope note**: touched `MainBinderDao`, `BinderRepository`, `SlotDetailScreen`, `BinderRepositoryTest`, new `AssignWithHistoryTransactionTest`. Unit tests **595/595** (fresh XMLs, `--rerun-tasks`, on `master`), `lintDebug`, `assembleDebug`, `compileDebugAndroidTestKotlin` pass; emulator `OK (30 tests)` (26 + 4 new, pinned `emulator-5554`). Rollback proven twice by mutation (without `@Transaction` the new test fails 1 of 4). Pipeline run (Planner, Coder, Tester, single Reviewer 91/100, ship). Not run on the phone.
@@ -12,7 +26,7 @@ actually fixed and verified, not when merely planned. Struck-through (closed) en
 - **Assign is not transactional** (batch 2 carry-over): `MainBinderDao.assignDisplacing` does the history insert and the slot upsert in one `@Transaction`. Moved to [gaps-archive.md](gaps-archive.md).
 
 ### New, not fixed
-- **Room schema export is off and cannot be turned on yet.** `exportSchema = false` in `PokedexDatabase.kt`. With `exportSchema = true` plus KSP `room.schemaLocation`, the first `assembleDebug` writes `9.json`; the next build fails in `kspDebugKotlin` with `AbstractMethodError ... FieldBundle$$serializer.typeParametersSerializers()`. Tried and failed: pinning `kotlinx-serialization-json` 1.9.0 on the KSP classpath and in the root buildscript, and `kotlin.compiler.execution.strategy=in-process`. Likely a Room 2.8.5 vs Kotlin 2.1.20 / KSP 2.1.20-1.0.32 mismatch (unverified). Next step: its own task, bump Kotlin + KSP first (check the AGP 8.9.1 cap), then redo. Rebuild with `--rerun-tasks` after generating the JSON, or the failure hides. Until then a future entity change has no migration test.
+- **Room schema export was blocked** (closed in session 28, see the section above). The "Kotlin/KSP mismatch" guess was wrong; it needed no bump.
 - **P2: id-set / url-null slot now overwrites with no history row** (`assignDisplacing` receives `displaced = null`); master threw an NPE there. Probably unreachable (`withCard` writes id and url together). Untested and silent; pin with a test or a `Log.w`.
 - **P3s:** read-then-write race remains (`getByPokemonId` runs outside the transaction and the stale copy is written back wholesale); next-position SQL duplicated in `MainBinderDao` and `SecondaryBinderDao` (drift risk); the real-SQL test does not assert the moved row's name or image URL (only the mock unit test does); the rollback test injects failure on UPDATE only; the `ScannerViewModel`/`QuickScanViewModel`/`SecondaryBinderViewModel`/`RestoreRepository` paths that call `insertAtEnd` remain non-transactional with their own writes.
 - **Remaining `!!`:** `PublishRepository.kt:501-521` (six, snapshot diff). Not changed.

@@ -1,4 +1,41 @@
-# Handoff — Session 27, transactional Card History assign (2026-11-11)
+# Handoff — Session 28, Room schema export on (2026-11-12)
+
+## 1. Goals
+
+Finish the item left over from session 27: turn on Room schema export (`exportSchema = true`).
+
+## 2. Current State
+
+- **Done, merged (ff) to `master` as `760aafd`:** `exportSchema = true`, KSP arg `room.schemaLocation`, `app/schemas/.../9.json` committed, androidTest assets dir, new `Schema9ValidationTest`, and a `resolutionStrategy.force` of kotlinx-serialization 1.9.0 on `ksp*` + `debugAndroidTestRuntimeClasspath` (catalog entry `kotlinxSerialization`). DB stays at version 9.
+- **Root cause (session 27's guess was wrong):** kotlinx-serialization 1.8.1 on the KSP processor classpath vs Room serializers built for >= 1.9; fails only on the second build, once `9.json` exists. No Kotlin/KSP bump was needed.
+- Verified fresh on `master`: unit tests **595/595** (`--rerun-tasks`, `9.json` present), `compileDebugAndroidTestKotlin`, `lintDebug` alone. On the branch: emulator `OK (31 tests)`, runtime classpaths identical to before, cause proven by removing/restoring the force. Pipeline: Planner, Coder, Tester, single Reviewer 89/100.
+- **Not verified:** the phone; `assembleRelease` (no keystore in the worktree; `kspReleaseKotlin`, `compileReleaseKotlin`, `minifyReleaseWithR8` pass).
+
+## 3. Active files
+
+`app/build.gradle.kts`, `gradle/libs.versions.toml`, `data/local/PokedexDatabase.kt`, `app/schemas/.../9.json`, `androidTest/.../Schema9ValidationTest.kt`, `app/CLAUDE.md`, `gaps.md`, `gaps-archive.md`.
+
+## 4. Changes made
+
+See section 2. From now on an entity change means: bump `SCHEMA_VERSION`, write the migration, rebuild, commit the new `N.json`, and add a `runMigrationsAndValidate` test (`app/CLAUDE.md`).
+
+## 5. Failed attempts / skipped on purpose
+
+The first attempt (session 27) pinned the version as a constraint / buildscript pin: wrong mechanism, reverted. A bespoke drift guard for `9.json` was skipped on purpose (reviewer: Room rewrites `9.json` each KSP build, so drift shows in `git diff`; a real guard arrives with the first 8->9 test).
+
+## 6. Next Steps
+
+1. First real `assembleRelease` in the main checkout (confirms the release config).
+2. Run `lintDebug` alone, never in the same Gradle call as the compile/test tasks (pre-existing race, `gaps.md`).
+3. Revisit the ksp force on any Room/KSP/Kotlin bump (note in `build.gradle.kts`).
+4. Carry-overs from sessions 26-27: look at the 4-across grid, press "Back up now" once, optional test or `Log.w` for the id-set / url-null slot.
+
+Blocked on Skyler: nothing.
+
+---
+Previous handoff (session 27) follows.
+
+# (s27) Handoff — Session 27, transactional Card History assign (2026-11-11)
 
 ## 1. Goals
 
