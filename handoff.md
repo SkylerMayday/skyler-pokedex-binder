@@ -27,10 +27,10 @@ A `cat` of the `_v2` prefs files was blocked by the auto-mode classifier (it wou
 
 1. Skyler: look at the Pokédex grid; tell Claude if search-result rows should use one tile size, or if the web snapshot should mirror 4/3.
 2. Phone tap-through of every drawer section (nav / Room / lifecycle bumps have no UI tests); press "Back up now" once.
-3. Emulator run: `$env:ANDROID_SERIAL="emulator-5554"; .\gradlew.bat connectedDebugAndroidTest` (emulator only; Claude can run it on request).
+3. ~~Emulator run~~ done 2026-11-11: 26/26 (see `gaps.md`).
 4. Remaining debt is in `gaps.md`; most of it is deferred on purpose.
 
-Blocked on Skyler: items 1-2.
+Blocked on Skyler: nothing (grid and drawer looked okay to him 2026-11-11; "Back up now" tap not confirmed).
 
 ---
 Previous handoff (session 25) follows.
