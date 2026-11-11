@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.skyler.pokedexbinder.data.model.PokemonSlot
+import com.skyler.pokedexbinder.data.model.SlotType
 import com.skyler.pokedexbinder.ui.publish.PublishDialog
 import com.skyler.pokedexbinder.ui.publish.PublishViewModel
 import com.skyler.pokedexbinder.ui.settings.SettingsViewModel
@@ -140,7 +141,8 @@ fun MainBinderScreen(
 
             LazyVerticalGrid(
                 state = gridState,
-                columns = GridCells.Fixed(3),
+                // 12 = lcm(3, 4): BASE/REGIONAL tiles span 3 (4 per row), the rest span 4 (3 per row).
+                columns = GridCells.Fixed(12),
                 contentPadding = PaddingValues(8.dp),
                 modifier = Modifier.weight(1f)
             ) {
@@ -161,7 +163,13 @@ fun MainBinderScreen(
                             }
                         }
                         is BinderDisplayItem.Slot -> {
-                            item(key = item.pokemonSlot.id) {
+                            val narrow = item.pokemonSlot.slotType.let {
+                                it == SlotType.BASE || it == SlotType.REGIONAL
+                            }
+                            item(
+                                key = item.pokemonSlot.id,
+                                span = { GridItemSpan(if (narrow) 3 else 4) }
+                            ) {
                                 SlotCard(
                                     slot = item.pokemonSlot,
                                     onClick = {
